@@ -1,0 +1,106 @@
+# apartment-tracker — пример конфигурации
+# Скопируй в ./config.yaml в корне проекта и отредактируй под себя.
+
+database:
+  path: data/apartments.sqlite
+
+scoring:
+  version: "1.0"
+
+  # Веса критериев. Сумма должна быть 100.
+  # Можно занулять критерии, которые не важны.
+  weights:
+    price_per_m2: 25
+    metro_distance: 15
+    floor: 10
+    area_total: 10
+    renovation: 10
+    year_built: 10
+    rooms: 10
+    seller_type: 5
+    photos_count: 5
+
+  # Границы нормализации в 0..1 для каждого критерия.
+  # «best» = 1.0, «worst» = 0.0, линейная интерполяция между.
+  thresholds:
+    price_per_m2:
+      best: 200000        # ₽/м² и ниже = идеально
+      worst: 500000       # ₽/м² и выше = ужасно
+    metro_distance:
+      best: 5             # минут пешком
+      worst: 30
+    floor:
+      # этаж считается отдельной функцией: 1й и последний = 0.2,
+      # 2-3 и предпоследний = 0.7, остальные = 1.0
+      penalty_first: 0.2
+      penalty_last: 0.2
+      penalty_second_or_prelast: 0.7
+    area_total:
+      ideal_min: 40       # внутри диапазона = 1.0
+      ideal_max: 80
+      tolerance: 20       # снаружи на tolerance м² = 0.0
+    year_built:
+      best: 2020
+      worst: 1960
+    rooms:
+      target: 2           # точное совпадение = 1.0
+      tolerance: 1        # ±1 = 0.5, иначе 0
+    photos_count:
+      best: 20
+      worst: 0
+
+  # Категориальные шкалы
+  renovation_scores:
+    designer: 1.0
+    euro: 0.8
+    cosmetic: 0.5
+    none: 0.2
+    unknown: 0.4
+
+  seller_scores:
+    owner: 1.0
+    agent: 0.5
+    agency: 0.3
+    unknown: 0.5
+
+  # Что делать если поле отсутствует:
+  # - "neutral"  → подставить 0.5 (нейтрально)
+  # - "skip"     → исключить критерий из формулы, перенормировать веса
+  # - "worst"    → подставить 0.0 (как если бы поле было плохим)
+  missing_policy: neutral
+
+telegram:
+  # Если bot_token или chat_id не заданы — уведомления отключены.
+  # Значения подтягиваются из переменных окружения (.env).
+  bot_token_env: TELEGRAM_BOT_TOKEN
+  chat_id_env: TELEGRAM_CHAT_ID
+
+  # Как часто бот сам прогоняет включённые фильтры (секунды).
+  # 3600 = раз в час. 0 = отключить (только ручной /scrape).
+  scrape_interval_seconds: 3600
+
+  notify_on:
+    new_listing: true
+    price_drop: true            # уведомлять при снижении цены
+    price_increase: false       # уведомлять при повышении цены
+    status_change: true         # появился снова / снят
+    score_above: 70             # уведомлять только если скоринг ≥ N (0 = выкл)
+
+  # Минимальный интервал между уведомлениями по одному лоту (сек)
+  rate_limit_per_listing: 3600
+
+# Сохранённые фильтры для polling.
+# Можно добавлять через CLI: apartment-tracker filter-add ...
+# Здесь — только примеры.
+filters:
+  - name: "moscow_2k_central_example"
+    source: cian
+    enabled: false
+    location: "Москва"
+    deal_type: "sale"            # "sale" или "rent_long"
+    rooms: 2                     # int, "studio", "all"
+    additional_settings:
+      start_page: 1
+      end_page: 2
+      min_price: 8000000
+      max_price: 20000000

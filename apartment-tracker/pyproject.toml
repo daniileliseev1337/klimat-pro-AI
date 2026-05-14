@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "apartment-tracker"
+version = "0.1.0"
+description = "Apartment search tracker and analyzer for Russian realty portals (CIAN automatic, Yandex Realty best-effort + manual)."
+requires-python = ">=3.10"
+license = { text = "MIT" }
+readme = "README.md"
+dependencies = [
+    "cianparser>=0.4",
+    "openpyxl>=3.1",
+    "PyYAML>=6.0",
+    "python-dotenv>=1.0",
+    "beautifulsoup4>=4.12",
+    "lxml>=5.0",
+    "requests>=2.31",
+    "cloudscraper>=1.2.71",
+    "rich>=13.0",
+    "click>=8.1",
+    "python-telegram-bot[job-queue]>=21.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+]
+
+[project.scripts]
+apartment-tracker = "apartment_tracker.cli:main"
+apartment-bot = "apartment_tracker.bot:main"
+
+[tool.setuptools.packages.find]
+include = ["apartment_tracker*"]
+exclude = ["tests*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

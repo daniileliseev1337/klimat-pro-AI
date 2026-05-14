@@ -1,0 +1,25 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local data and secrets
+.env
+*.sqlite
+*.sqlite-journal
+*.db
+data/
+exports/
+config.yaml
+saved-pages/
+
+# IDE
+.vscode/
+.idea/
+*.swp
