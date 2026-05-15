@@ -34,6 +34,7 @@ from .db import Database
 from .exporter import export as do_export
 from .models import FilterSpec, Listing, PricePoint, Score, make_listing_id
 from .scoring import ScoringConfig, compute_score
+from .sources.avito import AvitoSource
 from .sources.cian import CianSource
 from .sources.manual import _extract_external_id, _guess_source
 from .sources.yandex import YandexSource, _parse_from_html
@@ -78,6 +79,7 @@ def _build_app_state(application: Application) -> None:
     application.bot_data["tracker"] = Tracker(db)
     application.bot_data["cian"] = CianSource()
     application.bot_data["yandex"] = YandexSource()
+    application.bot_data["avito"] = AvitoSource()
 
     # Whitelist по chat_id — бот должен общаться только с владельцем.
     chat_id_env = cfg.get("telegram", {}).get("chat_id_env", "TELEGRAM_CHAT_ID")
@@ -120,14 +122,14 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         hint = ""
     await update.message.reply_text(
         "🏠 <b>Трекер квартир</b>\n\n"
-        "Я ищу, отслеживаю и оцениваю квартиры с CIAN и Yandex Недвижимости.\n\n"
+        "Я ищу, отслеживаю и оцениваю квартиры с CIAN и Avito (Yandex — вручную).\n\n"
         "Главные команды:\n"
         "/add — добавить лот (пришли URL)\n"
         "/list — топ лотов по скорингу\n"
         "/score — пересчитать рейтинг\n"
         "/export — прислать Excel\n"
         "/history — история цены лота\n"
-        "/filter_add — сохранить фильтр поиска CIAN\n"
+        "/filter_add — сохранить фильтр поиска (CIAN или Avito)\n"
         "/filter_list — мои фильтры\n"
         "/scrape — прогнать фильтры прямо сейчас\n"
         "/help — все команды" + hint,
@@ -141,16 +143,19 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
         "<b>Все команды:</b>\n\n"
         "<b>Лоты:</b>\n"
-        "/add &lt;URL&gt; — добавить (CIAN — автомат, Yandex — попытка + вопросы)\n"
+        "/add &lt;URL&gt; — добавить (CIAN/Avito — автомат, Yandex — попытка + вопросы)\n"
         "/list — топ-10 по скорингу\n"
         "/score — пересчитать рейтинг\n"
         "/export — Excel-дашборд\n"
         "/history &lt;ID&gt; — история цены\n"
         "/remove &lt;ID&gt; — удалить лот\n\n"
-        "<b>Фильтры (только CIAN):</b>\n"
-        "/filter_add — добавить (бот спросит параметры)\n"
+        "<b>Фильтры (CIAN + Avito):</b>\n"
+        "/filter_add — добавить (пришли ссылку поиска с CIAN или Avito)\n"
         "/filter_list — список\n"
         "/scrape — прогнать включённые фильтры сейчас\n\n"
+        "<b>Совет.</b> Для «без агента/без комиссии»:\n"
+        "• CIAN — в поиске поставь галку «Только собственники», скопируй URL.\n"
+        "• Avito — поставь фильтр «Только частные лица», скопируй URL.\n\n"
         "<b>Прочее:</b>\n"
         "/cancel — отмена текущей формы\n"
         "/status — БД и настройки\n\n"
@@ -224,6 +229,18 @@ async def _add_handle_url(update: Update, context: ContextTypes.DEFAULT_TYPE, ur
                 "сохрани как <i>Веб-страница, только HTML</i> → пришли мне файл документом.\n"
                 "2) Или ответь сейчас на вопросы по полям — спрошу по одному.",
                 parse_mode=ParseMode.HTML,
+            )
+            return await _ask_next_field(update, context)
+    elif source == "avito":
+        await update.message.reply_text("🔄 Пробую спарсить Avito...")
+        try:
+            avito: AvitoSource = context.application.bot_data["avito"]
+            result = avito.fetch_single(url)
+            return await _save_parsed_result(update, context, result.listing, result.price, result.deal_type)
+        except Exception as e:
+            await update.message.reply_text(
+                f"⚠ Автопарсинг Avito не получился: {e}\n\n"
+                "Заполни поля вручную (по одному вопросу) или /cancel.",
             )
             return await _ask_next_field(update, context)
     elif source == "cian":
@@ -560,9 +577,11 @@ async def filter_receive_name(update: Update, context: ContextTypes.DEFAULT_TYPE
         return FILTER_NAME
     context.user_data["filter_name"] = name
     await update.message.reply_text(
-        "URL поиска CIAN (https://www.cian.ru/cat.php?...).\n"
-        "Открой поиск с нужными фильтрами в браузере, скопируй URL — пришли мне.\n"
-        "<i>Поддерживается только CIAN.</i>",
+        "Пришли URL поиска — <b>CIAN</b> (https://www.cian.ru/cat.php?...) "
+        "или <b>Avito</b> (https://www.avito.ru/.../kvartiry/...).\n\n"
+        "Открой нужный поиск в браузере с фильтрами (комнаты, цена, метро, "
+        "«только собственники / частные лица») — скопируй URL из адресной "
+        "строки и пришли сюда.",
         parse_mode=ParseMode.HTML,
     )
     return FILTER_URL
@@ -570,13 +589,22 @@ async def filter_receive_name(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 async def filter_receive_url(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     url = (update.message.text or "").strip()
-    if "cian.ru" not in url:
-        await update.message.reply_text("Сейчас принимаются только URL CIAN. /cancel чтобы отменить.")
+    if "cian.ru" in url:
+        source = "cian"
+        params = _parse_cian_url(url)
+    elif "avito.ru" in url:
+        source = "avito"
+        params = _parse_avito_url(url)
+    else:
+        await update.message.reply_text(
+            "Принимаются только URL <b>CIAN</b> или <b>Avito</b>. /cancel чтобы отменить.",
+            parse_mode=ParseMode.HTML,
+        )
         return FILTER_URL
-    context.user_data["filter_url"] = url
 
-    # Распарсить базовые параметры из URL
-    params = _parse_cian_url(url)
+    context.user_data["filter_url"] = url
+    context.user_data["filter_source"] = source
+
     keyboard = InlineKeyboardMarkup(
         [
             [InlineKeyboardButton("✅ Сохранить и включить", callback_data="filter_save_on")],
@@ -584,11 +612,19 @@ async def filter_receive_url(update: Update, context: ContextTypes.DEFAULT_TYPE)
             [InlineKeyboardButton("❌ Отмена", callback_data="filter_cancel")],
         ]
     )
+
+    owner_note = ""
+    if source == "cian" and params.get("additional_settings", {}).get("is_by_homeowner"):
+        owner_note = "\n👤 Только собственники: <b>да</b>"
+    elif source == "avito" and params.get("owner_only"):
+        owner_note = "\n👤 Только частные лица: <b>да</b>"
+
     summary = (
-        f"<b>{context.user_data['filter_name']}</b>\n"
+        f"<b>{context.user_data['filter_name']}</b> · источник: <b>{source}</b>\n"
         f"URL: {url}\n"
-        f"Распознано: location={params.get('location', 'Москва')}, "
-        f"deal={params.get('deal_type', 'sale')}, rooms={params.get('rooms', 'all')}"
+        f"Распознано: location={params.get('location', '—')}, "
+        f"deal={params.get('deal_type', '—')}, rooms={params.get('rooms', '—')}"
+        f"{owner_note}"
     )
     await update.message.reply_text(summary, reply_markup=keyboard, parse_mode=ParseMode.HTML)
     context.user_data["filter_params"] = params
@@ -606,29 +642,54 @@ async def filter_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     enabled = query.data == "filter_save_on"
     db: Database = context.application.bot_data["db"]
     params = context.user_data.get("filter_params", {})
+    source = context.user_data.get("filter_source", "cian")
+    url = context.user_data["filter_url"]
 
-    spec = FilterSpec(
-        name=context.user_data["filter_name"],
-        source="cian",
-        enabled=enabled,
-        location=params.get("location", "Москва"),
-        deal_type=params.get("deal_type", "sale"),
-        rooms=params.get("rooms", "all"),
-        url=context.user_data["filter_url"],
-        additional_settings={"start_page": 1, "end_page": 2},
-    )
+    if source == "cian":
+        addl = dict(params.get("additional_settings", {}))
+        addl.setdefault("start_page", 1)
+        addl.setdefault("end_page", 2)
+        spec = FilterSpec(
+            name=context.user_data["filter_name"],
+            source="cian",
+            enabled=enabled,
+            location=params.get("location", "Москва"),
+            deal_type=params.get("deal_type", "sale"),
+            rooms=params.get("rooms", "all"),
+            url=url,
+            additional_settings=addl,
+        )
+    else:  # avito
+        spec = FilterSpec(
+            name=context.user_data["filter_name"],
+            source="avito",
+            enabled=enabled,
+            location=params.get("location"),
+            deal_type=params.get("deal_type"),
+            rooms=None,  # Avito-URL уже несёт rooms внутри, парсим из карточек
+            url=url,
+            additional_settings={"owner_only": bool(params.get("owner_only"))},
+        )
+
     db.upsert_filter(spec)
     status = "включён" if enabled else "выключен"
-    await query.edit_message_text(f"✅ Фильтр {spec.name} сохранён, {status}.")
+    await query.edit_message_text(f"✅ Фильтр {spec.name} ({source}) сохранён, {status}.")
     context.user_data.clear()
     return ConversationHandler.END
 
 
 def _parse_cian_url(url: str) -> dict[str, Any]:
-    """Грубо распарсить URL CIAN и вернуть параметры для cianparser."""
+    """Грубо распарсить URL CIAN. Возвращает dict с ключами:
+    location, deal_type, rooms, additional_settings (для cianparser).
+    """
     from urllib.parse import parse_qs, urlparse
 
-    out: dict[str, Any] = {"location": "Москва", "deal_type": "sale", "rooms": "all"}
+    out: dict[str, Any] = {
+        "location": "Москва",
+        "deal_type": "sale",
+        "rooms": "all",
+        "additional_settings": {},
+    }
     q = parse_qs(urlparse(url).query)
     if "deal_type" in q:
         v = q["deal_type"][0]
@@ -640,6 +701,51 @@ def _parse_cian_url(url: str) -> dict[str, Any]:
     rooms_found = [int(k[4:]) for k in q if re.match(r"^room\d$", k)]
     if rooms_found:
         out["rooms"] = rooms_found[0] if len(rooms_found) == 1 else "all"
+    # Только собственники
+    if q.get("is_by_homeowner", ["0"])[0] == "1":
+        out["additional_settings"]["is_by_homeowner"] = True
+    # Цены
+    if "minprice" in q:
+        try:
+            out["additional_settings"]["min_price"] = int(q["minprice"][0])
+        except ValueError:
+            pass
+    if "maxprice" in q:
+        try:
+            out["additional_settings"]["max_price"] = int(q["maxprice"][0])
+        except ValueError:
+            pass
+    return out
+
+
+def _parse_avito_url(url: str) -> dict[str, Any]:
+    """Грубо распарсить URL Avito. Avito-фильтры в основном «зашиты» в slug
+    (например ASgBAgI...), поэтому декодировать их сложно. Извлекаем только:
+    - location (slug города): /moskva/, /sankt-peterburg/, /mytischi/, ...
+    - deal_type: prodam/sdam в slug
+    - owner_only: ?cd=1 (Avito: только частные лица)
+    """
+    from urllib.parse import parse_qs, urlparse
+
+    out: dict[str, Any] = {"location": None, "deal_type": None, "owner_only": False}
+
+    parsed = urlparse(url)
+    path = parsed.path.lower()
+    q = parse_qs(parsed.query)
+
+    m = re.search(r"avito\.ru/([a-z_-]+)/", url.lower())
+    if m:
+        out["location"] = m.group(1)
+
+    if "/sdam" in path or "/arenda" in path:
+        out["deal_type"] = "rent_short" if ("posutochno" in path or "sutoch" in path) else "rent_long"
+    elif "/prodam" in path or "/kuplyu" not in path:
+        out["deal_type"] = "sale"
+
+    # Avito: cd=1 — "только частные лица"
+    if q.get("cd", ["0"])[0] == "1":
+        out["owner_only"] = True
+
     return out
 
 
@@ -676,6 +782,7 @@ async def _run_scrape(application: Application, *, notify_events: bool) -> str:
     tracker: Tracker = application.bot_data["tracker"]
     sc_cfg: ScoringConfig = application.bot_data["scoring_config"]
     cian: CianSource = application.bot_data["cian"]
+    avito: AvitoSource = application.bot_data["avito"]
     chat_id = application.bot_data.get("allowed_chat_id")
     cfg_notify = application.bot_data["config"].get("telegram", {}).get("notify_on", {})
 
@@ -683,24 +790,39 @@ async def _run_scrape(application: Application, *, notify_events: bool) -> str:
     error_lines: list[str] = []
     notifications_sent = 0
 
+    # Группируем seen_ids по source — finalize_run учитывает только лоты своего
+    # источника, иначе авито-фильтр «снимет» все cian-лоты с прошлого прогона.
+    seen_by_source: dict[str, list[str]] = {"cian": [], "avito": []}
+
     for spec in db.list_filters(enabled_only=True):
-        if spec.source != "cian":
+        if spec.source not in ("cian", "avito"):
             continue
         try:
-            results = cian.fetch_filter(
-                location=spec.location or "Москва",
-                deal_type=spec.deal_type or "sale",
-                rooms=spec.rooms if spec.rooms is not None else "all",
-                additional_settings=spec.additional_settings or {},
-            )
+            if spec.source == "cian":
+                results = cian.fetch_filter(
+                    location=spec.location or "Москва",
+                    deal_type=spec.deal_type or "sale",
+                    rooms=spec.rooms if spec.rooms is not None else "all",
+                    additional_settings=spec.additional_settings or {},
+                )
+            else:  # avito
+                if not spec.url:
+                    error_lines.append(f"⚠ {spec.name}: avito-фильтр без URL — пропуск")
+                    continue
+                results = avito.fetch_filter(url=spec.url)
+                # Если в фильтре стоит owner_only, отбрасываем явно агентские лоты
+                if (spec.additional_settings or {}).get("owner_only"):
+                    results = [
+                        r for r in results
+                        if r.listing.seller_type in (None, "owner")
+                    ]
         except Exception as e:
             error_lines.append(f"⚠ {spec.name}: {e}")
             continue
 
-        seen_ids: list[str] = []
         for res in results:
             event = tracker.ingest(res)
-            seen_ids.append(res.listing.id)
+            seen_by_source[spec.source].append(res.listing.id)
             sc = compute_score(event.listing, event.price, sc_cfg)
             db.save_score(sc)
             if notify_events and chat_id:
@@ -713,15 +835,19 @@ async def _run_scrape(application: Application, *, notify_events: bool) -> str:
             elif event.kind == "price_increase":
                 total_inc += 1
 
-        removed_ids = tracker.finalize_run("cian", seen_ids)
+        db.mark_filter_run(spec.name)
+
+    # Финализация по каждому источнику отдельно: только если в этом прогоне
+    # был хоть один enabled-фильтр с таким source.
+    sources_run = {spec.source for spec in db.list_filters(enabled_only=True) if spec.source in ("cian", "avito")}
+    for src in sources_run:
+        removed_ids = tracker.finalize_run(src, seen_by_source[src])
         total_removed += len(removed_ids)
         if notify_events and chat_id and cfg_notify.get("status_change", True):
             for lid in removed_ids:
                 listing = db.get_listing(lid)
                 if listing and await _maybe_notify_removed(application, chat_id, listing):
                     notifications_sent += 1
-
-        db.mark_filter_run(spec.name)
 
     summary = (
         f"📊 Прогон закончен\n"
