@@ -572,14 +572,15 @@ async function sendTelegramNotify(client, type, recipientId, data = {}) {
   }
 }
 
-// ── v2.0: Yandex Disk — функции файлового хранилища ──────────────────────
+// ── v3.0: Nextcloud — функции файлового хранилища ────────────────────────
+// Доступ к файлам идёт через Edge Function `nextcloud` (Nextcloud наружу не
+// выставлен). Права проверяются в функции через RLS под JWT пользователя.
 
-async function ydAction(client, action, payload = {}) {
-  const { data, error } = await client.functions.invoke("yandex-disk", {
+async function ncAction(client, action, payload = {}) {
+  const { data, error } = await client.functions.invoke("nextcloud", {
     body: { action, ...payload },
   });
   if (error) throw error;
-  if (data && !data.ok) throw new Error(data.error || "Ошибка Yandex Disk");
   return data;
 }
 
@@ -597,7 +598,7 @@ async function uploadProjectFile(client, projectId, file, isPublic) {
     reader.onerror = () => reject(new Error("Ошибка чтения файла"));
     reader.readAsDataURL(file);
   });
-  return ydAction(client, "upload", {
+  return ncAction(client, "upload", {
     projectId,
     filename:   file.name,
     mimeType:   file.type || "application/octet-stream",
@@ -606,17 +607,24 @@ async function uploadProjectFile(client, projectId, file, isPublic) {
   });
 }
 
-async function getDownloadUrl(client, diskPath) {
-  const res = await ydAction(client, "download-url", { diskPath });
-  return res.url;
+// Nextcloud внутренний — прямой ссылки нет: функция стримит файл, получаем Blob.
+async function downloadProjectFile(client, fileId) {
+  const { data, error } = await client.functions.invoke("nextcloud", {
+    body: { action: "download", id: fileId },
+  });
+  if (error) throw error;
+  if (data instanceof Blob) return data;
+  if (typeof data === "string") return new Blob([data]);
+  if (data instanceof ArrayBuffer) return new Blob([data]);
+  throw new Error("Не удалось получить файл");
 }
 
-async function toggleFilePublic(client, fileId, diskPath, makePublic) {
-  return ydAction(client, "toggle-public", { fileId, diskPath, makePublic });
+async function toggleFilePublic(client, fileId, makePublic) {
+  return ncAction(client, "toggle-public", { id: fileId, makePublic });
 }
 
 async function deleteProjectFile(client, fileId) {
-  return ydAction(client, "delete", { fileId });
+  return ncAction(client, "delete", { id: fileId });
 }
 
 async function signInWithPassword(client, email, password) {
@@ -3773,21 +3781,16 @@ function ProjectFiles({ projectId, profile, client, showToast, isOwner }) {
 
   const handleDownload = async (f) => {
     try {
-      let url;
-      if (f.is_public && f.public_url) {
-        url = f.public_url;
-      } else {
-        showToast("Получаем ссылку…");
-        url = await getDownloadUrl(client, f.disk_path);
-      }
-      // Создаём временный <a> для скачивания
+      showToast("Скачиваем…");
+      const blob = await downloadProjectFile(client, f.id);
+      const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = f.filename;
-      a.target = "_blank";
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } catch (e) {
       showToast("Ошибка: " + (e.message || ""), "error");
     }
@@ -3795,11 +3798,11 @@ function ProjectFiles({ projectId, profile, client, showToast, isOwner }) {
 
   const handleTogglePublic = async (f) => {
     try {
-      const res = await toggleFilePublic(client, f.id, f.disk_path, !f.is_public);
+      await toggleFilePublic(client, f.id, !f.is_public);
       setFiles(prev => prev.map(x =>
-        x.id === f.id ? { ...x, is_public: !f.is_public, public_url: res.publicUrl || null } : x
+        x.id === f.id ? { ...x, is_public: !f.is_public, public_url: null } : x
       ));
-      showToast(f.is_public ? "Файл сделан приватным" : "Файл опубликован");
+      showToast(f.is_public ? "Файл сделан приватным" : "Файл опубликован (доступ внутри системы)");
     } catch (e) {
       showToast("Ошибка: " + (e.message || ""), "error");
     }

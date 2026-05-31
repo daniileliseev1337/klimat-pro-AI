@@ -38,6 +38,33 @@
 - frpc: `/usr/local/bin/frpc`, конфиг `/etc/frp/frpc.toml` (с токеном — НЕ в git).
 - Сервисы systemd (автозапуск): `docker`, `frpc`. Контейнеры — `restart: unless-stopped`.
 
+## Nextcloud (этап 6.3 — файловое хранилище, заменяет Yandex Disk)
+
+- Стек: `/srv/nextcloud` (`docker-compose.yml` + `.env` с секретами — НЕ в git).
+  Исходник compose/скрипты — `deploy/nextcloud/` в репо.
+- 3 контейнера (`restart: unless-stopped`): `app` (nextcloud:stable, v33),
+  `db` (postgres:16-alpine), `redis`.
+- **Размещение данных:** БД/Redis/код NC — в ext4 docker-volume; пользовательские
+  файлы — bind-mount на **`F:\nextcloud-data`** (`/mnt/f/nextcloud-data`).
+  На drvfs `chmod` не действует → в конфиг добавлен `check_data_directory_permissions=false`
+  (`config/drvfs.config.php`). Postgres НЕ на drvfs (иначе ломается).
+- **Наружу НЕ выставлен.** Веб-UI/админка — только локально `127.0.0.1:8081`.
+  В общей docker-сети `supabase_default` под алиасом `nextcloud` (его видит edge-runtime).
+- Техюзер приложения `dashboard` (пароль в `/srv/nextcloud/.env`), файлы в `/projects/<project_id>/`.
+- `trusted_domains`: `localhost`, `nextcloud`, `localhost:8081`.
+- Доступ из приложения — через Edge Function `nextcloud` (см. ниже), не напрямую из браузера.
+
+## Edge Function `nextcloud` (локальный Supabase)
+
+- Код: `deploy/nextcloud/functions/nextcloud/index.ts` → деплоится в
+  `/srv/supabase-src/docker/volumes/functions/nextcloud/`. Креды NC — в `config.json`
+  рядом (на сервере, не в git). Сброс кэша — `docker restart supabase-edge-functions`.
+- Actions: `upload` | `download` | `delete` | `toggle-public`. Чистый `fetch`
+  (без supabase-js): метаданные пишутся/читаются через PostgREST **под JWT
+  пользователя** (срабатывает RLS `project_files`), байты — по WebDAV под техюзером.
+- `is_public`: при внутреннем NC прямой внешней ссылки нет (`public_url=null`);
+  скачивание всегда через эту функцию с проверкой прав.
+
 ## Автозапуск
 
 - VPS: `frps`, `caddy` — systemd enabled, переживают перезагрузку VPS.
@@ -67,8 +94,13 @@ systemctl restart frpc
 journalctl -u frpc -n 50
 ```
 
-## Дальше (этап 6.2)
+## Деплой фронта
 
-Миграция реальной схемы и данных с облачного Supabase на локальный.
-Потребуется доступ к облачному проекту (`pzdzyaswjlqiifmacygr.supabase.co`).
-После миграции — переключить фронт на `https://193-124-130-236.sslip.io`.
+`bash deploy/nextcloud/deploy-web.sh` — собранный `dist` → `/srv/daniil-deploy/web`.
+Сборка: `npm run build` на Windows (node_modules — Windows-нативные). Скрипт чистит
+**содержимое** каталога, не пересоздаёт его (каталог — источник bind-mount nginx).
+
+## Дальше (этап 6.4)
+
+Слой задач (таск-панель) как самостоятельная сущность над проектами (раздел 4.2 ТЗ).
+Этапы 6.1 (инфра), 6.2 (миграция БД), 6.3 (Nextcloud) — завершены.

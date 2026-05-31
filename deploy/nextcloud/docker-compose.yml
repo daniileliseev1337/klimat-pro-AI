@@ -1,0 +1,78 @@
+name: nextcloud
+
+# Nextcloud — локальное файловое хранилище проекта (этап 6.3, заменяет Yandex Disk).
+# Доступ к файлам идёт ТОЛЬКО через Edge Function локального Supabase (браузер наружу
+# к Nextcloud не ходит). Наружу через туннель NC НЕ выставляется.
+#
+# Размещение данных:
+#   - БД (Postgres) и Redis  -> ext4 docker-volume (на drvfs/9p Postgres ломается!)
+#   - код/конфиг/apps NC      -> ext4 docker-volume (nc-app)
+#   - пользовательские файлы  -> bind-mount на F:\nextcloud-data (/mnt/f/nextcloud-data)
+#
+# Секреты — в соседнем .env (НЕ в git). Шаблон: .env.example.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: nextcloud
+      POSTGRES_USER: nextcloud
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - nc-db:/var/lib/postgresql/data
+    networks:
+      - ncnet
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
+    volumes:
+      - nc-redis:/data
+    networks:
+      - ncnet
+
+  app:
+    image: nextcloud:stable
+    restart: unless-stopped
+    depends_on:
+      - db
+      - redis
+    ports:
+      # только локально на ПК — для первичной веб-настройки и админки
+      - "127.0.0.1:8081:80"
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_DB: nextcloud
+      POSTGRES_USER: nextcloud
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_HOST_PASSWORD: ${REDIS_PASSWORD}
+      NEXTCLOUD_ADMIN_USER: ${NC_ADMIN_USER}
+      NEXTCLOUD_ADMIN_PASSWORD: ${NC_ADMIN_PASSWORD}
+      # localhost:8081 — админка с ПК; nextcloud — имя для Edge Function во внутренней сети
+      NEXTCLOUD_TRUSTED_DOMAINS: "localhost 127.0.0.1 nextcloud localhost:8081"
+      OVERWRITEPROTOCOL: http
+    volumes:
+      - nc-app:/var/www/html
+      # пользовательские файлы — на отдельном диске Windows (drvfs)
+      - /mnt/f/nextcloud-data:/var/www/html/data
+    networks:
+      ncnet:
+      supabase:
+        aliases:
+          - nextcloud
+
+volumes:
+  nc-db:
+  nc-redis:
+  nc-app:
+
+networks:
+  ncnet:
+    driver: bridge
+  # общая сеть с Supabase — чтобы supabase-edge-functions достучался до nextcloud по имени
+  supabase:
+    external: true
+    name: supabase_default
