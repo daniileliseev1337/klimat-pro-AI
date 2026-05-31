@@ -9,6 +9,7 @@ build/
 .env
 .env.local
 .env.*.local
+.env.production
 
 # Lock-файл — по решению команды (если коммитим — убрать)
 # package-lock.json
