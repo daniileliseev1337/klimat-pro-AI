@@ -41,10 +41,15 @@
 ## Автозапуск
 
 - VPS: `frps`, `caddy` — systemd enabled, переживают перезагрузку VPS.
-- ПК: автозагрузка WSL при входе в Windows — VBS в папке Startup
-  (`%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\daniil-dashboard-autostart.vbs`).
-  Дальше systemd в WSL поднимает docker + frpc, контейнеры — сами.
-- Проверено: после `wsl --shutdown` весь стек поднимается автоматически, HTTPS снаружи = 200.
+- ПК: автозагрузка + KEEP-ALIVE WSL — VBS в папке Startup
+  (`%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\daniil-dashboard-autostart.vbs`)
+  запускает `wsl -d Ubuntu -u root -- /usr/bin/sleep infinity` (скрыто).
+  Этот долгоживущий процесс — «якорь» со стороны Windows: без него WSL2 гасит
+  виртуалку по простою (и туннель отваливается → 502). systemd в WSL поднимает
+  docker + frpc, контейнеры — сами.
+- ВАЖНО: systemd+frpc ВНУТРИ WSL не держат VM от idle-shutdown — нужен именно
+  внешний Windows-процесс-якорь (sleep infinity). Это решено VBS-держателем.
+- Проверено: после `wsl --shutdown` весь стек поднимается автоматически, HTTPS = 200.
 - Ограничение: VBS срабатывает при ВХОДЕ пользователя. Для старта ДО входа нужна
   задача Планировщика с правами администратора (TODO, опционально).
 
