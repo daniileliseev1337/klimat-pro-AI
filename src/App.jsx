@@ -589,6 +589,7 @@ async function updateNotificationSettings(client, settings) {
     p_team_invite:   settings.notifTeamInvite,
     p_comment:       settings.notifComment,
     p_deadline:      settings.notifDeadline,
+    p_notif_task:    settings.notifTask,
   });
   if (error) throw error;
 }
@@ -5031,6 +5032,7 @@ function ProfileModal({ profile, client, onClose, onProfileUpdated, showToast })
     notifTeamInvite:   profile?.notif_team_invite   !== false,
     notifComment:      profile?.notif_comment        !== false,
     notifDeadline:     profile?.notif_deadline       !== false,
+    notifTask:         profile?.notif_task           !== false,
   });
   const [savingNotifs, setSavingNotifs] = useState(false);
 
@@ -5090,6 +5092,7 @@ function ProfileModal({ profile, client, onClose, onProfileUpdated, showToast })
         notif_team_invite:   updated.notifTeamInvite,
         notif_comment:       updated.notifComment,
         notif_deadline:      updated.notifDeadline,
+        notif_task:          updated.notifTask,
       });
     } catch (e) {
       showToast("Ошибка сохранения настроек: " + (e.message || ""), "error");
@@ -5273,6 +5276,7 @@ function ProfileModal({ profile, client, onClose, onProfileUpdated, showToast })
           <NotifToggle label="Меня пригласили в команду проекта"          notifKey="notifTeamInvite" />
           <NotifToggle label="Новый комментарий в проекте"                notifKey="notifComment" />
           <NotifToggle label="До дедлайна проекта осталось 3 дня"         notifKey="notifDeadline" />
+          <NotifToggle label="Уведомления о задачах"                      notifKey="notifTask" />
         </div>
       )}
 
