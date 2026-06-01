@@ -1876,6 +1876,7 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
             showToast={showToast}
             isOwner={isOwner}
           />
+          {initial.id && <ProjectTasksSection projectId={initial.id} client={client} profile={profile} showToast={showToast} />}
         </div>
       )}
 
@@ -2899,6 +2900,47 @@ async function parsePdfYandex(file) {
 // ════════════════════════════════════════════════════════════════════════════
 // TASKS (v6.4a) — вкладка Задачи: список + фильтры, доска (drag-drop), модалка
 // ════════════════════════════════════════════════════════════════════════════
+
+function ProjectTasksSection({ projectId, client, profile, showToast }) {
+  const [tasks, setTasks] = useState([]);
+  const [title, setTitle] = useState("");
+  const [editing, setEditing] = useState(null);
+
+  const reload = async () => {
+    try { setTasks(await fetchTasks(client, { projectId })); }
+    catch (e) { showToast("Ошибка задач: " + (e.message || ""), "error"); }
+  };
+  useEffect(() => { if (projectId) reload(); /* eslint-disable-next-line */ }, [projectId]);
+
+  const quickAdd = async () => {
+    if (!title.trim()) return;
+    try {
+      const id = await createTask(client, { projectId, title, status: "Новая", priority: "Обычный" }, profile.id);
+      await notifyTask(client, "task_created", id, profile.id);
+      setTitle(""); reload();
+    } catch (e) { showToast("Ошибка: " + (e.message || ""), "error"); }
+  };
+
+  return (
+    <div className="mt-4">
+      <div className="text-sm uppercase opacity-70 mb-2">Задачи проекта</div>
+      {tasks.map(t => (
+        <div key={t.id} onClick={() => setEditing(t)} className="flex justify-between items-center bg-zinc-800/60 rounded px-2 py-1 mb-1 cursor-pointer">
+          <span>{t.title}</span>
+          <span className="text-xs opacity-60">{t.status}{t.assigneeName ? ` · ${t.assigneeName}` : ""}</span>
+        </div>
+      ))}
+      <div className="flex gap-2 mt-2">
+        <input className="flex-1 bg-zinc-800 rounded px-2 py-1" placeholder="+ задача (Enter)"
+               value={title} onChange={e => setTitle(e.target.value)}
+               onKeyDown={e => { if (e.key === "Enter") quickAdd(); }} />
+      </div>
+      {editing && <TaskModal task={editing} client={client} profile={profile} projects={[]}
+                             onClose={() => setEditing(null)} onSaved={() => { setEditing(null); reload(); }}
+                             showToast={showToast} />}
+    </div>
+  );
+}
 
 function TaskModal({ task, client, profile, projects, onClose, onSaved, showToast }) {
   const isNew = !task.id;
