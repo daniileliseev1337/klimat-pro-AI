@@ -1206,7 +1206,16 @@ function AuthScreen({ onAuthenticated, onError }) {
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
             backgroundClip: "text",
-          }}>ДАНИИЛ</div>
+          }}>КЛИМАТ-ПРО</div>
+          <div style={{
+            fontSize: 11,
+            color: "#62646b",
+            fontWeight: 500,
+            opacity: 0.6,
+            marginBottom: 6,
+          }}>
+            Проектирование ОВ и К
+          </div>
           <div style={{
             fontSize: 11,
             color: "#62646b",
@@ -1509,7 +1518,7 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
           <StyledInput value={f.executor}
             onChange={e => { s("executor", e.target.value); s("executorUserId", null); setExecQuery(e.target.value); }}
             onBlur={() => setTimeout(() => setExecResults([]), 200)}
-            placeholder="Н-р: Даниил, Субподряд" />
+            placeholder="Н-р: Субподряд" />
           {execResults.length > 0 && (
             <div style={{
               position: "absolute", top: "100%", left: 0, right: 0, zIndex: 50,
@@ -2993,6 +3002,14 @@ function TaskModal({ task, client, profile, projects, onClose, onSaved, showToas
     catch (e) { showToast("Ошибка удаления: " + (e.message || ""), "error"); }
   };
 
+  const accept = async () => {
+    try {
+      await updateTask(client, task.id, { status: "В работе" });
+      await notifyTask(client, "task_status", task.id, profile.id);
+      onSaved();
+    } catch (e) { showToast("Ошибка: " + (e.message || ""), "error"); }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
       <div className="bg-zinc-900 rounded-lg p-5 w-[min(560px,92vw)]" onClick={e => e.stopPropagation()}>
@@ -3022,6 +3039,7 @@ function TaskModal({ task, client, profile, projects, onClose, onSaved, showToas
           {!isNew ? <button onClick={() => confirmDel ? remove() : setConfirmDel(true)} className="text-red-400 text-sm">{confirmDel ? "Точно удалить?" : "Удалить"}</button> : <span />}
           <div className="flex gap-2">
             <button onClick={onClose} className="px-3 py-1.5 rounded bg-zinc-700">Отмена</button>
+            {!isNew && task.assignedTo === profile.id && task.status === "Новая" && <button onClick={accept} className="px-3 py-1.5 rounded bg-emerald-600 text-white font-semibold">Принять в работу</button>}
             <button onClick={save} disabled={saving} className="px-3 py-1.5 rounded bg-amber-500 text-black font-semibold">
               {saving ? "…" : "Сохранить"}</button>
           </div>
@@ -5172,7 +5190,7 @@ function ProfileModal({ profile, client, onClose, onProfileUpdated, showToast })
         <StyledInput
           value={name}
           onChange={e => setSaveName(e.target.value)}
-          placeholder="Например: Даниил Елисеев"
+          placeholder="Например: Иван Иванов"
           onKeyDown={e => { if (e.key === "Enter") save(); }}
         />
       </Field>
@@ -5918,7 +5936,7 @@ function ReportViewer({ projects, onClose }) {
             <div style="font-size:11px;font-weight:700;color:#a8a8a3;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;">Примечания</div>
             ${visible.filter(p=>p.notes).map(p=>`<div style="margin-bottom:6px;font-size:13px;"><b>${p.name}:</b> <span style="color:#404040;">${p.notes}</span></div>`).join("")}
           </div>`:""}
-          <div style="text-align:center;font-size:12px;color:#cbd5e1;padding-top:8px;">Рабочий центр Даниила · ${dateStr}</div>
+          <div style="text-align:center;font-size:12px;color:#cbd5e1;padding-top:8px;">КЛИМАТ-ПРО · ${dateStr}</div>
         </div>
       </div>`;
     return () => { const e=document.getElementById("report-print-root"); if(e) e.innerHTML=""; };
@@ -6028,7 +6046,7 @@ function ReportViewer({ projects, onClose }) {
             </div>
           )}
           <div style={{textAlign:"center",fontSize:12,color:"#cbd5e1",paddingBottom:32}}>
-            Рабочий центр Даниила · {dateStr}
+            КЛИМАТ-ПРО · {dateStr}
           </div>
         </div>
       </div>
@@ -6342,13 +6360,20 @@ export default function App() {
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
               backgroundClip: "text",
-            }}>ДАНИИЛ</span>
+            }}>КЛИМАТ-ПРО</span>
             <span style={{
               color: "#62646b",
               fontWeight: 400,
               fontSize: 13,
             }}>· рабочий центр</span>
           </h1>
+          <div style={{
+            fontSize: 11,
+            color: "#62646b",
+            fontWeight: 500,
+            opacity: 0.6,
+            marginTop: 2,
+          }}>Проектирование ОВ и К</div>
         </div>
 
         {/* Правая часть: кнопки действий и информация о пользователе */}
