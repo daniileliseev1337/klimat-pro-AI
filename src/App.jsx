@@ -171,6 +171,10 @@ function taskJsToDb(t) {
 }
 export const TASK_STATUSES = ["Новая", "В работе", "На проверке", "Готово", "Отменена"];
 export const TASK_PRIORITIES = ["Низкий", "Обычный", "Высокий"];
+const TASK_STATUS_BADGE = {
+  "Новая": "bg-zinc-600", "В работе": "bg-amber-600", "На проверке": "bg-sky-600",
+  "Готово": "bg-emerald-600", "Отменена": "bg-zinc-800",
+};
 
 // ────────────────────────────────────────────────────────────────────────
 // Маппинг записей клиентской базы (v1.5)
@@ -2906,6 +2910,7 @@ function TaskModal({ task, client, profile, projects, onClose, onSaved, showToas
   });
   const [members, setMembers] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [confirmDel, setConfirmDel] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -2915,7 +2920,7 @@ function TaskModal({ task, client, profile, projects, onClose, onSaved, showToas
         setMembers(m.data || []);
       } catch { setMembers([]); }
     })();
-  }, [form.projectId]); // eslint-disable-line
+  }, [form.projectId, client]);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -2971,7 +2976,7 @@ function TaskModal({ task, client, profile, projects, onClose, onSaved, showToas
           <input type="date" className="bg-zinc-800 rounded px-2 py-2" value={form.dueDate || ""} onChange={e => set("dueDate", e.target.value)} />
         </div>
         <div className="flex justify-between mt-3">
-          {!isNew ? <button onClick={remove} className="text-red-400 text-sm">Удалить</button> : <span />}
+          {!isNew ? <button onClick={() => confirmDel ? remove() : setConfirmDel(true)} className="text-red-400 text-sm">{confirmDel ? "Точно удалить?" : "Удалить"}</button> : <span />}
           <div className="flex gap-2">
             <button onClick={onClose} className="px-3 py-1.5 rounded bg-zinc-700">Отмена</button>
             <button onClick={save} disabled={saving} className="px-3 py-1.5 rounded bg-amber-500 text-black font-semibold">
@@ -2983,7 +2988,8 @@ function TaskModal({ task, client, profile, projects, onClose, onSaved, showToas
   );
 }
 
-function TasksBoard({ tasks, onOpen, onReload, client, profile, badge }) {
+function TasksBoard({ tasks, onOpen, onReload, client, profile, badge, showToast }) {
+  // колонки доски — без «Отменена» (намеренно); при добавлении статусов в TASK_STATUSES обновить вручную
   const cols = ["Новая", "В работе", "На проверке", "Готово"];
   const [dragId, setDragId] = useState(null);
   const move = async (taskId, toStatus) => {
@@ -2993,7 +2999,7 @@ function TasksBoard({ tasks, onOpen, onReload, client, profile, badge }) {
       await updateTask(client, taskId, { status: toStatus });
       await notifyTask(client, "task_status", taskId, profile.id);
       onReload();
-    } catch (e) { onReload(); }
+    } catch (e) { showToast("Ошибка смены статуса: " + (e.message || ""), "error"); onReload(); }
   };
   return (
     <div className="flex gap-3 overflow-x-auto">
@@ -3025,7 +3031,7 @@ function TasksView({ client, profile, projects, showToast }) {
   const [onlyMine, setOnlyMine] = useState(false);
   const [editing, setEditing] = useState(null);
 
-  const reload = async () => {
+  const reload = useCallback(async () => {
     setLoading(true);
     try {
       const list = await fetchTasks(client, {
@@ -3035,13 +3041,10 @@ function TasksView({ client, profile, projects, showToast }) {
       setTasks(list);
     } catch (e) { showToast("Ошибка загрузки задач: " + (e.message || ""), "error"); }
     finally { setLoading(false); }
-  };
-  useEffect(() => { reload(); /* eslint-disable-next-line */ }, [fProject, fStatus, onlyMine]);
+  }, [fProject, fStatus, onlyMine, client, profile, showToast]);
+  useEffect(() => { reload(); }, [reload]);
 
-  const badge = (s) => ({
-    "Новая": "bg-zinc-600", "В работе": "bg-amber-600", "На проверке": "bg-sky-600",
-    "Готово": "bg-emerald-600", "Отменена": "bg-zinc-800",
-  }[s] || "bg-zinc-600");
+  const badge = (s) => TASK_STATUS_BADGE[s] || "bg-zinc-600";
 
   return (
     <div>
@@ -3067,7 +3070,7 @@ function TasksView({ client, profile, projects, showToast }) {
         </label>
       </div>
       {loading ? <div className="opacity-60">Загрузка…</div> :
-       view === "board" ? <TasksBoard tasks={tasks} onOpen={setEditing} onReload={reload} client={client} profile={profile} badge={badge} /> :
+       view === "board" ? <TasksBoard tasks={tasks} onOpen={setEditing} onReload={reload} client={client} profile={profile} badge={badge} showToast={showToast} /> :
        <div className="overflow-x-auto">
          <table className="w-full text-sm">
            <thead><tr className="text-left opacity-60">
