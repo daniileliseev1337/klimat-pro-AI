@@ -19,6 +19,8 @@ import {
   // ── v2.0: иконки маркетплейса, комментариев, файлов ──
   Globe, Store, Undo2, MessageSquare,
   Paperclip, Download, HardDrive, FileImage, Lock, Unlock,
+  // ── v6.4a: вкладка Задачи ──
+  ListTodo,
 } from "lucide-react";
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis,
@@ -2888,6 +2890,206 @@ async function parsePdfYandex(file) {
     i++;
   }
   return transactions;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// TASKS (v6.4a) — вкладка Задачи: список + фильтры, доска (drag-drop), модалка
+// ════════════════════════════════════════════════════════════════════════════
+
+function TaskModal({ task, client, profile, projects, onClose, onSaved, showToast }) {
+  const isNew = !task.id;
+  const [form, setForm] = useState({
+    projectId: task.projectId || "", assignedTo: task.assignedTo || "",
+    title: task.title || "", description: task.description || "",
+    status: task.status || "Новая", priority: task.priority || "Обычный",
+    dueDate: task.dueDate || "",
+  });
+  const [members, setMembers] = useState([]);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      if (!form.projectId) { setMembers([]); return; }
+      try {
+        const m = await client.rpc("get_project_members", { p_project_id: form.projectId });
+        setMembers(m.data || []);
+      } catch { setMembers([]); }
+    })();
+  }, [form.projectId]); // eslint-disable-line
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const save = async () => {
+    if (!form.title.trim()) { showToast("Заголовок обязателен", "error"); return; }
+    setSaving(true);
+    try {
+      if (isNew) {
+        const id = await createTask(client, form, profile.id);
+        if (form.assignedTo) await notifyTask(client, "task_assigned", id, profile.id);
+        if (form.projectId) await notifyTask(client, "task_created", id, profile.id);
+      } else {
+        const assigneeChanged = (task.assignedTo || "") !== (form.assignedTo || "");
+        const statusChanged = task.status !== form.status;
+        await updateTask(client, task.id, form);
+        if (assigneeChanged && form.assignedTo) await notifyTask(client, "task_assigned", task.id, profile.id);
+        if (statusChanged) await notifyTask(client, "task_status", task.id, profile.id);
+      }
+      onSaved();
+    } catch (e) { showToast("Ошибка сохранения: " + (e.message || ""), "error"); }
+    finally { setSaving(false); }
+  };
+
+  const remove = async () => {
+    if (!task.id) return;
+    try { await deleteTask(client, task.id); onSaved(); }
+    catch (e) { showToast("Ошибка удаления: " + (e.message || ""), "error"); }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-zinc-900 rounded-lg p-5 w-[min(560px,92vw)]" onClick={e => e.stopPropagation()}>
+        <h3 className="text-lg font-semibold mb-3">{isNew ? "Новая задача" : "Задача"}</h3>
+        <input className="w-full bg-zinc-800 rounded px-3 py-2 mb-2" placeholder="Заголовок"
+               value={form.title} onChange={e => set("title", e.target.value)} />
+        <textarea className="w-full bg-zinc-800 rounded px-3 py-2 mb-2" rows={4} placeholder="Описание (ТЗ)"
+               value={form.description} onChange={e => set("description", e.target.value)} />
+        <div className="grid grid-cols-2 gap-2 mb-2">
+          <select className="bg-zinc-800 rounded px-2 py-2" value={form.projectId} onChange={e => set("projectId", e.target.value)}>
+            <option value="">Без проекта (личная)</option>
+            {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+          <select className="bg-zinc-800 rounded px-2 py-2" value={form.assignedTo} onChange={e => set("assignedTo", e.target.value)}>
+            <option value="">Исполнитель: —</option>
+            {members.map(m => <option key={m.user_id || m.id} value={m.user_id || m.id}>{m.name || m.email}</option>)}
+          </select>
+          <select className="bg-zinc-800 rounded px-2 py-2" value={form.status} onChange={e => set("status", e.target.value)}>
+            {TASK_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <select className="bg-zinc-800 rounded px-2 py-2" value={form.priority} onChange={e => set("priority", e.target.value)}>
+            {TASK_PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+          <input type="date" className="bg-zinc-800 rounded px-2 py-2" value={form.dueDate || ""} onChange={e => set("dueDate", e.target.value)} />
+        </div>
+        <div className="flex justify-between mt-3">
+          {!isNew ? <button onClick={remove} className="text-red-400 text-sm">Удалить</button> : <span />}
+          <div className="flex gap-2">
+            <button onClick={onClose} className="px-3 py-1.5 rounded bg-zinc-700">Отмена</button>
+            <button onClick={save} disabled={saving} className="px-3 py-1.5 rounded bg-amber-500 text-black font-semibold">
+              {saving ? "…" : "Сохранить"}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TasksBoard({ tasks, onOpen, onReload, client, profile, badge }) {
+  const cols = ["Новая", "В работе", "На проверке", "Готово"];
+  const [dragId, setDragId] = useState(null);
+  const move = async (taskId, toStatus) => {
+    const t = tasks.find(x => x.id === taskId);
+    if (!t || t.status === toStatus) return;
+    try {
+      await updateTask(client, taskId, { status: toStatus });
+      await notifyTask(client, "task_status", taskId, profile.id);
+      onReload();
+    } catch (e) { onReload(); }
+  };
+  return (
+    <div className="flex gap-3 overflow-x-auto">
+      {cols.map(col => (
+        <div key={col} onDragOver={e => e.preventDefault()}
+             onDrop={() => { if (dragId) move(dragId, col); setDragId(null); }}
+             className="min-w-[200px] flex-1 bg-zinc-900/50 rounded p-2">
+          <div className="text-xs uppercase opacity-60 mb-2">{col}</div>
+          {tasks.filter(t => t.status === col).map(t => (
+            <div key={t.id} draggable onDragStart={() => setDragId(t.id)} onClick={() => onOpen(t)}
+                 className="bg-zinc-800 rounded p-2 mb-2 cursor-pointer">
+              <div className="text-sm font-medium">{t.title}</div>
+              <div className="text-xs opacity-60">{t.projectName || "личная"} · {t.assigneeName || "—"}</div>
+              {t.dueDate && <div className="text-xs opacity-50">⏱ {t.dueDate}</div>}
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TasksView({ client, profile, projects, showToast }) {
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [view, setView] = useState("list");
+  const [fProject, setFProject] = useState("");
+  const [fStatus, setFStatus] = useState("");
+  const [onlyMine, setOnlyMine] = useState(false);
+  const [editing, setEditing] = useState(null);
+
+  const reload = async () => {
+    setLoading(true);
+    try {
+      const list = await fetchTasks(client, {
+        projectId: fProject || null, status: fStatus || null,
+        assignedTo: onlyMine ? profile.id : null,
+      });
+      setTasks(list);
+    } catch (e) { showToast("Ошибка загрузки задач: " + (e.message || ""), "error"); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { reload(); /* eslint-disable-next-line */ }, [fProject, fStatus, onlyMine]);
+
+  const badge = (s) => ({
+    "Новая": "bg-zinc-600", "В работе": "bg-amber-600", "На проверке": "bg-sky-600",
+    "Готово": "bg-emerald-600", "Отменена": "bg-zinc-800",
+  }[s] || "bg-zinc-600");
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex gap-2">
+          <button onClick={() => setView("list")} className={view === "list" ? "font-bold" : "opacity-60"}>Список</button>
+          <button onClick={() => setView("board")} className={view === "board" ? "font-bold" : "opacity-60"}>Доска</button>
+        </div>
+        <button onClick={() => setEditing({ status: "Новая", priority: "Обычный" })}
+                className="px-3 py-1.5 rounded bg-amber-500 text-black font-semibold">+ Новая задача</button>
+      </div>
+      <div className="flex flex-wrap gap-2 mb-3">
+        <select value={fProject} onChange={e => setFProject(e.target.value)} className="bg-zinc-800 rounded px-2 py-1">
+          <option value="">Все проекты</option>
+          {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+        </select>
+        <select value={fStatus} onChange={e => setFStatus(e.target.value)} className="bg-zinc-800 rounded px-2 py-1">
+          <option value="">Все статусы</option>
+          {TASK_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <label className="flex items-center gap-1 text-sm">
+          <input type="checkbox" checked={onlyMine} onChange={e => setOnlyMine(e.target.checked)} /> только мои
+        </label>
+      </div>
+      {loading ? <div className="opacity-60">Загрузка…</div> :
+       view === "board" ? <TasksBoard tasks={tasks} onOpen={setEditing} onReload={reload} client={client} profile={profile} badge={badge} /> :
+       <div className="overflow-x-auto">
+         <table className="w-full text-sm">
+           <thead><tr className="text-left opacity-60">
+             <th>Статус</th><th>Задача</th><th>Проект</th><th>Исполнитель</th><th>Приоритет</th><th>Срок</th>
+           </tr></thead>
+           <tbody>
+             {tasks.map(t => (
+               <tr key={t.id} onClick={() => setEditing(t)} className="cursor-pointer hover:bg-zinc-800/50">
+                 <td><span className={"px-2 py-0.5 rounded text-xs text-white " + badge(t.status)}>{t.status}</span></td>
+                 <td>{t.title}</td><td>{t.projectName || "—"}</td><td>{t.assigneeName || "—"}</td>
+                 <td>{t.priority}</td><td>{t.dueDate || "—"}</td>
+               </tr>
+             ))}
+             {!tasks.length && <tr><td colSpan={6} className="opacity-60 py-4">Задач нет</td></tr>}
+           </tbody>
+         </table>
+       </div>}
+      {editing && <TaskModal task={editing} client={client} profile={profile} projects={projects}
+                             onClose={() => setEditing(null)} onSaved={() => { setEditing(null); reload(); }}
+                             showToast={showToast} />}
+    </div>
+  );
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -6044,6 +6246,7 @@ export default function App() {
   const TABS = [
     { id: "dashboard", label: "Дашборд",   Icon: LayoutDashboard },
     { id: "projects",  label: "Проекты",   Icon: FolderKanban },
+    { id: "tasks",     label: "Задачи",    Icon: ListTodo },
     { id: "clients",   label: "Заказчики", Icon: BookUser },
     { id: "finance",   label: "Финансы",   Icon: Receipt },
     { id: "analytics", label: "Аналитика", Icon: BarChart3 },
@@ -6294,6 +6497,7 @@ export default function App() {
           >
             {tab === "dashboard" && <Dashboard projects={projects} txs={txs} clients={clients} profile={profile} />}
             {tab === "projects" && <Projects projects={projects} setProjects={setProjects} clients={clients} client={supabase} profile={profile} ownerId={profile.id} showToast={showToast} />}
+            {tab === "tasks" && <TasksView client={supabase} profile={profile} projects={projects} showToast={showToast} />}
             {tab === "clients" && <ClientsPage clients={clients} setClients={setClients} projects={projects} client={supabase} ownerId={profile.id} showToast={showToast} />}
             {tab === "finance" && <Finance txs={txs} setTxs={setTxs} client={supabase} ownerId={profile.id} showToast={showToast} />}
             {tab === "analytics" && <Analytics projects={projects} txs={txs} />}
