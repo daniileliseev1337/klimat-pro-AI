@@ -94,7 +94,7 @@ Deno.serve(async (req: Request) => {
           const pr = await rest(`projects?id=eq.${task.project_id}&select=owner_id`);
           const prows = await pr.json();
           const owner = Array.isArray(prows) && prows[0] ? prows[0].owner_id : null;
-          targetIds = [...members, owner].filter(Boolean);
+          targetIds = [...members, owner].filter(Boolean).filter(id => id !== task.assigned_to);
         }
         text = `🆕 Новая задача в проекте: <b>${task.title}</b>`;
       }

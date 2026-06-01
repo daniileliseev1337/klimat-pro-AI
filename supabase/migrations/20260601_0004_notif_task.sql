@@ -23,3 +23,5 @@ BEGIN
     notif_task          = p_notif_task
   WHERE id = auth.uid();
 END $$;
+
+GRANT EXECUTE ON FUNCTION public.update_notification_settings(boolean,boolean,boolean,boolean,boolean) TO authenticated;
