@@ -86,7 +86,7 @@ DESC2=$(rpc "$JA" get_tasks "{}" | python3 -c "import sys,json;print(next((r['de
 echo "description после апрува: [$DESC2] (ожидаем содержит 'СТРОКА2-изменена')"
 
 echo "== reject: A предлагает снова, B отклоняет -> rejected, description НЕ меняется =="
-rpc "$JA" propose_tz_version "{\"p_task_id\":\"$RID\",\"p_content\":\"отклоняемая\"}" -o /dev/null >/dev/null
+rpc "$JA" propose_tz_version "{\"p_task_id\":\"$RID\",\"p_content\":\"отклоняемая\"}" >/dev/null
 VID2=$(rpc "$JA" get_task_versions "{\"p_task_id\":\"$RID\"}" \
   | python3 -c "import sys,json;print(next((v['id'] for v in json.load(sys.stdin) if v['status']=='pending'),''))")
 REJ=$(rpc "$JB" reject_tz_version "{\"p_version_id\":\"$VID2\"}" \
@@ -94,6 +94,12 @@ REJ=$(rpc "$JB" reject_tz_version "{\"p_version_id\":\"$VID2\"}" \
 echo "статус reject: $REJ (ожидаем rejected)"
 DESC3=$(rpc "$JA" get_tasks "{}" | python3 -c "import sys,json;print(next((r['description'] for r in json.load(sys.stdin) if r['id']=='$RID'),''))")
 echo "description после reject: [$DESC3] (ожидаем как после апрува, 'СТРОКА2-изменена')"
+
+echo "== прямой INSERT в task_tz_versions под JWT запрещён (только через RPC) =="
+DIRECT=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$REST/task_tz_versions" \
+  -H "apikey: $ANON" -H "Authorization: Bearer $JA" -H "Content-Type: application/json" \
+  -d "{\"task_id\":\"$RID\",\"version_no\":99,\"content\":\"hack\",\"status\":\"approved\",\"proposed_by\":\"$A\"}")
+echo "прямой POST в task_tz_versions: HTTP $DIRECT (ожидаем 401/403/4xx, НЕ 201)"
 
 echo "== видимость под посторонним C недоступна; берём третьего approved или anon =="
 # посторонний: используем anon-токен (нет auth.uid()) — get_task_versions должна вернуть access_denied

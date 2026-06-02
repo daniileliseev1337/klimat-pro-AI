@@ -105,11 +105,12 @@ DECLARE
   v_caller uuid := auth.uid();
   v_row    public.task_tz_versions%ROWTYPE;
 BEGIN
-  SELECT * INTO v FROM public.task_tz_versions WHERE id = p_version_id;
+  SELECT * INTO v FROM public.task_tz_versions WHERE id = p_version_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'version_not_found'; END IF;
   IF v.status <> 'pending' THEN RAISE EXCEPTION 'not_pending'; END IF;
 
   SELECT * INTO t FROM public.project_tasks WHERE id = v.task_id;
+  IF NOT FOUND THEN RAISE EXCEPTION 'task_not_found'; END IF;
   IF NOT public.can_access_task(v.task_id) THEN RAISE EXCEPTION 'access_denied'; END IF;
 
   -- апрувит противоположная сторона: одна из сторон задачи, но НЕ предложивший
@@ -123,7 +124,7 @@ BEGIN
    WHERE id = p_version_id
   RETURNING * INTO v_row;
 
-  UPDATE public.project_tasks SET description = v_row.content WHERE id = v_row.task_id;
+  UPDATE public.project_tasks SET description = (SELECT content FROM public.task_tz_versions WHERE task_id = v_row.task_id AND status='approved' ORDER BY version_no DESC LIMIT 1) WHERE id = v_row.task_id;
 
   RETURN v_row;
 END $$;
@@ -145,6 +146,7 @@ BEGIN
   IF v.status <> 'pending' THEN RAISE EXCEPTION 'not_pending'; END IF;
 
   SELECT * INTO t FROM public.project_tasks WHERE id = v.task_id;
+  IF NOT FOUND THEN RAISE EXCEPTION 'task_not_found'; END IF;
   IF NOT public.can_access_task(v.task_id) THEN RAISE EXCEPTION 'access_denied'; END IF;
 
   IF v_caller = v.proposed_by THEN RAISE EXCEPTION 'proposer_cannot_reject'; END IF;
