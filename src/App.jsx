@@ -3097,7 +3097,7 @@ function TaskModal({ task, client, profile, projects, realtimeTick, onClose, onS
   // 6.4b: realtime-сигнал по открытой задаче -> рефетч дочерних данных
   useEffect(() => {
     if (realtimeTick) { reloadVersions(); reloadComments(); }
-  }, [realtimeTick]); // eslint-disable-line
+  }, [realtimeTick, reloadVersions, reloadComments]);
 
   // действующая (последняя approved) и pending
   const approvedVers = versions.filter(v => v.status === "approved");
@@ -3181,8 +3181,15 @@ function TaskModal({ task, client, profile, projects, realtimeTick, onClose, onS
       } else {
         const assigneeChanged = (task.assignedTo || "") !== (form.assignedTo || "");
         const statusChanged = task.status !== form.status;
-        const { description, status, ...rest } = form;
-        await updateTask(client, task.id, rest);
+        // явный whitelist полей: description версионируется отдельно (RPC),
+        // status меняется через setTaskStatus ниже — здесь их не шлём.
+        await updateTask(client, task.id, {
+          title: form.title,
+          projectId: form.projectId,
+          assignedTo: form.assignedTo,
+          priority: form.priority,
+          dueDate: form.dueDate,
+        });
         if (statusChanged) {
           try { await setTaskStatus(client, task.id, form.status); }
           catch (e) {
@@ -3431,6 +3438,10 @@ function TasksView({ client, profile, projects, showToast }) {
   const [fStatus, setFStatus] = useState("");
   const [onlyMine, setOnlyMine] = useState(false);
   const [editing, setEditing] = useState(null);
+  // ref на открытую задачу: realtime-колбэк читает editingRef.current, чтобы
+  // открытие/закрытие модалки не пересоздавало канал (иначе churn -> потеря событий).
+  const editingRef = useRef(null);
+  useEffect(() => { editingRef.current = editing; }, [editing]);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -3485,13 +3496,14 @@ function TasksView({ client, profile, projects, showToast }) {
           if (idx === -1) return [merged, ...prev];
           const copy = prev.slice(); copy[idx] = merged; return copy;
         });
-        // точечный сигнал открытой карточке
+        // точечный сигнал открытой карточке (через ref, чтобы не пересоздавать канал)
         const rid = (payload.new && payload.new.id) || (payload.old && payload.old.id);
-        if (editing && editing.id && rid === editing.id) setOpenTaskTick(t => t + 1);
+        const open = editingRef.current;
+        if (open && open.id && rid === open.id) setOpenTaskTick(t => t + 1);
       })
       .subscribe();
     return () => { client.removeChannel(channel); };
-  }, [client, canSeeRow, editing]);
+  }, [client, canSeeRow]);
 
   const badge = (s) => TASK_STATUS_BADGE[s] || "bg-zinc-600";
 
