@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "./lib/supabase";
+import { diffLines } from "./lib/lineDiff";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, FolderKanban, Wallet, BarChart3,
@@ -3033,7 +3034,22 @@ function ProjectTasksSection({ projectId, client, profile, showToast }) {
   );
 }
 
-function TaskModal({ task, client, profile, projects, onClose, onSaved, showToast }) {
+// Рендер построчного diff (git-стиль): del — красным, add — зелёным, equal — приглушённо.
+function DiffView({ oldText, newText }) {
+  const segs = diffLines(oldText, newText);
+  if (!segs.length) return <div className="text-xs opacity-50 py-1">— пусто —</div>;
+  return (
+    <div className="font-mono text-xs rounded bg-zinc-950 p-2 overflow-x-auto" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+      {segs.map((s, i) => {
+        if (s.type === "del") return <div key={i} style={{ color: "#f8a3a3", background: "rgba(248,163,163,0.08)" }}>- {s.text || " "}</div>;
+        if (s.type === "add") return <div key={i} style={{ color: "#6ee7a8", background: "rgba(110,231,168,0.08)" }}>+ {s.text || " "}</div>;
+        return <div key={i} style={{ color: "#a8a8a3" }}>&nbsp;&nbsp;{s.text || " "}</div>;
+      })}
+    </div>
+  );
+}
+
+function TaskModal({ task, client, profile, projects, realtimeTick, onClose, onSaved, showToast }) {
   const isNew = !task.id;
   const [form, setForm] = useState({
     projectId: task.projectId || "", assignedTo: task.assignedTo || "",
@@ -3044,6 +3060,103 @@ function TaskModal({ task, client, profile, projects, onClose, onSaved, showToas
   const [members, setMembers] = useState([]);
   const [saving, setSaving] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
+
+  // ── 6.4b: версии ТЗ ──
+  const [versions, setVersions] = useState([]);
+  const [verLoading, setVerLoading] = useState(false);
+  const [editingTz, setEditingTz] = useState(false);
+  const [tzDraft, setTzDraft] = useState("");
+  const [tzBusy, setTzBusy] = useState(false);
+  const [openVerId, setOpenVerId] = useState(null); // версия, раскрытая в истории для diff
+
+  // ── 6.4b: обсуждение ──
+  const [comments, setComments] = useState([]);
+  const [cmtLoading, setCmtLoading] = useState(false);
+  const [cmtText, setCmtText] = useState("");
+  const [cmtIsQuestion, setCmtIsQuestion] = useState(false);
+  const [cmtSending, setCmtSending] = useState(false);
+
+  const reloadVersions = useCallback(async () => {
+    if (isNew || !task.id) return;
+    setVerLoading(true);
+    try { setVersions(await fetchTaskVersions(client, task.id)); }
+    catch (e) { showToast("Ошибка загрузки версий ТЗ: " + (e.message || ""), "error"); }
+    finally { setVerLoading(false); }
+  }, [isNew, task.id, client, showToast]);
+  useEffect(() => { reloadVersions(); }, [reloadVersions]);
+
+  const reloadComments = useCallback(async () => {
+    if (isNew || !task.id) return;
+    setCmtLoading(true);
+    try { setComments(await fetchTaskComments(client, task.id)); }
+    catch (e) { showToast("Ошибка загрузки обсуждения: " + (e.message || ""), "error"); }
+    finally { setCmtLoading(false); }
+  }, [isNew, task.id, client, showToast]);
+  useEffect(() => { reloadComments(); }, [reloadComments]);
+
+  // 6.4b: realtime-сигнал по открытой задаче -> рефетч дочерних данных
+  useEffect(() => {
+    if (realtimeTick) { reloadVersions(); reloadComments(); }
+  }, [realtimeTick]); // eslint-disable-line
+
+  // действующая (последняя approved) и pending
+  const approvedVers = versions.filter(v => v.status === "approved");
+  const currentVer = approvedVers.length ? approvedVers[approvedVers.length - 1] : null;
+  const currentTz = currentVer ? currentVer.content : (task.description || "");
+  const pendingVer = versions.find(v => v.status === "pending") || null;
+  // противоположная сторона относительно предложившего pending
+  const isProposer = pendingVer && pendingVer.proposedBy === profile.id;
+  const isParty = task.authorId === profile.id || task.assignedTo === profile.id;
+  const canDecide = pendingVer && !isProposer && isParty;
+
+  const openQuestions = comments.filter(c => c.isQuestion && !c.resolved).length;
+  const canResolveQ = task.authorId === profile.id || task.assignedTo === profile.id || profile.role === "admin";
+
+  const proposeTz = async () => {
+    if (!tzDraft.trim()) { showToast("Текст ТЗ пуст", "error"); return; }
+    setTzBusy(true);
+    try {
+      await proposeTzVersion(client, task.id, tzDraft);
+      setEditingTz(false); setTzDraft("");
+      await reloadVersions();
+      notifyTask(client, "task_tz_proposed", task.id, profile.id);
+      showToast("Изменение ТЗ предложено");
+    } catch (e) {
+      const m = e.message || "";
+      if (m.includes("tz_pending_exists")) showToast("Уже есть ожидающее изменение ТЗ — дождитесь решения", "error");
+      else showToast("Ошибка: " + m, "error");
+    } finally { setTzBusy(false); }
+  };
+  const decideTz = async (approve) => {
+    if (!pendingVer) return;
+    try {
+      if (approve) { await approveTzVersion(client, pendingVer.id); notifyTask(client, "task_tz_approved", task.id, profile.id); }
+      else { await rejectTzVersion(client, pendingVer.id); notifyTask(client, "task_tz_rejected", task.id, profile.id); }
+      await reloadVersions();
+      showToast(approve ? "Изменение ТЗ принято" : "Изменение ТЗ отклонено");
+    } catch (e) {
+      const m = e.message || "";
+      if (m.includes("proposer_cannot_approve")) showToast("Свою версию подтверждает другая сторона", "error");
+      else showToast("Ошибка: " + m, "error");
+    }
+  };
+
+  const sendComment = async () => {
+    if (!cmtText.trim()) return;
+    setCmtSending(true);
+    try {
+      const wasQuestion = cmtIsQuestion;
+      await insertTaskComment(client, task.id, cmtText.trim(), wasQuestion);
+      setCmtText(""); setCmtIsQuestion(false);
+      await reloadComments();
+      if (wasQuestion) notifyTask(client, "task_question", task.id, profile.id);
+    } catch (e) { showToast("Ошибка отправки: " + (e.message || ""), "error"); }
+    finally { setCmtSending(false); }
+  };
+  const toggleResolve = async (commentId, val) => {
+    try { await resolveTaskQuestion(client, commentId, val); await reloadComments(); }
+    catch (e) { showToast("Ошибка: " + (e.message || ""), "error"); }
+  };
 
   useEffect(() => {
     (async () => {
@@ -3068,7 +3181,15 @@ function TaskModal({ task, client, profile, projects, onClose, onSaved, showToas
       } else {
         const assigneeChanged = (task.assignedTo || "") !== (form.assignedTo || "");
         const statusChanged = task.status !== form.status;
-        await updateTask(client, task.id, form);
+        const { description, status, ...rest } = form;
+        await updateTask(client, task.id, rest);
+        if (statusChanged) {
+          try { await setTaskStatus(client, task.id, form.status); }
+          catch (e) {
+            if ((e.message || "").includes("only_author_can_complete")) { showToast("В «Готово» переводит только автор задачи", "error"); setSaving(false); return; }
+            throw e;
+          }
+        }
         if (assigneeChanged && form.assignedTo) await notifyTask(client, "task_assigned", task.id, profile.id);
         if (statusChanged) await notifyTask(client, "task_status", task.id, profile.id);
       }
@@ -3085,7 +3206,7 @@ function TaskModal({ task, client, profile, projects, onClose, onSaved, showToas
 
   const accept = async () => {
     try {
-      await updateTask(client, task.id, { status: "В работе" });
+      await setTaskStatus(client, task.id, "В работе");
       await notifyTask(client, "task_status", task.id, profile.id);
       onSaved();
     } catch (e) { showToast("Ошибка: " + (e.message || ""), "error"); }
@@ -3097,8 +3218,87 @@ function TaskModal({ task, client, profile, projects, onClose, onSaved, showToas
         <h3 className="text-lg font-semibold mb-3">{isNew ? "Новая задача" : "Задача"}</h3>
         <input className="w-full bg-zinc-800 rounded px-3 py-2 mb-2" placeholder="Заголовок"
                value={form.title} onChange={e => set("title", e.target.value)} />
-        <textarea className="w-full bg-zinc-800 rounded px-3 py-2 mb-2" rows={4} placeholder="Описание (ТЗ)"
-               value={form.description} onChange={e => set("description", e.target.value)} />
+        {isNew ? (
+          <textarea className="w-full bg-zinc-800 rounded px-3 py-2 mb-2" rows={4} placeholder="Описание (ТЗ)"
+                 value={form.description} onChange={e => set("description", e.target.value)} />
+        ) : (
+          <div className="mb-3">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs uppercase opacity-60">Техническое задание</span>
+              {!editingTz && !pendingVer && (
+                <button onClick={() => { setEditingTz(true); setTzDraft(currentTz); }}
+                        className="text-xs text-amber-400 underline">Изменить ТЗ</button>
+              )}
+            </div>
+            {!editingTz && (
+              <div className="bg-zinc-800 rounded px-3 py-2 text-sm" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                {currentTz || <span className="opacity-50">— ТЗ не задано —</span>}
+              </div>
+            )}
+            {editingTz && (
+              <div>
+                <textarea className="w-full bg-zinc-800 rounded px-3 py-2" rows={5}
+                          value={tzDraft} onChange={e => setTzDraft(e.target.value)} />
+                <div className="flex gap-2 mt-1">
+                  <button onClick={proposeTz} disabled={tzBusy}
+                          className="px-3 py-1 rounded bg-amber-500 text-black text-sm font-semibold">
+                    {tzBusy ? "…" : "Предложить изменение"}</button>
+                  <button onClick={() => { setEditingTz(false); setTzDraft(""); }}
+                          className="px-3 py-1 rounded bg-zinc-700 text-sm">Отмена</button>
+                </div>
+              </div>
+            )}
+
+            {/* Баннер pending-версии */}
+            {pendingVer && (
+              <div className="mt-3 rounded border border-amber-500/40 bg-amber-500/5 p-2">
+                <div className="text-xs font-semibold text-amber-300 mb-1">
+                  Предложены изменения ТЗ · v{pendingVer.versionNo} · {pendingVer.proposedByName} · {fmtDT(pendingVer.createdAt)}
+                </div>
+                <DiffView oldText={currentTz} newText={pendingVer.content} />
+                {canDecide ? (
+                  <div className="flex gap-2 mt-2">
+                    <button onClick={() => decideTz(true)} className="px-3 py-1 rounded bg-emerald-600 text-white text-sm font-semibold">Принять</button>
+                    <button onClick={() => decideTz(false)} className="px-3 py-1 rounded bg-red-600 text-white text-sm font-semibold">Отклонить</button>
+                  </div>
+                ) : (
+                  <div className="text-xs opacity-60 mt-2">{isProposer ? "Ожидает подтверждения другой стороны" : "Решение принимает сторона задачи"}</div>
+                )}
+              </div>
+            )}
+
+            {/* История ТЗ */}
+            {versions.length > 0 && (
+              <div className="mt-3">
+                <div className="text-xs uppercase opacity-60 mb-1">История ТЗ</div>
+                {verLoading ? <div className="text-xs opacity-50">Загрузка…</div> : versions.slice().reverse().map(v => {
+                  // diff против предыдущей approved-версии (по version_no)
+                  const prevApproved = approvedVers.filter(a => a.versionNo < v.versionNo).slice(-1)[0] || null;
+                  const opened = openVerId === v.id;
+                  const stColor = v.status === "approved" ? "#6ee7a8" : v.status === "pending" ? "#d4af37" : "#f8a3a3";
+                  return (
+                    <div key={v.id} className="border-b border-white/5 py-1">
+                      <button onClick={() => setOpenVerId(opened ? null : v.id)} className="flex items-center gap-2 text-xs w-full text-left">
+                        <span style={{ color: stColor }}>●</span>
+                        <span className="opacity-80">v{v.versionNo}</span>
+                        <span className="opacity-60">{v.proposedByName}</span>
+                        <span className="opacity-40">{fmtDT(v.createdAt)}</span>
+                        <span className="opacity-50">{v.status}</span>
+                      </button>
+                      {opened && (
+                        <div className="mt-1">
+                          {prevApproved
+                            ? <DiffView oldText={prevApproved.content} newText={v.content} />
+                            : <DiffView oldText="" newText={v.content} />}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
           <select className="bg-zinc-800 rounded px-2 py-2" value={form.projectId} onChange={e => set("projectId", e.target.value)}>
             <option value="">Без проекта (личная)</option>
@@ -3116,6 +3316,60 @@ function TaskModal({ task, client, profile, projects, onClose, onSaved, showToas
           </select>
           <input type="date" className="bg-zinc-800 rounded px-2 py-2" value={form.dueDate || ""} onChange={e => set("dueDate", e.target.value)} />
         </div>
+
+        {!isNew && (
+          <div className="mt-4 border-t border-white/10 pt-3">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xs uppercase opacity-60">Обсуждение</span>
+              {openQuestions > 0 && (
+                <span className="text-xs font-semibold text-amber-300 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30">
+                  {openQuestions} {openQuestions === 1 ? "открытый вопрос" : "открытых вопросов"}
+                </span>
+              )}
+            </div>
+            {cmtLoading ? <div className="text-xs opacity-50">Загрузка…</div> :
+             comments.length === 0 ? <div className="text-xs opacity-50 mb-2">Пока нет сообщений</div> :
+             <div className="mb-2 max-h-60 overflow-y-auto">
+               {comments.map(c => (
+                 <div key={c.id} className="flex gap-2 py-2 border-b border-white/5">
+                   <UserAvatar name={c.authorName} size={26} />
+                   <div className="flex-1 min-w-0">
+                     <div className="flex items-center gap-2 flex-wrap">
+                       <span className="text-xs font-semibold text-zinc-100">{c.authorName}</span>
+                       <span className="text-[10px] opacity-50">{fmtDT(c.createdAt)}</span>
+                       {c.isQuestion && (
+                         <span className="text-[10px] px-1.5 py-0.5 rounded" style={{
+                           color: c.resolved ? "#6ee7a8" : "#d4af37",
+                           background: c.resolved ? "rgba(110,231,168,0.08)" : "rgba(212,175,55,0.10)",
+                           border: `1px solid ${c.resolved ? "rgba(110,231,168,0.25)" : "rgba(212,175,55,0.30)"}`,
+                         }}>{c.resolved ? "✓ вопрос решён" : "вопрос"}</span>
+                       )}
+                     </div>
+                     <p className="m-0 text-sm text-zinc-300" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.5 }}>{c.body}</p>
+                     {c.isQuestion && canResolveQ && (
+                       c.resolved
+                         ? <button onClick={() => toggleResolve(c.id, false)} className="text-[11px] text-zinc-500 underline mt-1">↩ Переоткрыть</button>
+                         : <button onClick={() => toggleResolve(c.id, true)} className="text-[11px] text-emerald-400 underline mt-1">✓ Пометить решённым</button>
+                     )}
+                   </div>
+                 </div>
+               ))}
+             </div>}
+            <div className="flex gap-2 items-end">
+              <textarea value={cmtText} onChange={e => setCmtText(e.target.value)} rows={2}
+                        onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) sendComment(); }}
+                        placeholder="Сообщение… (Ctrl+Enter — отправить)"
+                        className="flex-1 bg-zinc-800 rounded px-3 py-2 text-sm" style={{ resize: "none" }} />
+              <button onClick={sendComment} disabled={cmtSending || !cmtText.trim()}
+                      className="px-3 py-2 rounded bg-amber-500 text-black text-sm font-semibold whitespace-nowrap">
+                {cmtSending ? "…" : "Отправить"}</button>
+            </div>
+            <label className="flex items-center gap-1 text-xs mt-1 opacity-80">
+              <input type="checkbox" checked={cmtIsQuestion} onChange={e => setCmtIsQuestion(e.target.checked)} /> Это вопрос
+            </label>
+          </div>
+        )}
+
         <div className="flex justify-between mt-3">
           {!isNew ? <button onClick={() => confirmDel ? remove() : setConfirmDel(true)} className="text-red-400 text-sm">{confirmDel ? "Точно удалить?" : "Удалить"}</button> : <span />}
           <div className="flex gap-2">
@@ -3138,10 +3392,15 @@ function TasksBoard({ tasks, onOpen, onReload, client, profile, badge, showToast
     const t = tasks.find(x => x.id === taskId);
     if (!t || t.status === toStatus) return;
     try {
-      await updateTask(client, taskId, { status: toStatus });
+      await setTaskStatus(client, taskId, toStatus);
       await notifyTask(client, "task_status", taskId, profile.id);
       onReload();
-    } catch (e) { showToast("Ошибка смены статуса: " + (e.message || ""), "error"); onReload(); }
+    } catch (e) {
+      const m = e.message || "";
+      if (m.includes("only_author_can_complete")) showToast("В «Готово» переводит только автор задачи", "error");
+      else showToast("Ошибка смены статуса: " + m, "error");
+      onReload();
+    }
   };
   return (
     <div className="flex gap-3 overflow-x-auto">
@@ -3185,6 +3444,54 @@ function TasksView({ client, profile, projects, showToast }) {
     finally { setLoading(false); }
   }, [fProject, fStatus, onlyMine, client, profile, showToast]);
   useEffect(() => { reload(); }, [reload]);
+
+  // ── 6.4b: Realtime-подписка на project_tasks ──
+  // tick инкрементируется при realtime-событии по id открытой задачи -> модалка
+  // делает refetch версий/комментариев (дочерние таблицы не в publication).
+  const [openTaskTick, setOpenTaskTick] = useState(0);
+
+  // клиентский фолбэк-фильтр приватности: пускаем строку в состояние только если
+  // она проходит базовую проверку доступа (страховка поверх RLS на канале).
+  const canSeeRow = useCallback((row) => {
+    if (!row) return false;
+    if (profile?.role === "admin") return true;
+    if (row.project_id == null) {
+      // личная задача: видит автор или исполнитель
+      return row.author_id === profile.id || row.assigned_to === profile.id;
+    }
+    // проектная: видна, если проект уже в доступном списке (projects проп) ИЛИ
+    // пользователь — сторона задачи. Жёстче серверной RLS, но безопасно (не «течёт»).
+    return projects.some(p => p.id === row.project_id) || row.author_id === profile.id || row.assigned_to === profile.id;
+  }, [profile, projects]);
+
+  useEffect(() => {
+    const channel = client
+      .channel("project_tasks")
+      .on("postgres_changes", { event: "*", schema: "public", table: "project_tasks" }, (payload) => {
+        const { eventType, new: newRow, old: oldRow } = payload;
+        setTasks(prev => {
+          if (eventType === "DELETE") return prev.filter(t => t.id !== oldRow.id);
+          if (!canSeeRow(newRow)) {
+            // строка вне доступа — убираем, если вдруг была в состоянии
+            return prev.filter(t => t.id !== newRow.id);
+          }
+          const mapped = taskDbToJs(newRow); // payload не содержит *_name -> projectName/assigneeName будут null
+          // сохраняем уже известные denormalized-имена из текущего состояния (payload их не несёт)
+          const existing = prev.find(t => t.id === mapped.id);
+          const merged = existing
+            ? { ...mapped, projectName: mapped.projectName ?? existing.projectName, assigneeName: mapped.assigneeName ?? existing.assigneeName, authorName: mapped.authorName ?? existing.authorName }
+            : mapped;
+          const idx = prev.findIndex(t => t.id === merged.id);
+          if (idx === -1) return [merged, ...prev];
+          const copy = prev.slice(); copy[idx] = merged; return copy;
+        });
+        // точечный сигнал открытой карточке
+        const rid = (payload.new && payload.new.id) || (payload.old && payload.old.id);
+        if (editing && editing.id && rid === editing.id) setOpenTaskTick(t => t + 1);
+      })
+      .subscribe();
+    return () => { client.removeChannel(channel); };
+  }, [client, canSeeRow, editing]);
 
   const badge = (s) => TASK_STATUS_BADGE[s] || "bg-zinc-600";
 
@@ -3231,6 +3538,7 @@ function TasksView({ client, profile, projects, showToast }) {
          </table>
        </div>}
       {editing && <TaskModal task={editing} client={client} profile={profile} projects={projects}
+                             realtimeTick={openTaskTick}
                              onClose={() => setEditing(null)} onSaved={() => { setEditing(null); reload(); }}
                              showToast={showToast} />}
     </div>
