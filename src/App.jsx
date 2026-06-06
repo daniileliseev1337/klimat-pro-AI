@@ -2713,6 +2713,22 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
                         <span style={{fontSize:10,color:"#6b6b67"}}>{Math.round(paid/contract*100)}%</span>
                       </div>
                     )}
+                    {/* v2.1: индикатор «Моя доля» — только если проект делится на доли */}
+                    {(() => {
+                      const shs = (sharesByProject || {})[p.id] || [];
+                      if (!shs.length || !(contract > 0)) return null;
+                      const others = shs.reduce((acc, sh) => acc + (sh.shareKind === "amount"
+                        ? Number(sh.shareValue) || 0
+                        : contract * (Number(sh.shareValue) || 0) / 100), 0);
+                      const mine = Math.max(0, contract - others);
+                      const pct = Math.round(mine / contract * 100);
+                      return (
+                        <div style={{display:"flex",alignItems:"center",gap:6,marginTop:6,fontSize:11,color:"#6b6b67"}}>
+                          <Users size={12} strokeWidth={2.2}/>
+                          <span>Моя доля: <span style={{color:"#e8c860",fontWeight:600}}>{fmt(mine)} ({pct}%)</span></span>
+                        </div>
+                      );
+                    })()}
                     {/* ═══ КОНТАКТЫ ЗАКАЗЧИКА ═══
                         Показываются как маленькие кликабельные иконки. Каждая
                         открывает соответствующее приложение через спец-протокол:
