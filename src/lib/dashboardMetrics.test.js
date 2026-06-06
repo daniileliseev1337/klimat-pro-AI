@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { periodRange, prevPeriodRange, inPeriod, periodBalance, trendDir, granularityFor, financeSeries } from './dashboardMetrics.js';
+import { periodRange, prevPeriodRange, inPeriod, periodBalance, trendDir, granularityFor, financeSeries, expenseByCategory } from './dashboardMetrics.js';
 
 const NOW = new Date('2026-06-06T12:00:00');
 
@@ -95,5 +95,33 @@ describe('financeSeries (all — границы из данных)', () => {
   });
   it('пустые txs → пустой ряд', () => {
     expect(financeSeries([], { from:'0000-01-01', to:'9999-12-31', all:true }, 'month')).toEqual([]);
+  });
+});
+
+describe('expenseByCategory', () => {
+  const range = { from: '2026-06-01', to: '2026-07-01' };
+  const txs = [
+    { date: '2026-06-02', type: 'expense', amount: 50, category: 'Жильё / аренда' },
+    { date: '2026-06-03', type: 'expense', amount: 20, category: 'Транспорт' },
+    { date: '2026-06-04', type: 'expense', amount: 30, category: 'Жильё / аренда' },
+    { date: '2026-06-05', type: 'income',  amount: 999, category: 'Проектирование' }, // не расход
+    { date: '2026-05-31', type: 'expense', amount: 999, category: 'Транспорт' },       // вне периода
+  ];
+  it('группирует расходы по категориям и сортирует по убыванию', () => {
+    expect(expenseByCategory(txs, range)).toEqual([
+      { name: 'Жильё / аренда', value: 80 },
+      { name: 'Транспорт', value: 20 },
+    ]);
+  });
+  it('сворачивает хвост в «Прочее» при превышении maxSlices', () => {
+    const many = ['A','B','C','D','E','F','G'].map((c, i) => ({
+      date: '2026-06-10', type: 'expense', amount: (7 - i), category: c,
+    }));
+    const res = expenseByCategory(many, range, 6);
+    expect(res.length).toBe(6);
+    expect(res[5]).toEqual({ name: 'Прочее', value: 3 }); // F(2)+G(1) свёрнуты в Прочее
+  });
+  it('пустой результат при отсутствии расходов', () => {
+    expect(expenseByCategory([], range)).toEqual([]);
   });
 });
