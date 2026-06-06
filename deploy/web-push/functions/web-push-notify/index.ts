@@ -90,6 +90,35 @@ async function sendToUsers(userIds: string[], payload: object): Promise<number> 
   return sent;
 }
 
+// базовый список адресатов БЕЗ флаг-фильтра (для inbox): уникальные, минус инициатор
+function baseIds(ids: (string | null | undefined)[], initiator: string | undefined): string[] {
+  return [...new Set(ids.filter(Boolean).filter((x) => x !== initiator))] as string[];
+}
+
+// все одобренные минус владелец, БЕЗ флаг-фильтра (база broadcast для inbox)
+async function baseApproved(ownerId: string | undefined): Promise<string[]> {
+  const r = await rest(`profiles?approved=eq.true&select=id`);
+  const rows = await r.json();
+  return Array.isArray(rows) ? rows.map((p: { id: string }) => p.id).filter((id: string) => id !== ownerId) : [];
+}
+
+// inbox: батч-вставка durable-строк всем адресатам. Сбой логируется, push не блокирует.
+async function insertInbox(userIds: string[], n: { type: string; title: string; body: string; url: string }): Promise<number> {
+  if (!userIds.length) return 0;
+  const rows = userIds.map((uid) => ({ user_id: uid, type: n.type, title: n.title, body: n.body, url: n.url }));
+  try {
+    const r = await rest("notifications", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify(rows),
+    });
+    if (!r.ok) console.warn("inbox insert failed", r.status, await r.text());
+  } catch (e) {
+    console.warn("inbox insert error", String(e));
+  }
+  return rows.length;
+}
+
 const UUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 
 async function loadTask(taskId: string) {
@@ -110,22 +139,24 @@ Deno.serve(async (req: Request) => {
       if (!taskId || !UUID.test(taskId)) return j({ error: "valid taskId (uuid) required" }, 400);
       const task = await loadTask(taskId);
       if (!task) return j({ ok: true, note: "task not found" });
-      let ids: string[] = [];
+      let base: string[] = [];
       let body = "";
       if (type === "task_assigned") {
-        ids = await recipients([task.assigned_to], initiator, "notif_task");
+        base = baseIds([task.assigned_to], initiator);
         body = `📌 Вам назначена задача: ${task.title}`;
       } else if (type === "task_status") {
-        ids = await recipients([task.author_id, task.assigned_to], initiator, "notif_task");
+        base = baseIds([task.author_id, task.assigned_to], initiator);
         body = `🔄 Задача «${task.title}» → ${task.status}`;
       } else {
         const members = await projectMembers(task.project_id);
         const owner = await projectOwner(task.project_id);
-        ids = await recipients([...members, owner].filter((x) => x !== task.assigned_to), initiator, "notif_task");
+        base = baseIds([...members, owner].filter((x) => x !== task.assigned_to), initiator);
         body = `🆕 Новая задача в проекте: ${task.title}`;
       }
+      await insertInbox(base, { type, title: "КЛИМАТ-ПРО", body, url: "/" });
+      const ids = await recipients(base, undefined, "notif_task");
       const sent = await sendToUsers(ids, { title: "КЛИМАТ-ПРО", body, url: "/", tag: `task-${taskId}` });
-      return j({ ok: true, sent });
+      return j({ ok: true, sent, inbox: base.length });
     }
 
     // --- deadline (cron): задачи с due_date в ближайшие сутки, не финальные ---
@@ -139,20 +170,27 @@ Deno.serve(async (req: Request) => {
       const tasks = await tr.json();
       if (!Array.isArray(tasks)) return j({ ok: true, sent: 0 });
       let total = 0;
+      let inbox = 0;
       for (const t of tasks) {
-        const ids = await recipients([t.author_id, t.assigned_to], undefined, "notif_deadline");
-        total += await sendToUsers(ids, { title: "КЛИМАТ-ПРО", body: `⏰ Срок задачи «${t.title}»: ${t.due_date}`, url: "/", tag: `task-${t.id}` });
+        const base = baseIds([t.author_id, t.assigned_to], undefined);
+        const body = `⏰ Срок задачи «${t.title}»: ${t.due_date}`;
+        await insertInbox(base, { type: "deadline", title: "КЛИМАТ-ПРО", body, url: "/" });
+        inbox += base.length;
+        const ids = await recipients(base, undefined, "notif_deadline");
+        total += await sendToUsers(ids, { title: "КЛИМАТ-ПРО", body, url: "/", tag: `task-${t.id}` });
       }
-      return j({ ok: true, sent: total });
+      return j({ ok: true, sent: total, inbox });
     }
 
     // --- legacy с явным адресатом ---
     if (type === "project_taken" || type === "team_invite") {
       const flag = type === "project_taken" ? "notif_project_taken" : "notif_team_invite";
-      const ids = await recipients([b.recipientId as string], initiator, flag);
+      const base = baseIds([b.recipientId as string], initiator);
       const body = type === "project_taken" ? "✅ Ваш проект взят в работу" : "👥 Вас пригласили в команду проекта";
+      await insertInbox(base, { type, title: "КЛИМАТ-ПРО", body, url: "/" });
+      const ids = await recipients(base, undefined, flag);
       const sent = await sendToUsers(ids, { title: "КЛИМАТ-ПРО", body, url: "/" });
-      return j({ ok: true, sent });
+      return j({ ok: true, sent, inbox: base.length });
     }
 
     // --- комментарий/вопрос по задаче ---
@@ -162,16 +200,22 @@ Deno.serve(async (req: Request) => {
       const task = await loadTask(taskId);
       if (!task) return j({ ok: true, note: "task not found" });
       const members = await projectMembers(task.project_id);
-      const ids = await recipients([task.author_id, task.assigned_to, ...members], initiator, "notif_comment");
-      const sent = await sendToUsers(ids, { title: "КЛИМАТ-ПРО", body: `💬 Новый комментарий: ${task.title}`, url: "/", tag: `task-${taskId}` });
-      return j({ ok: true, sent });
+      const base = baseIds([task.author_id, task.assigned_to, ...members], initiator);
+      const body = `💬 Новый комментарий: ${task.title}`;
+      await insertInbox(base, { type: "comment", title: "КЛИМАТ-ПРО", body, url: "/" });
+      const ids = await recipients(base, undefined, "notif_comment");
+      const sent = await sendToUsers(ids, { title: "КЛИМАТ-ПРО", body, url: "/", tag: `task-${taskId}` });
+      return j({ ok: true, sent, inbox: base.length });
     }
 
     // --- broadcast: новый проект в поиске исполнителя ---
     if (type === "project_published") {
-      const ids = await broadcastApproved(b.ownerId as string, "notif_new_project");
-      const sent = await sendToUsers(ids, { title: "КЛИМАТ-ПРО", body: "🆕 Новый проект в поиске исполнителя", url: "/" });
-      return j({ ok: true, sent });
+      const base = await baseApproved(b.ownerId as string);
+      const body = "🆕 Новый проект в поиске исполнителя";
+      await insertInbox(base, { type: "project_published", title: "КЛИМАТ-ПРО", body, url: "/" });
+      const ids = await recipients(base, undefined, "notif_new_project");
+      const sent = await sendToUsers(ids, { title: "КЛИМАТ-ПРО", body, url: "/" });
+      return j({ ok: true, sent, inbox: base.length });
     }
 
     return j({ ok: true, note: "unknown type" });

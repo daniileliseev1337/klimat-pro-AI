@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "./lib/supabase";
 import { diffLines } from "./lib/lineDiff";
 import { isPushSupported, getPushState, enablePush, disablePush } from "./lib/push";
+import NotificationBell from "./components/NotificationBell";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, FolderKanban, Wallet, BarChart3,
@@ -6981,6 +6982,14 @@ export default function App() {
         {/* Правая часть: кнопки действий и информация о пользователе */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: isMobile ? "flex-start" : "flex-end", gap: 8 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", justifyContent: isMobile ? "flex-start" : "flex-end" }}>
+            {/* Колокольчик Центра уведомлений */}
+            <NotificationBell
+              client={supabase}
+              userId={profile?.id}
+              showToast={showToast}
+              isMobile={isMobile}
+              onNavigate={(url) => { if (url && url.startsWith("/tasks")) setTab("tasks"); }}
+            />
             {/* Кнопка отчёта — акцентная, в фирменном цвете */}
             <button
               onClick={() => setReportModal(true)}
