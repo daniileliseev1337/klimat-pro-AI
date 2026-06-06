@@ -81,7 +81,7 @@ const STAGE_META = {
   "КП выслано":       { color:"#93c5fd", progress:25  },
   "Договор подписан": { color:"#d4af37", progress:40  },
   "В работе":         { color:"#d4af37", progress:65  },
-  "Сдан заказчику":   { color:"#6ee7a8", progress:85  },
+  "Сдан заказчику":   { color:"#2dd4bf", progress:85  },
   "Оплачен":          { color:"#6ee7a8", progress:100 },
   "Архив":            { color:"#1c1c1a", progress:100 },
 };
