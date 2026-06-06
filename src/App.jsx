@@ -2280,9 +2280,9 @@ function Dashboard({ projects, txs }) {
 // ════════════════════════════════════════════════════════════════════════════
 // PROJECTS — список + CRUD через Supabase
 // ════════════════════════════════════════════════════════════════════════════
-function Projects({ projects, setProjects, clients, client, profile, ownerId, showToast }) {
+function Projects({ projects, setProjects, clients, client, profile, ownerId, showToast, initialStageFilter = "Активные" }) {
   const [modal, setModal]             = useState(null);
-  const [stageFilter, setStageFilter] = useState("Активные");
+  const [stageFilter, setStageFilter] = useState(initialStageFilter);
   const [confirmDel, setConfirmDel]   = useState(null);
   const [saving, setSaving]           = useState(false);
 
@@ -6710,6 +6710,7 @@ export default function App() {
   const [profile, setProfile] = useState(null);
 
   const [tab, setTab]               = useState("dashboard");
+  const [pendingStageFilter, setPendingStageFilter] = useState("Активные");
   const [projects, setProjects]     = useState([]);
   const [txs, setTxs]               = useState([]);
   const [tasks, setTasks]           = useState([]);
@@ -7187,7 +7188,7 @@ export default function App() {
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
           >
             {tab === "dashboard" && <Dashboard projects={projects} txs={txs} clients={clients} profile={profile} />}
-            {tab === "projects" && <Projects projects={projects} setProjects={setProjects} clients={clients} client={supabase} profile={profile} ownerId={profile.id} showToast={showToast} />}
+            {tab === "projects" && <Projects projects={projects} setProjects={setProjects} clients={clients} client={supabase} profile={profile} ownerId={profile.id} showToast={showToast} initialStageFilter={pendingStageFilter} />}
             {tab === "tasks" && <TasksView client={supabase} profile={profile} projects={projects} showToast={showToast} />}
             {tab === "clients" && <ClientsPage clients={clients} setClients={setClients} projects={projects} client={supabase} ownerId={profile.id} showToast={showToast} />}
             {tab === "finance" && <Finance txs={txs} setTxs={setTxs} client={supabase} ownerId={profile.id} showToast={showToast} />}
