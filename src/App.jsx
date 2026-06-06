@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "./lib/supabase";
 import { diffLines } from "./lib/lineDiff";
 import { isPushSupported, getPushState, enablePush, disablePush } from "./lib/push";
+import { periodRange, prevPeriodRange, granularityFor, periodBalance, trendDir, financeSeries, expenseByCategory, receivables, myTasks } from "./lib/dashboardMetrics";
 import NotificationBell from "./components/NotificationBell";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -2110,6 +2111,7 @@ function CashflowCard({ series, tt }) {
 }
 
 function MyTasksCard({ data }) {
+  const today = todayStr();
   const rows = [...data.overdue, ...data.today];
   return (
     <Card>
@@ -2119,7 +2121,7 @@ function MyTasksCard({ data }) {
       {rows.length === 0
         ? <p style={{ color: "#62646b", fontSize: 13, margin: 0 }}>Нет горящих задач</p>
         : rows.map(t => {
-          const od = t.dueDate < todayStr();
+          const od = t.dueDate < today;
           return (
             <div key={t.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
               <span style={{ color: od ? "#f8a3a3" : "#f7f8f8", fontSize: 13, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.title}</span>
@@ -2134,238 +2136,158 @@ function MyTasksCard({ data }) {
 // ════════════════════════════════════════════════════════════════════════════
 // DASHBOARD — главная страница с KPI и графиками
 // ════════════════════════════════════════════════════════════════════════════
-function Dashboard({ projects, txs }) {
+function Dashboard({ projects, txs, tasks, profile, onDrillStage }) {
+  const [period, setPeriod] = useState("month");
+  const range = periodRange(period);
+  const prevRange = prevPeriodRange(period);
+  const gran = granularityFor(period);
+
   const active = projects.filter(p => !["Оплачен", "Архив"].includes(p.stage));
   const portfolio = projects.filter(p => p.stage !== "Архив");
   const totalContract = portfolio.reduce((s, p) => s + (+p.contractSum || 0), 0);
   const totalPaid = portfolio.reduce((s, p) => s + (+p.paidAmount || 0), 0);
 
-  const now = new Date();
-  const mk = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const mTxs = txs.filter(t => t.date.startsWith(mk));
-  const mIncome = mTxs.filter(t => t.type === "income").reduce((s, t) => s + (+t.amount || 0), 0);
-  const mExpense = mTxs.filter(t => t.type === "expense").reduce((s, t) => s + (+t.amount || 0), 0);
+  const bal = periodBalance(txs, range);
+  const prevBal = prevRange ? periodBalance(txs, prevRange).balance : null;
+  const balanceTrend = trendDir(bal.balance, prevBal);
 
-  // Сравнение с прошлым месяцем для индикатора тренда
-  const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const prevMk = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, "0")}`;
-  const prevTxs = txs.filter(t => t.date.startsWith(prevMk));
-  const prevIncome = prevTxs.filter(t => t.type === "income").reduce((s, t) => s + (+t.amount || 0), 0);
-  const prevExpense = prevTxs.filter(t => t.type === "expense").reduce((s, t) => s + (+t.amount || 0), 0);
-  const prevBalance = prevIncome - prevExpense;
-  const curBalance = mIncome - mExpense;
-  const balanceTrend = prevBalance === 0 ? null : (curBalance > prevBalance ? "up" : "down");
+  const series = financeSeries(txs, range, gran);
+  const expCats = expenseByCategory(txs, range);
+  const debt = receivables(projects);
+  const myT = myTasks(tasks || [], todayStr());
 
   const stageData = PROJECT_STAGES.slice(0, -1)
     .map(s => ({ name: s, value: projects.filter(p => p.stage === s).length, fill: STAGE_META[s].color }))
     .filter(d => d.value > 0);
-
-  const months6 = Array.from({ length: 6 }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
-    const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    const inc = txs.filter(t => t.type === "income" && t.date.startsWith(k)).reduce((s, t) => s + (+t.amount || 0), 0);
-    const exp = txs.filter(t => t.type === "expense" && t.date.startsWith(k)).reduce((s, t) => s + (+t.amount || 0), 0);
-    return { label: d.toLocaleDateString("ru-RU", { month: "short" }), inc, exp };
-  });
 
   const todayS = todayStr();
   const overdue = active.filter(p => p.deadline && p.deadline < todayS && p.stage !== "Сдан заказчику");
   const upcoming = active.filter(p => p.deadline && p.deadline >= todayS)
     .sort((a, b) => a.deadline.localeCompare(b.deadline)).slice(0, 4);
 
-  // Тёмная стилизация для всплывающих подсказок графиков
   const tt = {
-    background: "#1c1c1a",
-    border: "1px solid rgba(255,255,255,0.10)",
-    borderRadius: 10,
-    fontSize: 12,
-    color: "#f7f8f8",
-    boxShadow: "0 12px 28px rgba(0,0,0,0.5)",
-    padding: "8px 12px",
+    background: "#1c1c1a", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 10,
+    fontSize: 12, color: "#f7f8f8", boxShadow: "0 12px 28px rgba(0,0,0,0.5)", padding: "8px 12px",
   };
 
-  // Каскадная анимация появления — каждый элемент появляется со своей задержкой
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.06 } },
-  };
-  const itemVariants = {
-    hidden: { opacity: 0, y: 12 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } },
-  };
+  const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.06 } } };
+  const itemVariants = { hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } } };
+
+  const PERIODS = [["month", "Месяц"], ["quarter", "Квартал"], ["year", "Год"], ["all", "Всё"]];
 
   return (
-    <motion.div
-      style={{ display: "flex", flexDirection: "column", gap: 16 }}
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-    >
-      {/* Главные KPI — четыре стеклянные карточки */}
+    <motion.div style={{ display: "flex", flexDirection: "column", gap: 16 }} variants={containerVariants} initial="hidden" animate="visible">
+
+      {/* Шапка с период-селектором */}
+      <motion.div variants={itemVariants} style={{ display: "flex", justifyContent: "flex-end" }}>
+        <div style={{ display: "flex", gap: 4, background: "#1c1c1a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: 3 }}>
+          {PERIODS.map(([key, label]) => (
+            <button key={key} onClick={() => setPeriod(key)} style={{
+              border: "none", cursor: "pointer", fontSize: 12, padding: "5px 12px", borderRadius: 7,
+              background: period === key ? "#d4af37" : "transparent",
+              color: period === key ? "#121214" : "#9b9ca4",
+              fontWeight: period === key ? 600 : 400,
+            }}>{label}</button>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* KPI ×4 */}
       <motion.div variants={itemVariants} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
-        <KpiCard
-          label="Активных проектов"
-          value={active.length}
-          Icon={FolderKanban}
-          color="#d4af37"
-          sub={`всего: ${projects.length}`}
-        />
-        <KpiCard
-          label="Портфель"
-          value={totalContract}
-          Icon={Briefcase}
-          color="#d4af37"
-          format={fmt}
-        />
-        <KpiCard
-          label="Получено"
-          value={totalPaid}
-          Icon={BadgeCheck}
-          color="#6ee7a8"
-          format={fmt}
-          sub={`осталось: ${fmt(totalContract - totalPaid)}`}
-        />
-        <KpiCard
-          label="Баланс месяца"
-          value={curBalance}
-          Icon={Wallet}
-          color={curBalance >= 0 ? "#6ee7a8" : "#f8a3a3"}
-          format={fmt}
-          sub={`доходы ${fmt(mIncome)}`}
-          trend={balanceTrend}
-        />
+        <div onClick={() => onDrillStage && onDrillStage("Активные")} style={{ cursor: onDrillStage ? "pointer" : "default" }}>
+          <KpiCard label="Активных проектов" value={active.length} Icon={FolderKanban} color="#d4af37" sub={`всего: ${projects.length}`} />
+        </div>
+        <KpiCard label="Портфель" value={totalContract} Icon={Briefcase} color="#d4af37" format={fmt} />
+        <KpiCard label="Получено" value={totalPaid} Icon={BadgeCheck} color="#6ee7a8" format={fmt} sub={`осталось: ${fmt(totalContract - totalPaid)}`} />
+        <KpiCard label="Баланс за период" value={bal.balance} Icon={Wallet} color={bal.balance >= 0 ? "#6ee7a8" : "#f8a3a3"} format={fmt} sub={`доходы ${fmt(bal.income)}`} trend={balanceTrend} />
       </motion.div>
 
-      {/* Два графика рядом */}
-      <motion.div variants={itemVariants} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
-        <Card>
-          <SectionTitle icon={<BarChart3 size={13} />}>Проекты по стадиям</SectionTitle>
-          {stageData.length > 0
-            ? <ResponsiveContainer width="100%" height={210}>
-              <PieChart>
-                <Pie data={stageData} cx="50%" cy="50%" innerRadius={56} outerRadius={84} dataKey="value" paddingAngle={3}>
-                  {stageData.map((e, i) => <Cell key={i} fill={e.fill} stroke="transparent" />)}
-                </Pie>
-                <Tooltip contentStyle={tt} itemStyle={{ color: "#fafaf7" }} formatter={(v, n) => [`${v} проектов`, n]} />
-                <Legend
-                  iconType="circle"
-                  iconSize={8}
-                  formatter={v => <span style={{ fontSize: 10, color: "#9b9ca4" }}>{v}</span>}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            : <Empty text="Добавь первый проект" />}
-        </Card>
-        <Card>
-          <SectionTitle icon={<TrendingUp size={13} />}>Доходы и расходы — 6 мес.</SectionTitle>
-          {months6.some(m => m.inc > 0 || m.exp > 0)
-            ? <ResponsiveContainer width="100%" height={210}>
-              <BarChart data={months6} barSize={14}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                <XAxis dataKey="label" tick={{ fill: "#62646b", fontSize: 10 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "#62646b", fontSize: 10 }} axisLine={false} tickLine={false}
-                  tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}к` : v} />
-                <Tooltip contentStyle={tt} itemStyle={{ color: "#fafaf7" }} formatter={(v, n) => [fmt(v), n === "inc" ? "Доходы" : "Расходы"]} />
-                <Bar dataKey="inc" name="inc" fill="#d4af37" radius={[5, 5, 0, 0]} />
-                <Bar dataKey="exp" name="exp" fill="#f8a3a3" radius={[5, 5, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-            : <Empty text="Добавь первые финансовые записи" />}
-        </Card>
-      </motion.div>
-
-      {/* Дедлайны: просроченные и предстоящие */}
-      <motion.div variants={itemVariants} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
-        <Card>
-          <SectionTitle icon={<AlertTriangle size={13} />}>Просроченные дедлайны</SectionTitle>
-          {overdue.length === 0
-            ? <p style={{ color: "#62646b", fontSize: 13, margin: 0 }}>Всё в срок</p>
-            : overdue.map(p => (
-              <div key={p.id} style={{
-                display: "flex", justifyContent: "space-between",
-                padding: "8px 0",
-                borderBottom: "1px solid rgba(255,255,255,0.04)",
-              }}>
-                <span style={{
-                  color: "#f8a3a3", fontSize: 13, fontWeight: 500, flex: 1,
-                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                }}>{p.name}</span>
-                <span style={{ color: "#62646b", fontSize: 11, flexShrink: 0, marginLeft: 8 }}>{fmtD(p.deadline)}</span>
-              </div>
-            ))}
-        </Card>
-        <Card>
-          <SectionTitle icon={<Calendar size={13} />}>Ближайшие дедлайны</SectionTitle>
-          {upcoming.length === 0
-            ? <p style={{ color: "#62646b", fontSize: 13, margin: 0 }}>Нет запланированных дедлайнов</p>
-            : upcoming.map(p => (
-              <div key={p.id} style={{
-                display: "flex", justifyContent: "space-between",
-                padding: "8px 0",
-                borderBottom: "1px solid rgba(255,255,255,0.04)",
-              }}>
-                <span style={{
-                  color: "#f7f8f8", fontSize: 13, flex: 1,
-                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                }}>{p.name}</span>
-                <span style={{ color: "#e8c860", fontSize: 11, flexShrink: 0, marginLeft: 8 }}>{fmtD(p.deadline)}</span>
-              </div>
-            ))}
-        </Card>
-      </motion.div>
-
-      {/* Финансы текущего месяца с прогресс-баром */}
+      {/* ЗОНА: Требует внимания */}
       <motion.div variants={itemVariants}>
-        <Card>
-          <SectionTitle icon={<Wallet size={13} />}>Финансы текущего месяца</SectionTitle>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 16 }}>
-            {[
-              { label: "Доходы", val: mIncome, color: "#e8c860" },
-              { label: "Расходы", val: mExpense, color: "#f8a3a3" },
-              { label: "Баланс", val: curBalance, color: curBalance >= 0 ? "#6ee7a8" : "#f8a3a3" },
-            ].map(r => (
-              <div key={r.label}>
-                <Label>{r.label}</Label>
-                <div style={{
-                  fontSize: 18, fontWeight: 700,
-                  color: r.color, marginTop: 6,
-                  letterSpacing: "-0.02em",
-                  fontVariantNumeric: "tabular-nums",
-                }}>{fmt(r.val)}</div>
-              </div>
-            ))}
-          </div>
-          {mIncome > 0 && (
-            <div style={{ marginTop: 18 }}>
-              <div style={{
-                display: "flex", justifyContent: "space-between",
-                fontSize: 11, color: "#62646b", marginBottom: 6,
-              }}>
-                <span>Расходы от доходов</span>
-                <span>{Math.min(100, Math.round(mExpense / mIncome * 100))}%</span>
-              </div>
-              <div style={{
-                height: 6, background: "rgba(255,255,255,0.06)",
-                borderRadius: 3, overflow: "hidden",
-              }}>
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${Math.min(100, mExpense / mIncome * 100)}%` }}
-                  transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
-                  style={{
-                    height: "100%",
-                    background: "linear-gradient(90deg, #d4af37, #e8c860)",
-                    borderRadius: 3,
-                  }}
-                />
-              </div>
-            </div>
-          )}
-        </Card>
+        <p style={ZONE_TITLE("#f8a3a3")}>⚠ Требует внимания</p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
+          <Card>
+            <SectionTitle icon={<AlertTriangle size={13} />}>Просроченные дедлайны проектов</SectionTitle>
+            {overdue.length === 0
+              ? <p style={{ color: "#62646b", fontSize: 13, margin: 0 }}>Всё в срок</p>
+              : overdue.map(p => (
+                <div key={p.id} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                  <span style={{ color: "#f8a3a3", fontSize: 13, fontWeight: 500, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
+                  <span style={{ color: "#62646b", fontSize: 11, flexShrink: 0, marginLeft: 8 }}>{fmtD(p.deadline)}</span>
+                </div>
+              ))}
+          </Card>
+          <MyTasksCard data={myT} />
+        </div>
       </motion.div>
+
+      {/* ЗОНА: Финансы */}
+      <motion.div variants={itemVariants}>
+        <p style={ZONE_TITLE("#e8c860")}>💰 Финансы · за выбранный период</p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginBottom: 16 }}>
+          <Card>
+            <SectionTitle icon={<TrendingUp size={13} />}>Доходы и расходы</SectionTitle>
+            {series.some(m => m.inc > 0 || m.exp > 0)
+              ? <ResponsiveContainer width="100%" height={210}>
+                  <BarChart data={series} barSize={14}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fill: "#62646b", fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: "#62646b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}к` : v} />
+                    <Tooltip contentStyle={tt} itemStyle={{ color: "#fafaf7" }} formatter={(v, n) => [fmt(v), n === "inc" ? "Доходы" : "Расходы"]} />
+                    <Bar dataKey="inc" name="inc" fill="#d4af37" radius={[5, 5, 0, 0]} />
+                    <Bar dataKey="exp" name="exp" fill="#f8a3a3" radius={[5, 5, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              : <Empty text="Нет финансовых записей за период" />}
+          </Card>
+          <CashflowCard series={series} tt={tt} />
+          <ExpenseByCategoryCard data={expCats} tt={tt} />
+        </div>
+        <ReceivablesCard data={debt} />
+      </motion.div>
+
+      {/* ЗОНА: Проекты */}
+      <motion.div variants={itemVariants}>
+        <p style={ZONE_TITLE("#93c5fd")}>📁 Проекты</p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
+          <Card>
+            <SectionTitle icon={<BarChart3 size={13} />}>Проекты по стадиям</SectionTitle>
+            {stageData.length > 0
+              ? <ResponsiveContainer width="100%" height={210}>
+                  <PieChart>
+                    <Pie data={stageData} cx="50%" cy="50%" innerRadius={56} outerRadius={84} dataKey="value" paddingAngle={3}
+                      onClick={(e) => onDrillStage && e && e.name && onDrillStage(e.name)} style={{ cursor: onDrillStage ? "pointer" : "default" }}>
+                      {stageData.map((e, i) => <Cell key={i} fill={e.fill} stroke="transparent" />)}
+                    </Pie>
+                    <Tooltip contentStyle={tt} itemStyle={{ color: "#fafaf7" }} formatter={(v, n) => [`${v} проектов`, n]} />
+                    <Legend iconType="circle" iconSize={8} formatter={v => <span style={{ fontSize: 10, color: "#9b9ca4" }}>{v}</span>} />
+                  </PieChart>
+                </ResponsiveContainer>
+              : <Empty text="Добавь первый проект" />}
+          </Card>
+          <Card>
+            <SectionTitle icon={<Calendar size={13} />}>Ближайшие дедлайны</SectionTitle>
+            {upcoming.length === 0
+              ? <p style={{ color: "#62646b", fontSize: 13, margin: 0 }}>Нет запланированных дедлайнов</p>
+              : upcoming.map(p => (
+                <div key={p.id} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                  <span style={{ color: "#f7f8f8", fontSize: 13, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
+                  <span style={{ color: "#e8c860", fontSize: 11, flexShrink: 0, marginLeft: 8 }}>{fmtD(p.deadline)}</span>
+                </div>
+              ))}
+          </Card>
+        </div>
+      </motion.div>
+
     </motion.div>
   );
 }
+
+// Заголовок зоны дашборда
+const ZONE_TITLE = (color) => ({
+  fontSize: 11, fontWeight: 600, color, letterSpacing: "0.08em",
+  margin: "0 0 10px", textTransform: "uppercase",
+});
 
 // ════════════════════════════════════════════════════════════════════════════
 // PROJECTS — список + CRUD через Supabase
@@ -7277,7 +7199,7 @@ export default function App() {
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
           >
-            {tab === "dashboard" && <Dashboard projects={projects} txs={txs} clients={clients} profile={profile} />}
+            {tab === "dashboard" && <Dashboard projects={projects} txs={txs} tasks={tasks} profile={profile} onDrillStage={(stage) => { setPendingStageFilter(stage); setTab("projects"); }} />}
             {tab === "projects" && <Projects projects={projects} setProjects={setProjects} clients={clients} client={supabase} profile={profile} ownerId={profile.id} showToast={showToast} initialStageFilter={pendingStageFilter} />}
             {tab === "tasks" && <TasksView client={supabase} profile={profile} projects={projects} showToast={showToast} />}
             {tab === "clients" && <ClientsPage clients={clients} setClients={setClients} projects={projects} client={supabase} ownerId={profile.id} showToast={showToast} />}
