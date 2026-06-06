@@ -26,9 +26,13 @@ echo "A=$A B=$B"
 [ -n "$A" ] && [ -n "$B" ] || { echo "NEED_TWO_APPROVED_USERS"; exit 1; }
 JA="$(sign "$A")"; JB="$(sign "$B")"
 
+# подчистим возможные остатки прошлых прогонов (идемпотентность)
+docker exec -i supabase-db psql -U postgres -d postgres -c "delete from public.notifications where type='selftest';" >/dev/null
+
 # тестовая строка для A — вставляем как postgres (service role обходит RLS; клиенту insert запрещён)
+# grep -Eom1 извлекает ровно UUID (psql -At к INSERT...RETURNING печатает ещё тег "INSERT 0 1")
 NID=$(docker exec -i supabase-db psql -U postgres -d postgres -At -c \
-  "insert into public.notifications(user_id,type,title,body,url) values ('$A','selftest','КЛИМАТ-ПРО','selftest inbox','/') returning id;")
+  "insert into public.notifications(user_id,type,title,body,url) values ('$A','selftest','КЛИМАТ-ПРО','selftest inbox','/') returning id;" | grep -Eom1 '[0-9a-f-]{36}')
 echo "NID=$NID"
 
 echo "== B читает уведомление A (ожидаем []) =="
