@@ -63,6 +63,8 @@ export function periodBalance(txs, range) {
   return { income, expense, balance: income - expense };
 }
 
+// 'up' | 'down' | null. null означает «индикатор тренда не показываем»:
+// и когда предыдущего периода нет (prev == null), и когда значения равны.
 export function trendDir(cur, prev) {
   if (prev == null) return null;
   if (cur > prev) return 'up';
@@ -92,7 +94,7 @@ export function financeSeries(txs, range, granularity) {
     const dates = txs.map(t => t.date).filter(Boolean).sort();
     startStr = dates[0].slice(0, 8) + '01';            // первое число месяца первой транзакции
     const last = new Date(dates[dates.length - 1] + 'T00:00:00');
-    last.setMonth(last.getMonth() + 1); last.setDate(1); // первое число следующего месяца после последней
+    last.setDate(1); last.setMonth(last.getMonth() + 1); // первое число следующего месяца после последней
     endStr = ymd(last.getFullYear(), last.getMonth() + 1, 1);
   }
   const start = new Date(startStr + 'T00:00:00');
@@ -150,6 +152,8 @@ export function receivables(projects) {
 const TASK_DONE = ['Готово', 'Отменена'];
 
 // tasks предполагаются уже «моими» (загружены с фильтром assignedTo на сервере).
+// Возвращает только просроченные (dueDate < today) и сегодняшние (dueDate === today) активные задачи.
+// Будущие задачи намеренно не включаются — блок дашборда показывает только требующие внимания сейчас.
 export function myTasks(tasks, today) {
   const active = tasks.filter(t => !TASK_DONE.includes(t.status) && t.dueDate);
   const overdue = active.filter(t => t.dueDate < today).sort((a, b) => a.dueDate.localeCompare(b.dueDate));

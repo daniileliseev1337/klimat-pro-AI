@@ -28,6 +28,10 @@ describe('prevPeriodRange', () => {
   it('для "всё" предыдущего периода нет', () => {
     expect(prevPeriodRange('all', NOW)).toBeNull();
   });
+  it('предыдущий квартал с переходом через год (Q1 → Q4 прошлого)', () => {
+    expect(prevPeriodRange('quarter', new Date('2026-02-15T00:00:00')))
+      .toEqual({ from: '2025-10-01', to: '2026-01-01' });
+  });
 });
 
 const TXS = [
@@ -95,6 +99,19 @@ describe('financeSeries (all — границы из данных)', () => {
   });
   it('пустые txs → пустой ряд', () => {
     expect(financeSeries([], { from:'0000-01-01', to:'9999-12-31', all:true }, 'month')).toEqual([]);
+  });
+  it('последняя транзакция 31-го числа не порождает лишний пустой бакет (I-1 регрессия)', () => {
+    // 2026-01-31: если сначала setMonth(+1) → 31 фев → 3 мар → setDate(1) → 1 мар (лишний бакет).
+    // Правильный порядок: setDate(1) затем setMonth(+1) → 1 фев → эндпоинт именно февраль.
+    const txs = [
+      { date: '2025-12-05', type: 'income', amount: 50 },
+      { date: '2026-01-31', type: 'income', amount: 70 },
+    ];
+    const series = financeSeries(txs, { from:'0000-01-01', to:'9999-12-31', all:true }, 'month');
+    // Ожидаем ровно 2 бакета: дек-2025 и янв-2026. Лишний фев (или мар) не должен появляться.
+    expect(series.length).toBe(2);
+    expect(series[0].label).toBe('дек');
+    expect(series[1].label).toBe('янв');
   });
 });
 
