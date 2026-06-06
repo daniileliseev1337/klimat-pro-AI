@@ -14,7 +14,7 @@ function timeAgo(iso) {
   const d = Math.floor(h / 24); return `${d} дн назад`;
 }
 
-export default function NotificationBell({ client, userId, onNavigate, showToast }) {
+export default function NotificationBell({ client, userId, onNavigate, showToast, isMobile }) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
   const [unread, setUnread] = useState(0);
@@ -80,6 +80,17 @@ export default function NotificationBell({ client, userId, onNavigate, showToast
     color: "#9b9ca4", display: "flex", alignItems: "center", gap: 6, transition: "all 0.18s", fontFamily: "inherit",
   };
 
+  // на мобильном колокольчик у левого края — открываем панель вправо (left:0),
+  // на десктопе кнопки справа — открываем влево (right:0); ширину клампим по вьюпорту
+  const panelStyle = {
+    position: "absolute", top: "calc(100% + 8px)",
+    ...(isMobile ? { left: 0 } : { right: 0 }),
+    width: isMobile ? "min(360px, calc(100vw - 24px))" : 360,
+    maxHeight: 460, overflowY: "auto", zIndex: 80, background: "#101012",
+    border: "1px solid rgba(255,255,255,0.10)", borderRadius: 12,
+    boxShadow: "0 12px 40px rgba(0,0,0,0.55)",
+  };
+
   return (
     <div ref={wrapRef} style={{ position: "relative" }}>
       <button
@@ -106,12 +117,7 @@ export default function NotificationBell({ client, userId, onNavigate, showToast
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: -4 }}
             transition={{ duration: 0.15 }}
-            style={{
-              position: "absolute", right: 0, top: "calc(100% + 8px)", width: 360, maxHeight: 460,
-              overflowY: "auto", zIndex: 80, background: "#101012",
-              border: "1px solid rgba(255,255,255,0.10)", borderRadius: 12,
-              boxShadow: "0 12px 40px rgba(0,0,0,0.55)",
-            }}
+            style={panelStyle}
           >
             <div style={{
               display: "flex", alignItems: "center", justifyContent: "space-between",

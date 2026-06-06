@@ -6987,6 +6987,7 @@ export default function App() {
               client={supabase}
               userId={profile?.id}
               showToast={showToast}
+              isMobile={isMobile}
               onNavigate={(url) => { if (url && url.startsWith("/tasks")) setTab("tasks"); }}
             />
             {/* Кнопка отчёта — акцентная, в фирменном цвете */}
