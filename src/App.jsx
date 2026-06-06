@@ -276,6 +276,43 @@ function txJsToDb(t, ownerId) {
   };
 }
 
+function shareDbToJs(row) {
+  return {
+    id:                row.id,
+    projectId:         row.project_id,
+    participantUserId: row.participant_user_id || null,
+    participantClientId: row.participant_client_id || null,
+    participantName:   row.participant_name || "",
+    shareKind:         row.share_kind === "amount" ? "amount" : "percent",
+    shareValue:        row.share_value != null ? Number(row.share_value) : 0,
+    note:              row.note || "",
+  };
+}
+
+// Доли всех проектов владельца (RLS вернёт только доступные). Группируем по projectId.
+async function fetchProjectShares(client) {
+  const { data, error } = await client.from("project_shares").select("*");
+  if (error) throw error;
+  const byProject = {};
+  for (const row of data || []) {
+    const s = shareDbToJs(row);
+    (byProject[s.projectId] = byProject[s.projectId] || []).push(s);
+  }
+  return byProject; // { [projectId]: [share, ...] }
+}
+
+// Мои доли в чужих проектах (приватная проекция через RPC).
+async function getMyShares(client) {
+  const { data, error } = await client.rpc("get_my_shares");
+  if (error) throw error;
+  return (data || []).map(r => ({
+    projectName:  r.project_name,
+    myAmount:     Number(r.my_amount) || 0,
+    myReceived:   Number(r.my_received) || 0,
+    myReceivable: Number(r.my_receivable) || 0,
+  }));
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 // DATA OPERATIONS — обёртки над Supabase API
 // ════════════════════════════════════════════════════════════════════════════
@@ -6528,6 +6565,8 @@ export default function App() {
   const [projects, setProjects]     = useState([]);
   const [txs, setTxs]               = useState([]);
   const [tasks, setTasks]           = useState([]);
+  const [sharesByProject, setSharesByProject] = useState({});
+  const [myShares, setMyShares]     = useState([]);
   const [clients, setClients]       = useState([]); // v1.5
 
   const [reportModal, setReportModal] = useState(false);
@@ -6566,16 +6605,20 @@ export default function App() {
             }
             setUser(session.user);
             setProfile(prof);
-            const [p, t, cl, tk] = await Promise.all([
+            const [p, t, cl, tk, sh, ms] = await Promise.all([
               fetchProjects(supabase),
               fetchTransactions(supabase),
               fetchClients(supabase).catch(() => []),
               fetchTasks(supabase, { assignedTo: prof.id }).catch(() => []),
+              fetchProjectShares(supabase).catch(() => ({})),
+              getMyShares(supabase).catch(() => []),
             ]);
             setProjects(p);
             setTxs(t);
             setClients(cl);
             setTasks(tk);
+            setSharesByProject(sh);
+            setMyShares(ms);
             setPhase("ready");
           } catch (e) {
             console.warn("Сессия есть, но профиль не загружается:", e);
@@ -6607,6 +6650,8 @@ export default function App() {
         setTxs([]);
         setTasks([]);
         setClients([]);
+        setSharesByProject({});
+        setMyShares([]);
         setPhase("auth");
       }
     });
@@ -6618,16 +6663,20 @@ export default function App() {
     setUser(u);
     setProfile(prof);
     try {
-      const [p, t, cl, tk] = await Promise.all([
+      const [p, t, cl, tk, sh, ms] = await Promise.all([
         fetchProjects(supabase),
         fetchTransactions(supabase),
         fetchClients(supabase).catch(() => []),
         fetchTasks(supabase, { assignedTo: prof.id }).catch(() => []),
+        fetchProjectShares(supabase).catch(() => ({})),
+        getMyShares(supabase).catch(() => []),
       ]);
       setProjects(p);
       setTxs(t);
       setClients(cl);
       setTasks(tk);
+      setSharesByProject(sh);
+      setMyShares(ms);
       setPhase("ready");
       showToast(`Добро пожаловать, ${prof.name || prof.email.split("@")[0]}!`);
     } catch (e) {
@@ -7001,8 +7050,8 @@ export default function App() {
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
           >
-            {tab === "dashboard" && <Dashboard projects={projects} txs={txs} tasks={tasks} onDrillStage={(stage) => { setPendingStageFilter(stage); setTab("projects"); }} />}
-            {tab === "projects" && <Projects projects={projects} setProjects={setProjects} clients={clients} client={supabase} profile={profile} ownerId={profile.id} showToast={showToast} initialStageFilter={pendingStageFilter} />}
+            {tab === "dashboard" && <Dashboard projects={projects} txs={txs} tasks={tasks} onDrillStage={(stage) => { setPendingStageFilter(stage); setTab("projects"); }} sharesByProject={sharesByProject} myShares={myShares} />}
+            {tab === "projects" && <Projects projects={projects} setProjects={setProjects} clients={clients} client={supabase} profile={profile} ownerId={profile.id} showToast={showToast} initialStageFilter={pendingStageFilter} sharesByProject={sharesByProject} />}
             {tab === "tasks" && <TasksView client={supabase} profile={profile} projects={projects} showToast={showToast} />}
             {tab === "clients" && <ClientsPage clients={clients} setClients={setClients} projects={projects} client={supabase} ownerId={profile.id} showToast={showToast} />}
             {tab === "finance" && <Finance txs={txs} setTxs={setTxs} client={supabase} ownerId={profile.id} showToast={showToast} />}
