@@ -5780,7 +5780,7 @@ function ProfileModal({ profile, client, onClose, onProfileUpdated, showToast })
         {!pushState.supported ? (
           <p style={{ fontSize: 12, color: "#a8a8a3", margin: 0, lineHeight: 1.5 }}>
             {isIOSNonPWA
-              ? "Чтобы получать уведомления на iPhone: «Поделиться» → «На экран Домой», затем откройте установленное приложение и включите push здесь."
+              ? "На iPhone push работает только из установленного приложения. Нажмите «Поделиться» (квадрат со стрелкой ↑ в нижней панели Safari), пролистайте меню вниз до пункта «На экран Домой» → «Добавить». Затем откройте КЛИМАТ-ПРО с домашнего экрана и включите push здесь."
               : "Этот браузер не поддерживает push-уведомления."}
           </p>
         ) : pushState.permission === "denied" ? (
