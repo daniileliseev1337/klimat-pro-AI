@@ -6712,6 +6712,7 @@ export default function App() {
   const [tab, setTab]               = useState("dashboard");
   const [projects, setProjects]     = useState([]);
   const [txs, setTxs]               = useState([]);
+  const [tasks, setTasks]           = useState([]);
   const [clients, setClients]       = useState([]); // v1.5
 
   const [reportModal, setReportModal] = useState(false);
@@ -6750,14 +6751,16 @@ export default function App() {
             }
             setUser(session.user);
             setProfile(prof);
-            const [p, t, cl] = await Promise.all([
+            const [p, t, cl, tk] = await Promise.all([
               fetchProjects(supabase),
               fetchTransactions(supabase),
               fetchClients(supabase).catch(() => []),
+              fetchTasks(supabase, { assignedTo: prof.id }).catch(() => []),
             ]);
             setProjects(p);
             setTxs(t);
             setClients(cl);
+            setTasks(tk);
             setPhase("ready");
           } catch (e) {
             console.warn("Сессия есть, но профиль не загружается:", e);
@@ -6787,6 +6790,7 @@ export default function App() {
         setProfile(null);
         setProjects([]);
         setTxs([]);
+        setTasks([]);
         setClients([]);
         setPhase("auth");
       }
@@ -6799,14 +6803,16 @@ export default function App() {
     setUser(u);
     setProfile(prof);
     try {
-      const [p, t, cl] = await Promise.all([
+      const [p, t, cl, tk] = await Promise.all([
         fetchProjects(supabase),
         fetchTransactions(supabase),
         fetchClients(supabase).catch(() => []),
+        fetchTasks(supabase, { assignedTo: prof.id }).catch(() => []),
       ]);
       setProjects(p);
       setTxs(t);
       setClients(cl);
+      setTasks(tk);
       setPhase("ready");
       showToast(`Добро пожаловать, ${prof.name || prof.email.split("@")[0]}!`);
     } catch (e) {
