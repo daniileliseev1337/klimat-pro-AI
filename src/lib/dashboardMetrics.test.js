@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { periodRange, prevPeriodRange, inPeriod, periodBalance, trendDir, granularityFor, financeSeries, expenseByCategory, receivables } from './dashboardMetrics.js';
+import { periodRange, prevPeriodRange, inPeriod, periodBalance, trendDir, granularityFor, financeSeries, expenseByCategory, receivables, myTasks } from './dashboardMetrics.js';
 
 const NOW = new Date('2026-06-06T12:00:00');
 
@@ -142,4 +142,31 @@ describe('receivables', () => {
     ]);
   });
   it('пустой портфель → нули', () => expect(receivables([])).toEqual({ total: 0, items: [] }));
+});
+
+describe('myTasks', () => {
+  const today = '2026-06-06';
+  const tasks = [
+    { id: 1, status: 'В работе',   dueDate: '2026-06-01', title: 'просрочена' },
+    { id: 2, status: 'Готово',     dueDate: '2026-06-01', title: 'готова — исключить' },
+    { id: 3, status: 'Новая',      dueDate: '2026-06-06', title: 'сегодня' },
+    { id: 4, status: 'На проверке',dueDate: '2026-06-20', title: 'будущая — не в блоке' },
+    { id: 5, status: 'Отменена',   dueDate: '2026-06-01', title: 'отменена — исключить' },
+    { id: 6, status: 'Новая',      dueDate: null,         title: 'без срока — не в блоке' },
+  ];
+  const r = myTasks(tasks, today);
+  it('просроченные — активные с dueDate < today', () => {
+    expect(r.overdue.map(t => t.id)).toEqual([1]);
+  });
+  it('сегодняшние — активные с dueDate == today', () => {
+    expect(r.today.map(t => t.id)).toEqual([3]);
+  });
+  it('счётчики', () => expect(r.counts).toEqual({ overdue: 1, today: 1 }));
+  it('исключает Готово/Отменена/будущие/без срока из обоих списков', () => {
+    const ids = [...r.overdue, ...r.today].map(t => t.id);
+    expect(ids).not.toContain(2);
+    expect(ids).not.toContain(4);
+    expect(ids).not.toContain(5);
+    expect(ids).not.toContain(6);
+  });
 });
