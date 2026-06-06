@@ -2282,7 +2282,7 @@ function Dashboard({ projects, txs }) {
 // ════════════════════════════════════════════════════════════════════════════
 function Projects({ projects, setProjects, clients, client, profile, ownerId, showToast }) {
   const [modal, setModal]             = useState(null);
-  const [stageFilter, setStageFilter] = useState("Все");
+  const [stageFilter, setStageFilter] = useState("Активные");
   const [confirmDel, setConfirmDel]   = useState(null);
   const [saving, setSaving]           = useState(false);
 
@@ -2338,8 +2338,8 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
 
   const visible = stageFilter === "Свободные"
     ? projects.filter(p => p.visibility === "marketplace" && !p.takenBy)
-    : stageFilter === "Все"
-      ? projects
+    : stageFilter === "Активные"
+      ? projects.filter(p => !["Оплачен", "Архив"].includes(p.stage))
       : projects.filter(p => p.stage === stageFilter);
   const todayS  = todayStr();
 
@@ -2347,9 +2347,9 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
     <div>
       <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:20,alignItems:"center"}}>
         <div style={{display:"flex",flexWrap:"wrap",gap:6,flex:1}}>
-          {["Все","Свободные",...PROJECT_STAGES].map(s=>{
+          {["Активные","Свободные",...PROJECT_STAGES].map(s=>{
             const freeCount = projects.filter(p=>p.visibility==="marketplace"&&!p.takenBy).length;
-            const cnt = s==="Все" ? projects.length : s==="Свободные" ? freeCount : projects.filter(p=>p.stage===s).length;
+            const cnt = s==="Активные" ? projects.filter(p=>!["Оплачен","Архив"].includes(p.stage)).length : s==="Свободные" ? freeCount : projects.filter(p=>p.stage===s).length;
             return (
               <Chip key={s}
                 label={`${s}${cnt>0?` (${cnt})`:""}`}
