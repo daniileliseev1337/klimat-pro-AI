@@ -132,6 +132,8 @@ function projectDbToJs(row) {
     clientId:       row.client_id || null,
     // Поля v2.0 — маркетплейс
     takenBy:        row.taken_by || null,
+    // Поля v2.2 — несколько исполнителей
+    executors:      Array.isArray(row.executors) ? row.executors.map(e => ({ name: e.name || "", userId: e.userId || null })) : [],
   };
 }
 
@@ -139,7 +141,8 @@ function projectJsToDb(p, ownerId) {
   return {
     name:             p.name || "Без названия",
     client:           p.client || null,
-    executor:         p.executor || null,
+    executor:         (p.executors || []).map(e => e.name).filter(Boolean).join(", ") || null,
+    executors:        (p.executors || []).filter(e => e && e.name).map(e => ({ name: e.name, userId: e.userId || null })),
     type:             p.type || null,
     stage:            p.stage || "Переговоры",
     start_date:       p.startDate || null,
@@ -1532,6 +1535,8 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
       shareKind: s.shareKind || "percent",
       shareValue: s.shareValue ?? "",
     })),
+    // v2.2 исполнители
+    executors: (initial.executors || []).map(e => ({ name: e.name || "", userId: e.userId || null })),
   } : {
     name: "", client: "", executor: "", type: "ОВиК", stage: "Переговоры",
     startDate: todayStr(), deadline: "", contractSum: "", paidAmount: "", notes: "",
@@ -1543,9 +1548,10 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
     clientId: null,
     // v2.0 поля
     visibilityUsers: [], // для режима selected: [{id, email, name}]
-    executorUserId: null, // UUID исполнителя для Telegram-уведомления
     // v2.1 поля
     shares: [],
+    // v2.2 поля
+    executors: [],
   });
   const s = (k, v) => setF(p => ({ ...p, [k]: v }));
 
@@ -1583,24 +1589,31 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
     setF(p => ({ ...p, visibilityUsers: (p.visibilityUsers || []).filter(u => u.id !== id) }));
   };
 
-  // v2.0: поиск исполнителя по пользователям системы
+  // v2.2: поиск исполнителей (несколько), паттерн как в TasksView
   const [execQuery, setExecQuery]     = useState("");
   const [execResults, setExecResults] = useState([]);
+  // Ввод внешнего исполнителя без аккаунта
+  const [execExtName, setExecExtName] = useState("");
 
   useEffect(() => {
     if (!client || !execQuery.trim()) { setExecResults([]); return; }
     const t = setTimeout(async () => {
-      const res = await searchApprovedUsers(client, execQuery);
-      setExecResults(res);
+      try {
+        const res = await searchApprovedUsers(client, execQuery);
+        const q = execQuery.trim().toLowerCase();
+        const selfMatches = profile?.id &&
+          ((profile.name || "").toLowerCase().includes(q) || (profile.email || "").toLowerCase().includes(q));
+        const out = (selfMatches && !res.some(u => u.id === profile.id))
+          ? [{ id: profile.id, name: profile.name, email: profile.email }, ...res]
+          : res;
+        setExecResults(out);
+      } catch { setExecResults([]); }
     }, 300);
     return () => clearTimeout(t);
   }, [execQuery]); // eslint-disable-line
 
-  const selectExecUser = (user) => {
-    setF(p => ({ ...p, executor: user.name || user.email, executorUserId: user.id }));
-    setExecQuery("");
-    setExecResults([]);
-  };
+  const addExecutor = (ex) => setF(p => ({ ...p, executors: [...(p.executors || []), { name: ex.name, userId: ex.userId || null }] }));
+  const removeExecutor = (i) => setF(p => ({ ...p, executors: (p.executors || []).filter((_, j) => j !== i) }));
 
   // v2.1: автокомплит участника доли
   const [shareUserQuery, setShareUserQuery] = useState("");
@@ -1672,35 +1685,107 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
             <StyledInput value={f.client} onChange={e => s("client", e.target.value)} />
           )}
         </div>
-        <div style={{ position: "relative" }}><Label>Исполнитель</Label>
-          <StyledInput value={f.executor}
-            onChange={e => { s("executor", e.target.value); s("executorUserId", null); setExecQuery(e.target.value); }}
-            onBlur={() => setTimeout(() => setExecResults([]), 200)}
-            placeholder="Н-р: Субподряд" />
-          {execResults.length > 0 && (
-            <div style={{
-              position: "absolute", top: "100%", left: 0, right: 0, zIndex: 50,
-              background: "#1c1c1a", border: "1px solid rgba(255,255,255,0.12)",
-              borderRadius: 8, overflow: "hidden", marginTop: 2,
-            }}>
-              {execResults.map(u => (
-                <div key={u.id}
-                  onMouseDown={() => selectExecUser(u)}
-                  style={{
-                    padding: "8px 12px", cursor: "pointer", fontSize: 12,
-                    borderBottom: "1px solid rgba(255,255,255,0.06)",
-                    display: "flex", alignItems: "center", gap: 8,
-                  }}
-                  onMouseOver={e => e.currentTarget.style.background = "rgba(212,175,55,0.10)"}
-                  onMouseOut={e => e.currentTarget.style.background = "transparent"}
-                >
-                  <span style={{ color: "#fafaf7" }}>{u.name || u.email}</span>
-                  {u.name && <span style={{ color: "#6b6b67" }}>{u.email}</span>}
-                  <Send size={10} strokeWidth={2} style={{ marginLeft: "auto", color: "#d4af37", flexShrink: 0 }} />
+        <div>
+          <Label>Исполнители</Label>
+          {/* Список добавленных исполнителей */}
+          {(f.executors || []).length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 6 }}>
+              {(f.executors || []).map((ex, i) => (
+                <div key={i} style={{
+                  display: "flex", alignItems: "center", gap: 6,
+                  background: "rgba(255,255,255,0.05)", borderRadius: 6,
+                  padding: "5px 8px", fontSize: 12,
+                }}>
+                  {ex.userId
+                    ? <UserCheck size={12} strokeWidth={2.2} style={{ color: "#d4af37", flexShrink: 0 }} />
+                    : <User size={12} strokeWidth={2.2} style={{ color: "#6b6b67", flexShrink: 0 }} />
+                  }
+                  <span style={{ color: "#fafaf7", flex: 1 }}>{ex.name}</span>
+                  <button type="button" onMouseDown={() => removeExecutor(i)} style={{
+                    background: "none", border: "none", cursor: "pointer",
+                    color: "#6b6b67", padding: 2, display: "flex", alignItems: "center",
+                  }}>
+                    <X size={12} strokeWidth={2.4} />
+                  </button>
                 </div>
               ))}
             </div>
           )}
+          {/* Autocomplete — выбор из системы */}
+          <div style={{ position: "relative", marginBottom: 6 }}>
+            <StyledInput
+              value={execQuery}
+              onChange={e => setExecQuery(e.target.value)}
+              onBlur={() => setTimeout(() => setExecResults([]), 200)}
+              placeholder="Найти в системе..." />
+            {execResults.length > 0 && (
+              <div style={{
+                position: "absolute", top: "100%", left: 0, right: 0, zIndex: 50,
+                background: "#1c1c1a", border: "1px solid rgba(255,255,255,0.12)",
+                borderRadius: 8, overflow: "hidden", marginTop: 2,
+              }}>
+                {execResults.map(u => {
+                  const alreadyAdded = (f.executors || []).some(e => e.userId === u.id);
+                  return (
+                    <div key={u.id}
+                      onMouseDown={() => {
+                        if (!alreadyAdded) {
+                          addExecutor({ name: u.name || u.email, userId: u.id });
+                          setExecQuery("");
+                          setExecResults([]);
+                        }
+                      }}
+                      style={{
+                        padding: "8px 12px", cursor: alreadyAdded ? "default" : "pointer", fontSize: 12,
+                        borderBottom: "1px solid rgba(255,255,255,0.06)",
+                        display: "flex", alignItems: "center", gap: 8,
+                        opacity: alreadyAdded ? 0.45 : 1,
+                      }}
+                      onMouseOver={e => { if (!alreadyAdded) e.currentTarget.style.background = "rgba(212,175,55,0.10)"; }}
+                      onMouseOut={e => e.currentTarget.style.background = "transparent"}
+                    >
+                      <span style={{ color: "#fafaf7" }}>{u.name || u.email}</span>
+                      {u.name && <span style={{ color: "#6b6b67" }}>{u.email}</span>}
+                      {u.id === profile?.id && <span style={{ color: "#d4af37", fontSize: 11 }}>(я)</span>}
+                      {alreadyAdded
+                        ? <Check size={10} strokeWidth={2} style={{ marginLeft: "auto", color: "#6b6b67", flexShrink: 0 }} />
+                        : <Plus size={10} strokeWidth={2.4} style={{ marginLeft: "auto", color: "#d4af37", flexShrink: 0 }} />
+                      }
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          {/* Добавить внешнего по имени (без аккаунта) */}
+          <div style={{ display: "flex", gap: 6 }}>
+            <StyledInput
+              value={execExtName}
+              onChange={e => setExecExtName(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === "Enter" && execExtName.trim()) {
+                  e.preventDefault();
+                  addExecutor({ name: execExtName.trim(), userId: null });
+                  setExecExtName("");
+                }
+              }}
+              placeholder="Внешний (без аккаунта)" style={{ flex: 1 }} />
+            <button type="button"
+              onMouseDown={() => {
+                if (execExtName.trim()) {
+                  addExecutor({ name: execExtName.trim(), userId: null });
+                  setExecExtName("");
+                }
+              }}
+              style={{
+                background: "rgba(212,175,55,0.12)", border: "1px solid rgba(212,175,55,0.3)",
+                borderRadius: 7, cursor: "pointer", color: "#d4af37", padding: "0 10px",
+                fontSize: 11, display: "flex", alignItems: "center", gap: 4, flexShrink: 0,
+              }}
+            >
+              <Plus size={11} strokeWidth={2.4} /> добавить
+            </button>
+          </div>
         </div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
@@ -2579,15 +2664,17 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
         const userIds = (form.visibilityUsers || []).map(u => u.id).filter(Boolean);
         await setProjectVisibilityUsers(client, saved.id, userIds);
       }
-      // v2.0: уведомление исполнителю если он выбран из системы
-      if (form.executorUserId) {
-        const prevExecutorId = modal !== "add" ? modal?.executorUserId : null;
-        if (form.executorUserId !== prevExecutorId) {
-          sendPush(client, "team_invite", form.executorUserId, {
-            projectName: saved?.name || form.name,
-            actorName: profile?.name || profile?.email,
-            customText: "Тебя назначили исполнителем проекта",
-          });
+      // v2.2: уведомление новым исполнителям-пользователям системы
+      {
+        const prevExecIds = new Set(((modal !== "add" ? modal?.executors : null) || []).map(e => e.userId).filter(Boolean));
+        for (const ex of (form.executors || [])) {
+          if (ex.userId && !prevExecIds.has(ex.userId)) {
+            sendPush(client, "team_invite", ex.userId, {
+              projectName: saved?.name || form.name,
+              actorName: profile?.name || profile?.email,
+              customText: "Тебя назначили исполнителем проекта",
+            });
+          }
         }
       }
       // v2.1: сохраняем доли участников атомарно через RPC (delete+insert в одной транзакции)
