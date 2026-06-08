@@ -387,22 +387,6 @@ async function revokeProject(client, projectId) {
   if (error) throw error;
 }
 
-async function setProjectVisibilityUsers(client, projectId, userIds) {
-  const { error } = await client.rpc("set_project_visibility_users", {
-    p_project_id: projectId,
-    p_user_ids: userIds,
-  });
-  if (error) throw error;
-}
-
-async function getProjectVisibilityUsers(client, projectId) {
-  const { data, error } = await client.rpc("get_project_visibility_users", {
-    p_project_id: projectId,
-  });
-  if (error) throw error;
-  return data || [];
-}
-
 // ── v2.0: функции комментариев ────────────────────────────────────────────
 
 async function fetchProjectComments(client, projectId) {
@@ -1546,48 +1530,12 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
     clientPhone: "", clientEmail: "", clientTelegram: "",
     // v1.5 поля
     clientId: null,
-    // v2.0 поля
-    visibilityUsers: [], // для режима selected: [{id, email, name}]
     // v2.1 поля
     shares: [],
     // v2.2 поля
     executors: [],
   });
   const s = (k, v) => setF(p => ({ ...p, [k]: v }));
-
-  // v2.0: состояние поиска пользователей для режима selected
-  const [visUserQuery, setVisUserQuery] = useState("");
-  const [visUserResults, setVisUserResults] = useState([]);
-
-  // Загружаем список visibilityUsers при открытии формы редактирования
-  useEffect(() => {
-    if (initial?.id && initial?.visibility === "selected" && client) {
-      getProjectVisibilityUsers(client, initial.id).then(users => {
-        setF(p => ({ ...p, visibilityUsers: users }));
-      }).catch(() => {});
-    }
-  }, [initial?.id, initial?.visibility]); // eslint-disable-line
-
-  // Поиск пользователей для selected-списка
-  useEffect(() => {
-    if (f.visibility !== "selected" || !client) return;
-    if (!visUserQuery.trim()) { setVisUserResults([]); return; }
-    const t = setTimeout(async () => {
-      const res = await searchApprovedUsers(client, visUserQuery);
-      const addedIds = new Set((f.visibilityUsers || []).map(u => u.id));
-      setVisUserResults(res.filter(u => !addedIds.has(u.id)));
-    }, 300);
-    return () => clearTimeout(t);
-  }, [visUserQuery, f.visibility, f.visibilityUsers]); // eslint-disable-line
-
-  const addVisUser = (user) => {
-    setF(p => ({ ...p, visibilityUsers: [...(p.visibilityUsers || []), user] }));
-    setVisUserQuery("");
-    setVisUserResults([]);
-  };
-  const removeVisUser = (id) => {
-    setF(p => ({ ...p, visibilityUsers: (p.visibilityUsers || []).filter(u => u.id !== id) }));
-  };
 
   // v2.2: поиск исполнителей (несколько), паттерн как в TasksView
   const [execQuery, setExecQuery]     = useState("");
@@ -2132,7 +2080,6 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
         <StyledSelect value={f.visibility} onChange={e => s("visibility", e.target.value)}>
           <option value="private">Личный (только я)</option>
           <option value="team">Командный (видят все одобренные)</option>
-          <option value="selected">Избранные (только выбранные пользователи)</option>
           <option value="marketplace">Маркетплейс (ищу исполнителя)</option>
         </StyledSelect>
       </Field>
@@ -2152,78 +2099,6 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
           </div>
           Стадия проекта должна быть «Поиск исполнителя». Любой одобренный пользователь системы
           сможет увидеть проект и нажать «Взять в работу». После взятия проект уйдёт из маркетплейса.
-        </div>
-      )}
-
-      {/* ── Пикер пользователей для режима selected ─────────────────────── */}
-      {f.visibility === "selected" && (
-        <div style={{
-          marginBottom: 14, padding: "12px 14px",
-          background: "rgba(212,175,55,0.04)",
-          border: "1px solid rgba(212,175,55,0.12)",
-          borderRadius: 10,
-        }}>
-          <div style={{
-            fontSize: 11, fontWeight: 600, color: "#d4af37",
-            textTransform: "uppercase", letterSpacing: "0.10em",
-            marginBottom: 10, display: "flex", alignItems: "center", gap: 6,
-          }}>
-            <Eye size={12} strokeWidth={2.4} />
-            Кому показать проект
-          </div>
-
-          {/* Поиск пользователя */}
-          <div style={{ position: "relative", marginBottom: 8 }}>
-            <StyledInput
-              value={visUserQuery}
-              onChange={e => setVisUserQuery(e.target.value)}
-              onBlur={() => setTimeout(() => setVisUserResults([]), 200)}
-              placeholder="Поиск по email или имени…"
-            />
-            {visUserResults.length > 0 && (
-              <div style={{
-                position: "absolute", top: "100%", left: 0, right: 0, zIndex: 50,
-                background: "#1c1c1a", border: "1px solid rgba(255,255,255,0.12)",
-                borderRadius: 8, overflow: "hidden", marginTop: 2,
-              }}>
-                {visUserResults.map(u => (
-                  <div key={u.id}
-                    onClick={() => addVisUser(u)}
-                    style={{
-                      padding: "8px 12px", cursor: "pointer", fontSize: 12,
-                      borderBottom: "1px solid rgba(255,255,255,0.06)",
-                      transition: "background 0.12s",
-                    }}
-                    onMouseOver={e => e.currentTarget.style.background = "rgba(212,175,55,0.10)"}
-                    onMouseOut={e => e.currentTarget.style.background = "transparent"}
-                  >
-                    <span style={{ color: "#fafaf7" }}>{u.name || u.email}</span>
-                    {u.name && <span style={{ color: "#6b6b67", marginLeft: 8 }}>{u.email}</span>}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Список добавленных */}
-          {(f.visibilityUsers || []).length === 0
-            ? <p style={{ fontSize: 11, color: "#6b6b67", margin: 0 }}>Никто не добавлен — проект будет виден только вам</p>
-            : (f.visibilityUsers || []).map(u => (
-              <div key={u.id} style={{
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-                padding: "5px 10px", marginBottom: 4,
-                background: "rgba(255,255,255,0.03)", borderRadius: 6,
-              }}>
-                <span style={{ fontSize: 12, color: "#fafaf7" }}>{u.name || u.email}</span>
-                <button onClick={() => removeVisUser(u.id)} style={{
-                  background: "none", border: "none", cursor: "pointer",
-                  color: "#f8a3a3", padding: 2, lineHeight: 1,
-                }}>
-                  <X size={12} />
-                </button>
-              </div>
-            ))
-          }
         </div>
       )}
 
@@ -2661,11 +2536,6 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
         setProjects(prev => prev.map(p => p.id === saved.id ? saved : p));
         showToast("✓ Проект обновлён");
       }
-      // v2.0: сохраняем список видимости для режима selected
-      if (form.visibility === "selected" && saved?.id) {
-        const userIds = (form.visibilityUsers || []).map(u => u.id).filter(Boolean);
-        await setProjectVisibilityUsers(client, saved.id, userIds);
-      }
       // v2.2: уведомление новым исполнителям-пользователям системы
       {
         const prevExecIds = new Set(((modal !== "add" ? modal?.executors : null) || []).map(e => e.userId).filter(Boolean));
@@ -2768,7 +2638,6 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
                           : p.takenBy === profile?.id ? "editor"
                           : p.visibility === "team" ? "viewer"
                           : p.visibility === "marketplace" ? "marketplace"
-                          : p.visibility === "selected" ? "selected"
                           : null
                       } />
                       {isAwaitingPayment&&<span style={{fontSize:11,color:"#d4af37",fontWeight:600}}>⏳ Ожидает оплаты</span>}
@@ -4658,7 +4527,6 @@ function PermissionBadge({ role }) {
     editor:      { label: "Команда · редактор", Icon: PencilLine,  color: "#6ee7a8", bg: "rgba(110,231,168,0.10)", border: "rgba(110,231,168,0.25)" },
     viewer:      { label: "Команда",            Icon: Users,       color: "#93c5fd", bg: "rgba(147,197,253,0.10)", border: "rgba(147,197,253,0.25)" },
     marketplace: { label: "Маркетплейс",        Icon: Store,       color: "#93c5fd", bg: "rgba(147,197,253,0.08)", border: "rgba(147,197,253,0.22)" },
-    selected:    { label: "Приглашён",          Icon: Eye,         color: "#f3d77b", bg: "rgba(243,215,123,0.08)", border: "rgba(243,215,123,0.22)" },
   };
   const c = config[role];
   if (!c) return null;
