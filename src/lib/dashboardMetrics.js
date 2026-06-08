@@ -196,6 +196,41 @@ export function mySharesTotals(myShares = []) {
   return { received, receivable };
 }
 
+// Моя доля проектных платежей за месяц 'YYYY-MM' — только мои проекты (где ownerId),
+// архив исключён. paymentsByProject: { [projectId]: [{ amount:number, paidOn:'YYYY-MM-DD' }] }.
+// Доля владельца берётся теми же функциями, что и ownerReceived (пропорция от платежа).
+export function myProjectIncomeForMonth(paymentsByProject = {}, projects = [], sharesByProject = {}, ownerId = null, monthStr = '') {
+  let total = 0;
+  for (const p of projects) {
+    if (ownerId != null && p.ownerId !== ownerId) continue;
+    if (p.stage === 'Архив') continue;
+    const contract = Number(p.contractSum) || 0;
+    if (contract <= 0) continue;
+    const myShare = ownerShareAmount(p, sharesByProject[p.id] || []);
+    for (const pay of (paymentsByProject[p.id] || [])) {
+      if (!pay.paidOn || !pay.paidOn.startsWith(monthStr)) continue;
+      total += (Number(pay.amount) || 0) * myShare / contract;
+    }
+  }
+  return total;
+}
+
+// Сводка по выбранным проектам (моя доля владельца). breakdown — построчно {id, name, received}.
+export function selectionTotals(selectedProjects = [], sharesByProject = {}, ownerId = null) {
+  let received = 0, remaining = 0, contract = 0;
+  const breakdown = [];
+  for (const p of selectedProjects) {
+    const c = Number(p.contractSum) || 0;
+    const myShare = ownerShareAmount(p, sharesByProject[p.id] || []);
+    const rec = proportionReceived(p.paidAmount, myShare, c);
+    received += rec;
+    remaining += Math.max(0, myShare - rec);
+    contract += c;
+    breakdown.push({ id: p.id, name: p.name, received: rec });
+  }
+  return { received, remaining, contract, breakdown };
+}
+
 const TASK_DONE = ['Готово', 'Отменена'];
 
 // tasks предполагаются уже «моими» (загружены с фильтром assignedTo на сервере).
