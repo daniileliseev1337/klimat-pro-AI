@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "./lib/supabase";
 import { diffLines } from "./lib/lineDiff";
 import { isPushSupported, getPushState, enablePush, disablePush } from "./lib/push";
-import { periodRange, prevPeriodRange, granularityFor, periodBalance, trendDir, financeSeries, expenseByCategory, receivables, myTasks, ownerReceived, mySharesTotals, myProjectIncomeForMonth } from "./lib/dashboardMetrics";
+import { periodRange, prevPeriodRange, granularityFor, periodBalance, trendDir, financeSeries, expenseByCategory, receivables, myTasks, ownerReceived, mySharesTotals, myProjectIncomeForMonth, selectionTotals } from "./lib/dashboardMetrics";
 import NotificationBell from "./components/NotificationBell";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -2570,6 +2570,8 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
   const [stageFilter, setStageFilter] = useState(initialStageFilter);
   const [confirmDel, setConfirmDel]   = useState(null);
   const [saving, setSaving]           = useState(false);
+  const [selectMode, setSelectMode]   = useState(false);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
 
   // Открыть карточку проекта по клику из уведомления (Центр уведомлений → onNavigate /projects/<id>).
   useEffect(() => {
@@ -2663,6 +2665,8 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
     }
   };
 
+  const toggleSelect = (id) => setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
   const visible = stageFilter === "Свободные"
     ? projects.filter(p => p.visibility === "marketplace" && !p.takenBy)
     : stageFilter === "Активные"
@@ -2684,6 +2688,16 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
             );
           })}
         </div>
+        <button
+          onClick={() => { setSelectMode(m => !m); setSelectedIds(new Set()); }}
+          style={{
+            padding: "6px 14px", borderRadius: 8,
+            border: `1px solid ${selectMode ? "rgba(110,231,168,0.40)" : "rgba(255,255,255,0.12)"}`,
+            background: selectMode ? "rgba(110,231,168,0.10)" : "rgba(255,255,255,0.05)",
+            color: selectMode ? "#6ee7a8" : "#a8a8a3",
+            fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all .15s", whiteSpace: "nowrap",
+          }}
+        >{selectMode ? "Отмена" : "Выбрать"}</button>
         <button onClick={()=>setModal("add")} className={BTN.primary}>+ Новый проект</button>
       </div>
 
@@ -2699,6 +2713,17 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
             return (
               <div key={p.id} style={{background:"#141414",border:"1px solid #141414",borderRadius:16,padding:16}}>
                 <div style={{display:"flex",alignItems:"flex-start",gap:12}}>
+                  {selectMode && (
+                    <div style={{paddingTop:2,flexShrink:0}} onClick={e => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(p.id)}
+                        onChange={() => toggleSelect(p.id)}
+                        onClick={e => e.stopPropagation()}
+                        style={{width:17,height:17,cursor:"pointer",accentColor:"#6ee7a8"}}
+                      />
+                    </div>
+                  )}
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:8,marginBottom:6}}>
                       <span style={{color:"white",fontWeight:700,fontSize:15}}>{p.name}</span>
@@ -2996,6 +3021,28 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
               </div>
             );
           })}
+        {selectMode && selectedIds.size > 0 && (() => {
+          const sel = projects.filter(p => selectedIds.has(p.id));
+          const t = selectionTotals(sel, sharesByProject, ownerId);
+          return (
+            <div style={{ position: "sticky", bottom: 0, background: "#101012", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 12, padding: 14, marginTop: 12, zIndex: 30 }}>
+              <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 8, fontSize: 13, color: "#d8d8d4" }}>
+                <span>Получено: <b style={{ color: "#6ee7a8" }}>{fmt(t.received)}</b></span>
+                <span>К получению: <b style={{ color: t.remaining > 0 ? "#f8a3a3" : "#6b6b67" }}>{fmt(t.remaining)}</b></span>
+                <span>Сумма договоров: <b style={{ color: "#e8c860" }}>{fmt(t.contract)}</b></span>
+                <span style={{ marginLeft: "auto", color: "#62646b" }}>выбрано: {sel.length}</span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 2, maxHeight: 160, overflowY: "auto" }}>
+                {t.breakdown.map(b => (
+                  <div key={b.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#a8a8a3" }}>
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: 8 }}>{b.name}</span>
+                    <span style={{ color: "#6ee7a8", flexShrink: 0 }}>{fmt(b.received)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {modal&&(
