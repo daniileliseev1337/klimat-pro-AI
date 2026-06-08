@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "./lib/supabase";
 import { diffLines } from "./lib/lineDiff";
 import { isPushSupported, getPushState, enablePush, disablePush } from "./lib/push";
-import { periodRange, prevPeriodRange, granularityFor, periodBalance, trendDir, financeSeries, expenseByCategory, receivables, myTasks, ownerReceived, mySharesTotals } from "./lib/dashboardMetrics";
+import { periodRange, prevPeriodRange, granularityFor, periodBalance, trendDir, financeSeries, expenseByCategory, receivables, myTasks, ownerReceived, mySharesTotals, myProjectIncomeForMonth } from "./lib/dashboardMetrics";
 import NotificationBell from "./components/NotificationBell";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -318,6 +318,15 @@ async function setProjectPayments(client, projectId, rows) {
   const payload = (rows || []).map(r => ({ amount: Number(r.amount) || 0, paid_on: r.paidOn, note: r.note || null }));
   const { error } = await client.rpc("set_project_payments", { p_project_id: projectId, p_rows: payload });
   if (error) throw error;
+}
+
+// Платежи по всем моим проектам (RLS вернёт только мои), сгруппированные по project_id.
+async function fetchMyPayments(client) {
+  const { data, error } = await client.from("project_payments").select("project_id, amount, paid_on");
+  if (error) throw error;
+  const by = {};
+  for (const r of (data || [])) (by[r.project_id] ||= []).push({ amount: Number(r.amount) || 0, paidOn: r.paid_on });
+  return by;
 }
 
 // Мои доли в чужих проектах (приватная проекция через RPC).
@@ -4251,7 +4260,7 @@ function CsvImportModal({ onClose, onImport }) {
 // ════════════════════════════════════════════════════════════════════════════
 // FINANCE
 // ════════════════════════════════════════════════════════════════════════════
-function Finance({ txs, setTxs, client, ownerId, showToast, projects = [], sharesByProject = {}, myShares = [] }) {
+function Finance({ txs, setTxs, client, ownerId, showToast, projects = [], sharesByProject = {}, myShares = [], paymentsByProject = {} }) {
   const [modal, setModal]           = useState(null);
   const [typeFilter, setTypeFilter] = useState("all");
   const [monthF, setMonthF]         = useState(todayStr().slice(0,7));
@@ -4306,6 +4315,8 @@ function Finance({ txs, setTxs, client, ownerId, showToast, projects = [], share
 
   const inc = filtered.filter(t=>t.type==="income").reduce((s,t)=>s+(+t.amount||0),0);
   const exp = filtered.filter(t=>t.type==="expense").reduce((s,t)=>s+(+t.amount||0),0);
+  const projIncomeMonth = myProjectIncomeForMonth(paymentsByProject, projects, sharesByProject, ownerId, monthF);
+  const incTotal = inc + projIncomeMonth;
 
   // Сводка «по проектам» (read-only): получено и к получению по МОЕЙ доле — теми же
   // расчётами, что и дашборд. У paidAmount нет даты платежа → показываем «всего»,
@@ -4319,6 +4330,7 @@ function Finance({ txs, setTxs, client, ownerId, showToast, projects = [], share
   const incByCat = INCOME_CATS
     .map(c=>({name:c,value:filtered.filter(t=>t.type==="income"&&t.category===c).reduce((s,t)=>s+(+t.amount||0),0)}))
     .filter(d=>d.value>0);
+  const incByCatFull = projIncomeMonth > 0 ? [...incByCat, { name: "Проектные доходы", value: projIncomeMonth }] : incByCat;
 
   const tt = {background:"#141414",border:"1px solid #141414",borderRadius:8,fontSize:12,color:"white"};
 
@@ -4361,9 +4373,9 @@ function Finance({ txs, setTxs, client, ownerId, showToast, projects = [], share
 
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:16}}>
         {[
-          {label:"Доходы",val:inc,color:"#e8c860"},
+          {label:"Доходы",val:incTotal,color:"#e8c860"},
           {label:"Расходы",val:exp,color:"#f8a3a3"},
-          {label:"Баланс",val:inc-exp,color:inc>=exp?"#6ee7a8":"#f8a3a3"},
+          {label:"Баланс",val:incTotal-exp,color:incTotal>=exp?"#6ee7a8":"#f8a3a3"},
         ].map(r=>(
           <Card key={r.label} style={{textAlign:"center"}}>
             <Label>{r.label}</Label>
@@ -4372,15 +4384,15 @@ function Finance({ txs, setTxs, client, ownerId, showToast, projects = [], share
         ))}
       </div>
 
-      {(incByCat.length>0||expByCat.length>0)&&(
+      {(incByCatFull.length>0||expByCat.length>0)&&(
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
-          {incByCat.length>0&&(
+          {incByCatFull.length>0&&(
             <Card>
               <SectionTitle>Источники доходов</SectionTitle>
               <ResponsiveContainer width="100%" height={160}>
                 <PieChart>
-                  <Pie data={incByCat} cx="50%" cy="50%" innerRadius={38} outerRadius={62} dataKey="value" paddingAngle={2}>
-                    {incByCat.map((_,i)=><Cell key={i} fill={PALETTE[i%PALETTE.length]} stroke="transparent"/>)}
+                  <Pie data={incByCatFull} cx="50%" cy="50%" innerRadius={38} outerRadius={62} dataKey="value" paddingAngle={2}>
+                    {incByCatFull.map((_,i)=><Cell key={i} fill={PALETTE[i%PALETTE.length]} stroke="transparent"/>)}
                   </Pie>
                   <Tooltip contentStyle={tt} itemStyle={{ color: "#fafaf7" }} formatter={(v,n)=>[fmt(v),n]}/>
                   <Legend iconType="circle" iconSize={7} formatter={v=><span style={{fontSize:10,color:"#a8a8a3"}}>{v}</span>}/>
@@ -6892,6 +6904,7 @@ export default function App() {
   const [tasks, setTasks]           = useState([]);
   const [sharesByProject, setSharesByProject] = useState({});
   const [myShares, setMyShares]     = useState([]);
+  const [paymentsByProject, setPaymentsByProject] = useState({});
   const [clients, setClients]       = useState([]); // v1.5
 
   const [reportModal, setReportModal] = useState(false);
@@ -6930,13 +6943,14 @@ export default function App() {
             }
             setUser(session.user);
             setProfile(prof);
-            const [p, t, cl, tk, sh, ms] = await Promise.all([
+            const [p, t, cl, tk, sh, ms, pb] = await Promise.all([
               fetchProjects(supabase),
               fetchTransactions(supabase),
               fetchClients(supabase).catch(() => []),
               fetchTasks(supabase, { assignedTo: prof.id }).catch(() => []),
               fetchProjectShares(supabase).catch(() => ({})),
               getMyShares(supabase).catch(() => []),
+              fetchMyPayments(supabase).catch(() => ({})),
             ]);
             setProjects(p);
             setTxs(t);
@@ -6944,6 +6958,7 @@ export default function App() {
             setTasks(tk);
             setSharesByProject(sh);
             setMyShares(ms);
+            setPaymentsByProject(pb);
             setPhase("ready");
           } catch (e) {
             console.warn("Сессия есть, но профиль не загружается:", e);
@@ -6977,6 +6992,7 @@ export default function App() {
         setClients([]);
         setSharesByProject({});
         setMyShares([]);
+        setPaymentsByProject({});
         setPhase("auth");
       }
     });
@@ -6988,13 +7004,14 @@ export default function App() {
     setUser(u);
     setProfile(prof);
     try {
-      const [p, t, cl, tk, sh, ms] = await Promise.all([
+      const [p, t, cl, tk, sh, ms, pb] = await Promise.all([
         fetchProjects(supabase),
         fetchTransactions(supabase),
         fetchClients(supabase).catch(() => []),
         fetchTasks(supabase, { assignedTo: prof.id }).catch(() => []),
         fetchProjectShares(supabase).catch(() => ({})),
         getMyShares(supabase).catch(() => []),
+        fetchMyPayments(supabase).catch(() => ({})),
       ]);
       setProjects(p);
       setTxs(t);
@@ -7002,6 +7019,7 @@ export default function App() {
       setTasks(tk);
       setSharesByProject(sh);
       setMyShares(ms);
+      setPaymentsByProject(pb);
       setPhase("ready");
       showToast(`Добро пожаловать, ${prof.name || prof.email.split("@")[0]}!`);
     } catch (e) {
@@ -7382,7 +7400,7 @@ export default function App() {
             {tab === "projects" && <Projects projects={projects} setProjects={setProjects} clients={clients} client={supabase} profile={profile} ownerId={profile.id} showToast={showToast} initialStageFilter={pendingStageFilter} sharesByProject={sharesByProject} setSharesByProject={setSharesByProject} pendingProjectId={pendingProjectId} onProjectOpened={() => setPendingProjectId(null)} />}
             {tab === "tasks" && <TasksView client={supabase} profile={profile} projects={projects} showToast={showToast} />}
             {tab === "clients" && <ClientsPage clients={clients} setClients={setClients} projects={projects} client={supabase} ownerId={profile.id} showToast={showToast} />}
-            {tab === "finance" && <Finance txs={txs} setTxs={setTxs} client={supabase} ownerId={profile.id} showToast={showToast} projects={projects} sharesByProject={sharesByProject} myShares={myShares} />}
+            {tab === "finance" && <Finance txs={txs} setTxs={setTxs} client={supabase} ownerId={profile.id} showToast={showToast} projects={projects} sharesByProject={sharesByProject} myShares={myShares} paymentsByProject={paymentsByProject} />}
             {tab === "analytics" && <Analytics projects={projects} txs={txs} />}
             {tab === "admin" && profile?.role === "admin" && <AdminPage profile={profile} client={supabase} showToast={showToast} />}
           </motion.div>
