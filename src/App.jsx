@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "./lib/supabase";
 import { diffLines } from "./lib/lineDiff";
 import { isPushSupported, getPushState, enablePush, disablePush } from "./lib/push";
-import { periodRange, prevPeriodRange, granularityFor, periodBalance, trendDir, financeSeries, expenseByCategory, receivables, myTasks, ownerReceived, mySharesTotals, myProjectIncomeForMonth, selectionTotals, projectIncomeTxs } from "./lib/dashboardMetrics";
+import { periodRange, prevPeriodRange, granularityFor, periodBalance, trendDir, financeSeries, expenseByCategory, receivables, myTasks, ownerReceived, mySharesTotals, myProjectIncomeForMonth, selectionTotals, projectIncomeTxs, viewerShareOnProject } from "./lib/dashboardMetrics";
 import NotificationBell from "./components/NotificationBell";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -137,7 +137,10 @@ function projectDbToJs(row) {
   };
 }
 
-function projectJsToDb(p, ownerId) {
+// ВАЖНО: owner_id здесь НЕ пишется. При insert владелец добавляется явно в insertProject/
+// insertProjectsBulk; при update owner_id НЕ шлётся вообще — иначе админ, правя чужой проект,
+// перезаписал бы владельца на себя и «угнал» проект (баг C4).
+function projectJsToDb(p) {
   return {
     name:             p.name || "Без названия",
     client:           p.client || null,
@@ -150,7 +153,6 @@ function projectJsToDb(p, ownerId) {
     contract_sum:     parseFloat(p.contractSum) || 0,
     notes:            p.notes || null,
     visibility:       p.visibility || "private",
-    owner_id:         ownerId,
     links: (Array.isArray(p.links) ? p.links : [])
       .filter(l => l && l.url && l.url.trim())
       .map(l => ({
@@ -367,7 +369,7 @@ async function fetchTransactions(client) {
 }
 
 async function insertProject(client, project, ownerId) {
-  const dbObj = projectJsToDb(project, ownerId);
+  const dbObj = { ...projectJsToDb(project), owner_id: ownerId }; // владелец задаётся только при создании
   const { data, error } = await client
     .from("projects")
     .insert(dbObj)
@@ -377,8 +379,8 @@ async function insertProject(client, project, ownerId) {
   return projectDbToJs(data);
 }
 
-async function updateProject(client, id, project, ownerId) {
-  const dbObj = projectJsToDb(project, ownerId);
+async function updateProject(client, id, project) {
+  const dbObj = projectJsToDb(project); // БЕЗ owner_id — не «угоняем» проект при правке (C4)
   const { data, error } = await client
     .from("projects")
     .update(dbObj)
@@ -478,7 +480,7 @@ async function insertTransactionsBulk(client, txs, ownerId) {
 
 async function insertProjectsBulk(client, projects, ownerId) {
   if (!projects.length) return [];
-  const dbRows = projects.map(p => projectJsToDb(p, ownerId));
+  const dbRows = projects.map(p => ({ ...projectJsToDb(p), owner_id: ownerId }));
   const { data, error } = await client
     .from("projects")
     .insert(dbRows)
@@ -1807,11 +1809,12 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
         <div>
           <Label>Платежи</Label>
           {(f.payments || []).map((pay, i) => (
-            <div key={i} style={{ display: "flex", gap: 6, marginBottom: 6 }}>
-              <input type="date" value={pay.paidOn || ""} onChange={e => updatePayment(i, "paidOn", e.target.value)} style={{ ...BASE_INPUT, width: "auto" }} />
-              <StyledInput type="number" value={pay.amount} onChange={e => updatePayment(i, "amount", e.target.value)} placeholder="сумма" />
-              <StyledInput value={pay.note || ""} onChange={e => updatePayment(i, "note", e.target.value)} placeholder="заметка" />
-              <button type="button" onClick={() => removePayment(i)} className={BTN.edit}>🗑️</button>
+            // flexWrap + flex-basis: на узком экране поля переносятся, а не схлопываются (моб-баг #1)
+            <div key={i} style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 6 }}>
+              <input type="date" value={pay.paidOn || ""} onChange={e => updatePayment(i, "paidOn", e.target.value)} style={{ ...BASE_INPUT, width: "auto", flex: "1 1 130px", minWidth: 0 }} />
+              <StyledInput type="number" value={pay.amount} onChange={e => updatePayment(i, "amount", e.target.value)} placeholder="сумма" style={{ flex: "1 1 90px", minWidth: 0 }} />
+              <StyledInput value={pay.note || ""} onChange={e => updatePayment(i, "note", e.target.value)} placeholder="заметка" style={{ flex: "2 1 120px", minWidth: 0 }} />
+              <button type="button" onClick={() => removePayment(i)} className={BTN.edit} style={{ flexShrink: 0 }}>🗑️</button>
             </div>
           ))}
           <button type="button" onClick={addPayment} className={BTN.edit}>+ платёж</button>
@@ -2593,7 +2596,7 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
         setProjects(prev => [saved, ...prev]);
         showToast("✓ Проект создан");
       } else {
-        saved = await updateProject(client, modal.id, form, ownerId);
+        saved = await updateProject(client, modal.id, form);
         setProjects(prev => prev.map(p => p.id === saved.id ? saved : p));
         showToast("✓ Проект обновлён");
       }
@@ -2772,19 +2775,17 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
                         <span style={{fontSize:10,color:"#6b6b67"}}>{Math.round(paid/contract*100)}%</span>
                       </div>
                     )}
-                    {/* v2.1: индикатор «Моя доля» — только если проект делится на доли */}
+                    {/* v2.1: индикатор «Моя доля». Для владельца — его остаток; для участника-
+                        зрителя — ИМЕННО его доля (раньше всем показывался остаток владельца — баг A). */}
                     {(() => {
                       const shs = (sharesByProject || {})[p.id] || [];
-                      if (!shs.length || !(contract > 0)) return null;
-                      const others = shs.reduce((acc, sh) => acc + (sh.shareKind === "amount"
-                        ? Number(sh.shareValue) || 0
-                        : contract * (Number(sh.shareValue) || 0) / 100), 0);
-                      const mine = Math.max(0, contract - others);
-                      const pct = Math.round(mine / contract * 100);
+                      if (!shs.length) return null;
+                      const mine = viewerShareOnProject(p, shs, profile?.id);
+                      if (!mine) return null;
                       return (
                         <div style={{display:"flex",alignItems:"center",gap:6,marginTop:6,fontSize:11,color:"#6b6b67"}}>
                           <Users size={12} strokeWidth={2.2}/>
-                          <span>Моя доля: <span style={{color:"#e8c860",fontWeight:600}}>{fmt(mine)} ({pct}%)</span></span>
+                          <span>Моя доля: <span style={{color:"#e8c860",fontWeight:600}}>{fmt(mine.amount)} ({mine.percent}%)</span></span>
                         </div>
                       );
                     })()}
@@ -6999,8 +7000,8 @@ export default function App() {
             setUser(session.user);
             setProfile(prof);
             const [p, t, cl, tk, sh, ms, pb] = await Promise.all([
-              fetchProjects(supabase),
-              fetchTransactions(supabase),
+              fetchProjects(supabase).catch(() => []),
+              fetchTransactions(supabase).catch(() => []),
               fetchClients(supabase).catch(() => []),
               fetchTasks(supabase, { assignedTo: prof.id }).catch(() => []),
               fetchProjectShares(supabase).catch(() => ({})),

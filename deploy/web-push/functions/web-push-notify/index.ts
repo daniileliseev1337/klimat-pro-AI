@@ -37,7 +37,8 @@ async function recipients(ids: (string | null | undefined)[], initiator: string 
   const uniq = [...new Set(ids.filter(Boolean).filter((x) => x !== initiator))] as string[];
   if (!uniq.length) return [];
   const inList = uniq.map((x) => `"${x}"`).join(",");
-  const r = await rest(`profiles?id=in.(${inList})&${flag}=eq.true&select=id`);
+  // approved=eq.true — не слать push отозванным пользователям (m1)
+  const r = await rest(`profiles?id=in.(${inList})&approved=eq.true&${flag}=eq.true&select=id`);
   const rows = await r.json();
   return Array.isArray(rows) ? rows.map((p) => p.id) : [];
 }
@@ -48,6 +49,16 @@ async function projectMembers(projectId: string | null): Promise<string[]> {
   const r = await rest(`project_members?project_id=eq.${projectId}&select=user_id`);
   const rows = await r.json();
   return Array.isArray(rows) ? rows.map((m) => m.user_id) : [];
+}
+
+// userId из projects.executors (jsonb [{name,userId}]) — внешние без userId отсеиваются
+async function projectExecutorIds(projectId: string | null): Promise<string[]> {
+  if (!projectId) return [];
+  const r = await rest(`projects?id=eq.${projectId}&select=executors`);
+  const rows = await r.json();
+  const ex = Array.isArray(rows) && rows[0] ? rows[0].executors : null;
+  if (!Array.isArray(ex)) return [];
+  return ex.map((e: { userId?: string }) => e?.userId).filter(Boolean) as string[];
 }
 
 async function projectOwner(projectId: string | null): Promise<string | null> {
@@ -200,7 +211,24 @@ Deno.serve(async (req: Request) => {
       return j({ ok: true, sent, inbox: base.length });
     }
 
-    // --- комментарий/вопрос по задаче ---
+    // --- комментарий к ПРОЕКТУ (фронт CommentsSection шлёт projectId, НЕ taskId) ---
+    if (type === "comment" && b.projectId) {
+      const pid = b.projectId as string;
+      if (!UUID.test(pid)) return j({ error: "valid projectId (uuid) required" }, 400);
+      const owner = await projectOwner(pid);
+      const members = await projectMembers(pid);
+      const execIds = await projectExecutorIds(pid);
+      const base = baseIds([owner, ...members, ...execIds], initiator);
+      const name = (await projectName(pid)) || "проект";
+      const body = `💬 Новый комментарий по проекту «${name}»`;
+      const url = `/projects/${pid}`;
+      await insertInbox(base, { type: "comment", title: "КЛИМАТ-ПРО", body, url });
+      const ids = await recipients(base, undefined, "notif_comment");
+      const sent = await sendToUsers(ids, { title: "КЛИМАТ-ПРО", body, url });
+      return j({ ok: true, sent, inbox: base.length });
+    }
+
+    // --- комментарий/вопрос по ЗАДАЧЕ (taskId) ---
     if (type === "comment") {
       const taskId = b.taskId as string | undefined;
       if (!taskId || !UUID.test(taskId)) return j({ error: "valid taskId (uuid) required" }, 400);
@@ -210,6 +238,37 @@ Deno.serve(async (req: Request) => {
       const base = baseIds([task.author_id, task.assigned_to, ...members], initiator);
       const body = `💬 Новый комментарий: ${task.title}`;
       await insertInbox(base, { type: "comment", title: "КЛИМАТ-ПРО", body, url: "/tasks" });
+      const ids = await recipients(base, undefined, "notif_comment");
+      const sent = await sendToUsers(ids, { title: "КЛИМАТ-ПРО", body, url: "/tasks", tag: `task-${taskId}` });
+      return j({ ok: true, sent, inbox: base.length });
+    }
+
+    // --- версии ТЗ задачи: предложено / принято / отклонено (фронт 6.4b, раньше edge не знал — C3) ---
+    if (type === "task_tz_proposed" || type === "task_tz_approved" || type === "task_tz_rejected") {
+      const taskId = b.taskId as string | undefined;
+      if (!taskId || !UUID.test(taskId)) return j({ error: "valid taskId (uuid) required" }, 400);
+      const task = await loadTask(taskId);
+      if (!task) return j({ ok: true, note: "task not found" });
+      const base = baseIds([task.author_id, task.assigned_to], initiator);
+      const body = type === "task_tz_proposed" ? `📝 Предложено изменение ТЗ: «${task.title}»`
+                 : type === "task_tz_approved" ? `✅ Изменение ТЗ принято: «${task.title}»`
+                 : `❌ Изменение ТЗ отклонено: «${task.title}»`;
+      await insertInbox(base, { type, title: "КЛИМАТ-ПРО", body, url: "/tasks" });
+      const ids = await recipients(base, undefined, "notif_task");
+      const sent = await sendToUsers(ids, { title: "КЛИМАТ-ПРО", body, url: "/tasks", tag: `task-${taskId}` });
+      return j({ ok: true, sent, inbox: base.length });
+    }
+
+    // --- вопрос по задаче (фронт шлёт task_question; раньше edge не знал — C3) ---
+    if (type === "task_question") {
+      const taskId = b.taskId as string | undefined;
+      if (!taskId || !UUID.test(taskId)) return j({ error: "valid taskId (uuid) required" }, 400);
+      const task = await loadTask(taskId);
+      if (!task) return j({ ok: true, note: "task not found" });
+      const members = await projectMembers(task.project_id);
+      const base = baseIds([task.author_id, task.assigned_to, ...members], initiator);
+      const body = `❓ Вопрос по задаче «${task.title}»`;
+      await insertInbox(base, { type: "task_question", title: "КЛИМАТ-ПРО", body, url: "/tasks" });
       const ids = await recipients(base, undefined, "notif_comment");
       const sent = await sendToUsers(ids, { title: "КЛИМАТ-ПРО", body, url: "/tasks", tag: `task-${taskId}` });
       return j({ ok: true, sent, inbox: base.length });

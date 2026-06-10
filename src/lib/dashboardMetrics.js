@@ -215,6 +215,23 @@ export function myProjectIncomeForMonth(paymentsByProject = {}, projects = [], s
   return total;
 }
 
+// Доля ЗРИТЕЛЯ на проекте — для индикатора «Моя доля» на карточке. Владелец → его
+// остаток (договор минус доли других); участник-юзер → ИМЕННО его строка доли, НЕ остаток
+// владельца (это и был баг A); иначе (не владелец и нет своей доли, либо нет зрителя) → null.
+export function viewerShareOnProject(project, shares = [], viewerId = null) {
+  const contract = Number(project.contractSum) || 0;
+  if (contract <= 0 || viewerId == null) return null;
+  if (project.ownerId === viewerId) {
+    const others = shares.reduce((s, sh) => s + shareToAmount(sh, contract), 0);
+    const amount = Math.max(0, contract - others);
+    return { amount, percent: Math.round(amount / contract * 100), isOwner: true };
+  }
+  const mine = shares.find(sh => sh.participantUserId === viewerId);
+  if (!mine) return null;
+  const amount = shareToAmount(mine, contract);
+  return { amount, percent: Math.round(amount / contract * 100), isOwner: false };
+}
+
 // Проектные платежи (моя доля владельца) → псевдо-доходные транзакции для общего
 // финансового потока дашборда/аналитики: { date:paidOn, type:'income', amount:моя доля, category }.
 // Считается ТЕМИ ЖЕ долями-пропорциями, что и myProjectIncomeForMonth/ownerReceived
