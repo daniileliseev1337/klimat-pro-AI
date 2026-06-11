@@ -722,6 +722,8 @@ async function updateTask(client, id, patch) {
   if (error) throw error;
 }
 async function deleteTask(client, id) {
+  // байты фото в NC чистим ДО удаления строки (каскад снесёт метаданные); best-effort
+  try { await purgeTaskPhotos(client, id); } catch { /* осиротевшие байты — косметика */ }
   const { error } = await client.from("project_tasks").delete().eq("id", id);
   if (error) throw error;
 }
@@ -830,6 +832,62 @@ async function toggleFilePublic(client, fileId, makePublic) {
 
 async function deleteProjectFile(client, fileId) {
   return ncAction(client, "delete", { id: fileId });
+}
+
+// ── Заход №2: фото-отчёты задач (хранение в Nextcloud, метаданные task_photos) ──
+export const TASK_PHOTO_MIME = ["image/jpeg", "image/png", "image/heic", "image/webp"];
+export const TASK_PHOTO_MAX = 10 * 1024 * 1024; // 10 МБ
+
+async function fetchTaskPhotos(client, taskId) {
+  const { data, error } = await client.from("task_photos")
+    .select("*").eq("task_id", taskId).order("created_at");
+  if (error) throw error;
+  return data || [];
+}
+
+// батч для карточек доски: метаданные фото всех видимых задач одним запросом
+async function fetchTaskPhotosBatch(client, taskIds) {
+  if (!taskIds.length) return {};
+  const { data, error } = await client.from("task_photos")
+    .select("id, task_id, file_name").in("task_id", taskIds).order("created_at");
+  if (error) throw error;
+  const map = {};
+  for (const p of data || []) (map[p.task_id] = map[p.task_id] || []).push(p);
+  return map;
+}
+
+async function uploadTaskPhoto(client, taskId, file) {
+  const { data, error } = await client.functions.invoke("nextcloud", {
+    body: file,
+    headers: {
+      "x-action":    "task-photo-upload",
+      "x-task-id":   taskId,
+      "x-filename":  encodeURIComponent(file.name),
+      "x-mime-type": file.type || "",
+      "x-file-size": String(file.size),
+    },
+  });
+  if (error) throw error;
+  return data;
+}
+
+async function downloadTaskPhoto(client, photoId) {
+  const { data, error } = await client.functions.invoke("nextcloud", {
+    body: { action: "task-photo-download", id: photoId },
+  });
+  if (error) throw error;
+  if (data instanceof Blob) return data;
+  if (data instanceof ArrayBuffer) return new Blob([data]);
+  if (typeof data === "string") return new Blob([data]);
+  throw new Error("Не удалось получить фото");
+}
+
+async function deleteTaskPhoto(client, photoId) {
+  return ncAction(client, "task-photo-delete", { id: photoId });
+}
+
+async function purgeTaskPhotos(client, taskId) {
+  return ncAction(client, "task-photos-purge", { taskId });
 }
 
 async function signInWithPassword(client, email, password) {
