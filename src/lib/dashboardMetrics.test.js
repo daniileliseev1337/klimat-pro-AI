@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { periodRange, prevPeriodRange, inPeriod, periodBalance, trendDir, granularityFor, financeSeries, expenseByCategory, receivables, myTasks, shareToAmount, ownerShareAmount, proportionReceived, ownerReceived, mySharesTotals, myProjectIncomeForMonth, selectionTotals, projectIncomeTxs, viewerShareOnProject } from './dashboardMetrics.js';
+import { periodRange, prevPeriodRange, inPeriod, periodBalance, trendDir, granularityFor, financeSeries, expenseByCategory, receivables, myTasks, shareToAmount, ownerShareAmount, proportionReceived, ownerReceived, mySharesTotals, myProjectIncomeForMonth, selectionTotals, projectIncomeTxs, viewerShareOnProject, portfolioMineTotal } from './dashboardMetrics.js';
 
 const NOW = new Date('2026-06-06T12:00:00');
 
@@ -419,5 +419,24 @@ describe('viewerShareOnProject (доля ЗРИТЕЛЯ на карточке п
   });
   it('viewerId не задан → null (нет зрителя)', () => {
     expect(viewerShareOnProject(project, shares, null)).toBeNull();
+  });
+});
+
+describe('portfolioMineTotal (сколько Я имею от портфеля, замечание B)', () => {
+  const projects = [
+    { id: 'p1', ownerId: 'me',    stage: 'В работе', contractSum: 100000 }, // моя доля = остаток
+    { id: 'p2', ownerId: 'me',    stage: 'Архив',    contractSum: 50000 },  // архив — исключить
+    { id: 'p3', ownerId: 'other', stage: 'В работе', contractSum: 80000 },  // чужой — не как владелец
+  ];
+  const sharesByProject = { p1: [{ shareKind: 'percent', shareValue: 30 }] }; // участник 30% → мой остаток 70000
+  const myShares = [{ projectName: 'X', myAmount: 18000, myReceived: 0, myReceivable: 18000 }]; // моя доля в чужом
+  it('сумма моих остатков по своим неархивным + мои доли в чужих', () => {
+    expect(portfolioMineTotal(projects, sharesByProject, 'me', myShares)).toBe(70000 + 18000);
+  });
+  it('без долей и без чужих = сумма договоров своих неархивных', () => {
+    expect(portfolioMineTotal([{ id: 'a', ownerId: 'me', stage: 'В работе', contractSum: 40000 }], {}, 'me', [])).toBe(40000);
+  });
+  it('пустой портфель → 0', () => {
+    expect(portfolioMineTotal([], {}, 'me', [])).toBe(0);
   });
 });

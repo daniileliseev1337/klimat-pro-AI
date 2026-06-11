@@ -215,6 +215,20 @@ export function myProjectIncomeForMonth(paymentsByProject = {}, projects = [], s
   return total;
 }
 
+// Сколько ВЛАДЕЛЕЦ имеет от портфеля (замечание B): сумма его остатка по своим неархивным
+// проектам + его доли в чужих проектах (myShares.myAmount). KPI «Портфель» = весь объём договоров,
+// а это — «сколько из него моё».
+export function portfolioMineTotal(projects = [], sharesByProject = {}, ownerId = null, myShares = []) {
+  let total = 0;
+  for (const p of projects) {
+    if (p.stage === 'Архив') continue;
+    if (ownerId != null && p.ownerId !== ownerId) continue;
+    total += ownerShareAmount(p, sharesByProject[p.id] || []);
+  }
+  for (const s of myShares) total += Number(s.myAmount) || 0;
+  return total;
+}
+
 // Доля ЗРИТЕЛЯ на проекте — для индикатора «Моя доля» на карточке. Владелец → его
 // остаток (договор минус доли других); участник-юзер → ИМЕННО его строка доли, НЕ остаток
 // владельца (это и был баг A); иначе (не владелец и нет своей доли, либо нет зрителя) → null.

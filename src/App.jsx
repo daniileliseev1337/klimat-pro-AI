@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "./lib/supabase";
 import { diffLines } from "./lib/lineDiff";
 import { isPushSupported, getPushState, enablePush, disablePush } from "./lib/push";
-import { periodRange, prevPeriodRange, granularityFor, periodBalance, trendDir, financeSeries, expenseByCategory, receivables, myTasks, ownerReceived, mySharesTotals, myProjectIncomeForMonth, selectionTotals, projectIncomeTxs, viewerShareOnProject } from "./lib/dashboardMetrics";
+import { periodRange, prevPeriodRange, granularityFor, periodBalance, trendDir, financeSeries, expenseByCategory, receivables, myTasks, ownerReceived, mySharesTotals, myProjectIncomeForMonth, selectionTotals, projectIncomeTxs, viewerShareOnProject, portfolioMineTotal } from "./lib/dashboardMetrics";
 import NotificationBell from "./components/NotificationBell";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -2441,6 +2441,7 @@ function Dashboard({ projects, txs, tasks, onDrillStage, sharesByProject = {}, m
   const sharesTot = mySharesTotals(myShares);
   const myReceived = ownerReceived(projects, sharesByProject, ownerId) + sharesTot.received;
   const debtTotal = debt.total + sharesTot.receivable;
+  const mineInPortfolio = portfolioMineTotal(projects, sharesByProject, ownerId, myShares); // замечание B
   const today = todayStr();
   const myT = myTasks(tasks || [], today);
 
@@ -2484,7 +2485,7 @@ function Dashboard({ projects, txs, tasks, onDrillStage, sharesByProject = {}, m
         <div onClick={() => onDrillStage && onDrillStage("Активные")} style={{ cursor: onDrillStage ? "pointer" : "default" }}>
           <KpiCard label="Активных проектов" value={active.length} Icon={FolderKanban} color="#d4af37" sub={`всего: ${projects.length}`} />
         </div>
-        <KpiCard label="Портфель" value={totalContract} Icon={Briefcase} color="#d4af37" format={fmt} />
+        <KpiCard label="Портфель" value={totalContract} Icon={Briefcase} color="#d4af37" format={fmt} sub={`моё: ${fmt(mineInPortfolio)}`} />
         <KpiCard label="Получено" value={myReceived} Icon={BadgeCheck} color="#6ee7a8" format={fmt} sub={`жду: ${fmt(debtTotal)}`} />
         <KpiCard label="Баланс за период" value={bal.balance} Icon={Wallet} color={bal.balance >= 0 ? "#6ee7a8" : "#f8a3a3"} format={fmt} sub={`доходы ${fmt(bal.income)}`} trend={balanceTrend} />
       </motion.div>
@@ -2581,6 +2582,7 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
   const [saving, setSaving]           = useState(false);
   const [selectMode, setSelectMode]   = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [sortBy, setSortBy]           = useState("default"); // №4: сортировка списка проектов
 
   // Открыть карточку проекта по клику из уведомления (Центр уведомлений → onNavigate /projects/<id>).
   useEffect(() => {
@@ -2683,6 +2685,19 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
     : stageFilter === "Активные"
       ? projects.filter(p => !["Оплачен", "Архив"].includes(p.stage))
       : projects.filter(p => p.stage === stageFilter);
+
+  // №4: варианты сортировки. «default» — порядок из БД (по дате создания, новые сверху).
+  // Для админа добавляется «по владельцу» (группировка чужих проектов).
+  const SORTS = {
+    default:  { label: "Сортировка: по дате",     fn: null },
+    stage:    { label: "По статусу",              fn: (a, b) => PROJECT_STAGES.indexOf(a.stage) - PROJECT_STAGES.indexOf(b.stage) },
+    client:   { label: "По заказчику",            fn: (a, b) => (a.client || "").localeCompare(b.client || "", "ru") },
+    deadline: { label: "По дедлайну",             fn: (a, b) => (a.deadline || "9999-99-99").localeCompare(b.deadline || "9999-99-99") },
+    contract: { label: "По сумме договора",       fn: (a, b) => (+b.contractSum || 0) - (+a.contractSum || 0) },
+    ...(profile?.role === "admin" ? { owner: { label: "По владельцу", fn: (a, b) => (a.ownerId || "").localeCompare(b.ownerId || "") } } : {}),
+  };
+  const sortFn = SORTS[sortBy]?.fn;
+  const visibleSorted = sortFn ? [...visible].sort(sortFn) : visible;
   const todayS  = todayStr();
 
   return (
@@ -2699,6 +2714,14 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
             );
           })}
         </div>
+        <select
+          value={sortBy}
+          onChange={e => setSortBy(e.target.value)}
+          title="Сортировка проектов"
+          style={{ ...BASE_INPUT, width: "auto", padding: "6px 10px", fontSize: 12, cursor: "pointer", flexShrink: 0 }}
+        >
+          {Object.entries(SORTS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+        </select>
         <button
           onClick={() => { setSelectMode(m => !m); setSelectedIds(new Set()); }}
           style={{
@@ -2713,9 +2736,9 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
       </div>
 
       <div style={{display:"flex",flexDirection:"column",gap:12}}>
-        {visible.length===0
+        {visibleSorted.length===0
           ? <Empty text={stageFilter==="Свободные"?"Нет свободных проектов в маркетплейсе":stageFilter==="Все"?"Нет проектов — нажми «Новый проект»":`Нет проектов со стадией «${stageFilter}»`}/>
-          : visible.map(p=>{
+          : visibleSorted.map(p=>{
             const meta = STAGE_META[p.stage]||{color:"#d4af37",progress:0};
             const isAwaitingPayment = p.stage==="Сдан заказчику";
             const isOverdue = p.deadline&&p.deadline<todayS&&!["Оплачен","Архив","Сдан заказчику"].includes(p.stage);
