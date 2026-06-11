@@ -3739,6 +3739,143 @@ function DiffView({ oldText, newText }) {
   );
 }
 
+// Кэш objectURL скачанных фото (живёт сессию страницы — повторные открытия без сети).
+const taskPhotoUrlCache = new Map(); // photoId -> objectURL
+
+// Миниатюра фото задачи: лениво качает через edge, кэширует objectURL.
+function TaskPhotoThumb({ photo, client, size = 64, onClick }) {
+  const [url, setUrl] = useState(taskPhotoUrlCache.get(photo.id) || null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    if (url || failed) return;
+    let alive = true;
+    downloadTaskPhoto(client, photo.id)
+      .then(blob => {
+        const u = URL.createObjectURL(blob);
+        taskPhotoUrlCache.set(photo.id, u);
+        if (alive) setUrl(u);
+      })
+      .catch(() => { if (alive) setFailed(true); });
+    return () => { alive = false; };
+  }, [photo.id, client, url, failed]);
+  return (
+    <div onClick={onClick} title={photo.file_name} style={{
+      width: size, height: size, borderRadius: 8, overflow: "hidden", flexShrink: 0,
+      background: "#0a0b11", border: "1px solid rgba(255,255,255,0.08)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      cursor: onClick ? "pointer" : "default",
+    }}>
+      {url
+        ? <img src={url} alt={photo.file_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        : <span style={{ fontSize: size / 3, opacity: 0.4 }}>{failed ? "✕" : "🖼"}</span>}
+    </div>
+  );
+}
+
+// Полноэкранный просмотр фото (клик по фону или ✕ — закрыть).
+// Кэша может ещё не быть (клик до загрузки миниатюры) — грузит сам.
+function TaskPhotoLightbox({ photo, client, onClose }) {
+  const [url, setUrl] = useState(taskPhotoUrlCache.get(photo.id) || null);
+  useEffect(() => {
+    if (url) return;
+    let alive = true;
+    downloadTaskPhoto(client, photo.id)
+      .then(blob => {
+        const u = URL.createObjectURL(blob);
+        taskPhotoUrlCache.set(photo.id, u);
+        if (alive) setUrl(u);
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [photo.id, client, url]);
+  return (
+    <div onClick={onClose} style={{
+      position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.9)",
+      display: "flex", alignItems: "center", justifyContent: "center", padding: 24,
+    }}>
+      <button onClick={onClose} style={{
+        position: "absolute", top: 16, right: 20, background: "none", border: "none",
+        color: "#fff", fontSize: 28, cursor: "pointer",
+      }}>×</button>
+      {url
+        ? <img src={url} alt={photo.file_name} onClick={e => e.stopPropagation()}
+               style={{ maxWidth: "95vw", maxHeight: "90vh", borderRadius: 8 }} />
+        : <span style={{ color: "#9b9ca4" }}>Загрузка…</span>}
+    </div>
+  );
+}
+
+// Секция «Фото-отчёт» в модалке задачи: сетка миниатюр + приложить/удалить/просмотр.
+function TaskPhotosSection({ task, client, profile, showToast }) {
+  const [photos, setPhotos] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [viewing, setViewing] = useState(null);
+  const fileRef = useRef(null);
+
+  const reload = useCallback(async () => {
+    try { setPhotos(await fetchTaskPhotos(client, task.id)); }
+    catch (e) { showToast("Ошибка загрузки фото: " + (e.message || ""), "error"); }
+  }, [client, task.id, showToast]);
+  useEffect(() => { reload(); }, [reload]);
+
+  const pick = () => fileRef.current?.click();
+  const onFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // повторный выбор того же файла
+    if (!file) return;
+    if (!TASK_PHOTO_MIME.includes(file.type)) {
+      showToast("Только фото: JPG, PNG, HEIC, WebP", "error"); return;
+    }
+    if (file.size > TASK_PHOTO_MAX) {
+      showToast("Файл больше 10 МБ", "error"); return;
+    }
+    setBusy(true);
+    try { await uploadTaskPhoto(client, task.id, file); await reload(); showToast("✓ Фото приложено"); }
+    catch (err) { showToast("Ошибка загрузки: " + (err.message || ""), "error"); }
+    finally { setBusy(false); }
+  };
+  const remove = async (photo) => {
+    try {
+      await deleteTaskPhoto(client, photo.id);
+      const u = taskPhotoUrlCache.get(photo.id);
+      if (u) { URL.revokeObjectURL(u); taskPhotoUrlCache.delete(photo.id); }
+      await reload();
+    } catch (e) { showToast("Ошибка удаления: " + (e.message || ""), "error"); }
+  };
+
+  return (
+    <div style={{ marginTop: 16, borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+        <Label>Фото-отчёт{photos.length ? ` · ${photos.length}` : ""}</Label>
+        <button onClick={pick} disabled={busy} style={{
+          marginLeft: "auto", fontSize: 12, padding: "5px 10px", borderRadius: 8,
+          background: "#d4af3722", border: "1px solid #d4af3744", color: "#e8c860",
+          cursor: "pointer", fontWeight: 600,
+        }}>{busy ? "Загрузка…" : "📷 Приложить фото"}</button>
+        <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/heic,image/webp"
+               onChange={onFile} style={{ display: "none" }} />
+      </div>
+      {photos.length === 0
+        ? <div style={{ fontSize: 12, color: "#62646b" }}>Фото пока нет</div>
+        : <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {photos.map(p => (
+              <div key={p.id} style={{ position: "relative" }}>
+                <TaskPhotoThumb photo={p} client={client} size={72} onClick={() => setViewing(p)} />
+                {p.uploaded_by === profile.id && (
+                  <button onClick={() => remove(p)} title="Удалить фото" style={{
+                    position: "absolute", top: -6, right: -6, width: 20, height: 20,
+                    borderRadius: "50%", border: "none", cursor: "pointer",
+                    background: "#1c1c1a", color: "#f8a3a3", fontSize: 12, lineHeight: 1,
+                  }}>×</button>
+                )}
+              </div>
+            ))}
+          </div>}
+      {viewing && <TaskPhotoLightbox photo={viewing} client={client} onClose={() => setViewing(null)} />}
+    </div>
+  );
+}
+
 // Контекстные кнопки workflow статусов (по таблице ролей спека).
 // «Есть замечания» — обязательный текст -> комментарий в обсуждение + возврат «В работе».
 function TaskWorkflowButton({ task, client, profile, showToast, onChanged }) {
@@ -4026,6 +4163,7 @@ function TaskModal({ task, client, profile, projects, realtimeTick, onClose, onS
         </div>
         {!isNew && <TaskWorkflowButton task={task} client={client} profile={profile}
                      showToast={showToast} onChanged={onSaved} />}
+        {!isNew && <TaskPhotosSection task={task} client={client} profile={profile} showToast={showToast} />}
         <StyledInput style={{ marginBottom: 8 }} placeholder="Заголовок"
                value={form.title} onChange={e => set("title", e.target.value)} />
         {isNew ? (
