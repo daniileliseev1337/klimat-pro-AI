@@ -884,7 +884,8 @@ const BASE_INPUT = {
 
 function StyledInput(props) {
   const [focused, setFocused] = useState(false);
-  const { style = {}, ...rest } = props;
+  // onFocus/onBlur вызывающего НЕ глотаем (нужно автокомплитам для закрытия дропдауна)
+  const { style = {}, onFocus, onBlur, ...rest } = props;
   return (
     <input
       {...rest}
@@ -894,14 +895,14 @@ function StyledInput(props) {
         boxShadow: focused ? "0 0 0 3px rgba(212,175,55,0.18)" : "none",
         ...style,
       }}
-      onFocus={() => setFocused(true)}
-      onBlur={() => setFocused(false)}
+      onFocus={e => { setFocused(true); onFocus?.(e); }}
+      onBlur={e => { setFocused(false); onBlur?.(e); }}
     />
   );
 }
 function StyledSelect(props) {
   const [focused, setFocused] = useState(false);
-  const { style = {}, ...rest } = props;
+  const { style = {}, onFocus, onBlur, ...rest } = props;
   return (
     <select
       {...rest}
@@ -913,14 +914,14 @@ function StyledSelect(props) {
         cursor: "pointer",
         ...style,
       }}
-      onFocus={() => setFocused(true)}
-      onBlur={() => setFocused(false)}
+      onFocus={e => { setFocused(true); onFocus?.(e); }}
+      onBlur={e => { setFocused(false); onBlur?.(e); }}
     />
   );
 }
 function StyledTextarea(props) {
   const [focused, setFocused] = useState(false);
-  const { style = {}, ...rest } = props;
+  const { style = {}, onFocus, onBlur, ...rest } = props;
   return (
     <textarea
       {...rest}
@@ -931,8 +932,8 @@ function StyledTextarea(props) {
         resize: "vertical",
         ...style,
       }}
-      onFocus={() => setFocused(true)}
-      onBlur={() => setFocused(false)}
+      onFocus={e => { setFocused(true); onFocus?.(e); }}
+      onBlur={e => { setFocused(false); onBlur?.(e); }}
     />
   );
 }
@@ -3680,6 +3681,86 @@ function DiffView({ oldText, newText }) {
   );
 }
 
+// Контекстные кнопки workflow статусов (по таблице ролей спека).
+// «Есть замечания» — обязательный текст -> комментарий в обсуждение + возврат «В работе».
+function TaskWorkflowButton({ task, client, profile, showToast, onChanged }) {
+  const [busy, setBusy] = useState(false);
+  const [revising, setRevising] = useState(false);
+  const [revText, setRevText] = useState("");
+  if (!task.id) return null;
+  const isAuthor = task.authorId === profile.id || profile.role === "admin";
+  const isAssignee = task.assignedTo === profile.id || profile.role === "admin";
+  // selfTask читает ДАННЫЕ задачи (автор=исполнитель), а не роли — для админа НЕ true
+  const selfTask = task.authorId === task.assignedTo;
+
+  const go = async (toStatus, extra) => {
+    setBusy(true);
+    try {
+      await setTaskStatus(client, task.id, toStatus);
+      await notifyTask(client, "task_status", task.id, profile.id, extra);
+      onChanged();
+    } catch (e) {
+      const m = e.message || "";
+      if (m.includes("only_author_can_complete")) showToast("В «Готово» переводит только автор задачи", "error");
+      else showToast("Ошибка: " + m, "error");
+    } finally { setBusy(false); }
+  };
+
+  const sendRevision = async () => {
+    if (!revText.trim()) { showToast("Опишите замечания — поле обязательно", "error"); return; }
+    setBusy(true);
+    try {
+      await insertTaskComment(client, task.id, "📋 Замечания по проверке:\n" + revText.trim(), false);
+      await setTaskStatus(client, task.id, "В работе");
+      await notifyTask(client, "task_status", task.id, profile.id,
+        { customText: `↩ Проверено, есть замечания по задаче «${task.title}» — смотри ТЗ и обсуждение` });
+      setRevising(false); setRevText("");
+      onChanged();
+    } catch (e) { showToast("Ошибка: " + (e.message || ""), "error"); }
+    finally { setBusy(false); }
+  };
+
+  const big = (label, onClick, color = "#d4af37", text = "#0a0a0a") => (
+    <button onClick={onClick} disabled={busy} style={{
+      flex: 1, padding: "12px 16px", borderRadius: 12, border: "none", cursor: "pointer",
+      background: color, color: text, fontSize: 14, fontWeight: 700,
+    }}>{busy ? "…" : label}</button>
+  );
+
+  if (revising) return (
+    <div style={{ marginTop: 12 }}>
+      <Label>Замечания по проверке (обязательно)</Label>
+      <StyledTextarea rows={3} value={revText} onChange={e => setRevText(e.target.value)}
+        placeholder="Что не так и что доработать…" />
+      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+        {big("Отправить замечания — вернуть в работу", sendRevision, "#e8c860")}
+        <button onClick={() => { setRevising(false); setRevText(""); }} className={BTN.ghost}>Отмена</button>
+      </div>
+    </div>
+  );
+
+  let buttons = null;
+  if (task.status === "Новая" && isAssignee) {
+    buttons = big("▶ Взять в работу", () => go("В работе"));
+  } else if (task.status === "В работе" && isAssignee) {
+    buttons = (
+      <>
+        {big("📤 Отправить на проверку", () => go("На проверке"))}
+        {selfTask && isAuthor && big("✓ Завершить", () => go("Готово"), "#6ee7a8")}
+      </>
+    );
+  } else if (task.status === "На проверке" && isAuthor) {
+    buttons = (
+      <>
+        {big("✓ Принять — завершено", () => go("Готово"), "#6ee7a8")}
+        {big("↩ Есть замечания", () => setRevising(true), "#e8c860")}
+      </>
+    );
+  }
+  if (!buttons) return null;
+  return <div style={{ display: "flex", gap: 8, marginTop: 12 }}>{buttons}</div>;
+}
+
 function TaskModal({ task, client, profile, projects, realtimeTick, onClose, onSaved, showToast }) {
   const isNew = !task.id;
   const [form, setForm] = useState({
@@ -3841,9 +3922,8 @@ function TaskModal({ task, client, profile, projects, realtimeTick, onClose, onS
         if (form.projectId) await notifyTask(client, "task_created", id, profile.id);
       } else {
         const assigneeChanged = (task.assignedTo || "") !== (form.assignedTo || "");
-        const statusChanged = task.status !== form.status;
         // явный whitelist полей: description версионируется отдельно (RPC),
-        // status меняется через setTaskStatus ниже — здесь их не шлём.
+        // status меняется через TaskWorkflowButton — здесь его не шлём.
         await updateTask(client, task.id, {
           title: form.title,
           projectId: form.projectId,
@@ -3851,15 +3931,7 @@ function TaskModal({ task, client, profile, projects, realtimeTick, onClose, onS
           priority: form.priority,
           dueDate: form.dueDate,
         });
-        if (statusChanged) {
-          try { await setTaskStatus(client, task.id, form.status); }
-          catch (e) {
-            if ((e.message || "").includes("only_author_can_complete")) { showToast("В «Готово» переводит только автор задачи", "error"); setSaving(false); return; }
-            throw e;
-          }
-        }
         if (assigneeChanged && form.assignedTo) await notifyTask(client, "task_assigned", task.id, profile.id);
-        if (statusChanged) await notifyTask(client, "task_status", task.id, profile.id);
       }
       onSaved();
     } catch (e) { showToast("Ошибка сохранения: " + (e.message || ""), "error"); }
@@ -3872,22 +3944,32 @@ function TaskModal({ task, client, profile, projects, realtimeTick, onClose, onS
     catch (e) { showToast("Ошибка удаления: " + (e.message || ""), "error"); }
   };
 
-  const accept = async () => {
-    try {
-      await setTaskStatus(client, task.id, "В работе");
-      await notifyTask(client, "task_status", task.id, profile.id);
-      onSaved();
-    } catch (e) { showToast("Ошибка: " + (e.message || ""), "error"); }
-  };
-
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-zinc-900 rounded-lg p-5 w-[min(560px,92vw)]" onClick={e => e.stopPropagation()}>
-        <h3 className="text-lg font-semibold mb-3">{isNew ? "Новая задача" : "Задача"}</h3>
-        <input className="w-full bg-zinc-800 rounded px-3 py-2 mb-2" placeholder="Заголовок"
+    <div style={{ position:"fixed", inset:0, zIndex:100, display:"flex", alignItems:"center", justifyContent:"center", padding:16, background:"rgba(2,8,23,0.92)", backdropFilter:"blur(6px)" }} onClick={onClose}>
+      <div style={{ background:"#141414", border:"1px solid rgba(255,255,255,0.06)", borderRadius:20, padding:24, width:"min(620px,92vw)", maxHeight:"90vh", overflowY:"auto", boxShadow:"0 25px 60px rgba(0,0,0,.6)" }} onClick={e => e.stopPropagation()}>
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>{isNew ? "Новая задача" : form.title || "Задача"}</h3>
+            {!isNew && (() => { const sm = TASK_STATUS_META[task.status] || { color: "#62646b" }; return (
+              <span style={{ fontSize: 10, fontWeight: 800, padding: "3px 9px", borderRadius: 20, background: sm.color + "1f", color: sm.color }}>{task.status}</span>
+            ); })()}
+            {!isNew && (() => { const pm = TASK_PRIORITY_META[task.priority] || TASK_PRIORITY_META["Обычный"]; return (
+              <span style={{ fontSize: 10, fontWeight: 800, padding: "3px 9px", borderRadius: 20, background: pm.bg, color: pm.color }}>{pm.label}</span>
+            ); })()}
+          </div>
+          {!isNew && (() => { const due = dueState(task.dueDate, todayStr()); return (
+            <p style={{ margin: "6px 0 0", fontSize: 12, color: "#9b9ca4" }}>
+              {task.projectName ? `📁 ${task.projectName}` : "👤 Личная задача"} · исполнитель: {task.assigneeName || "—"} · автор: {task.authorName || "—"} · поставлена {fmtD((task.createdAt || "").slice(0, 10))}
+              {task.dueDate && <> · срок <span style={{ color: DUE_COLORS[due.level], fontWeight: 600 }}>{fmtD(task.dueDate)} ({dueSuffix(due.days)})</span></>}
+            </p>
+          ); })()}
+        </div>
+        {!isNew && <TaskWorkflowButton task={task} client={client} profile={profile}
+                     showToast={showToast} onChanged={onSaved} />}
+        <StyledInput style={{ marginBottom: 8 }} placeholder="Заголовок"
                value={form.title} onChange={e => set("title", e.target.value)} />
         {isNew ? (
-          <textarea className="w-full bg-zinc-800 rounded px-3 py-2 mb-2" rows={4} placeholder="Описание (ТЗ)"
+          <StyledTextarea style={{ marginBottom: 8 }} rows={4} placeholder="Описание (ТЗ)"
                  value={form.description} onChange={e => set("description", e.target.value)} />
         ) : (
           <div className="mb-3">
@@ -3899,20 +3981,20 @@ function TaskModal({ task, client, profile, projects, realtimeTick, onClose, onS
               )}
             </div>
             {!editingTz && (
-              <div className="bg-zinc-800 rounded px-3 py-2 text-sm" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+              <div style={{ background:"#0a0b11", border:"1px solid rgba(255,255,255,0.10)", borderRadius:8, padding:"10px 12px", fontSize:13, whiteSpace:"pre-wrap", wordBreak:"break-word" }}>
                 {currentTz || <span className="opacity-50">— ТЗ не задано —</span>}
               </div>
             )}
             {editingTz && (
               <div>
-                <textarea className="w-full bg-zinc-800 rounded px-3 py-2" rows={5}
+                <StyledTextarea rows={5}
                           value={tzDraft} onChange={e => setTzDraft(e.target.value)} />
                 <div className="flex gap-2 mt-1">
                   <button onClick={proposeTz} disabled={tzBusy}
-                          className="px-3 py-1 rounded bg-amber-500 text-black text-sm font-semibold">
+                          className={BTN.primary}>
                     {tzBusy ? "…" : "Предложить изменение"}</button>
                   <button onClick={() => { setEditingTz(false); setTzDraft(""); }}
-                          className="px-3 py-1 rounded bg-zinc-700 text-sm">Отмена</button>
+                          className={BTN.ghost}>Отмена</button>
                 </div>
               </div>
             )}
@@ -3926,8 +4008,8 @@ function TaskModal({ task, client, profile, projects, realtimeTick, onClose, onS
                 <DiffView oldText={currentTz} newText={pendingVer.content} />
                 {canDecide ? (
                   <div className="flex gap-2 mt-2">
-                    <button onClick={() => decideTz(true)} className="px-3 py-1 rounded bg-emerald-600 text-white text-sm font-semibold">Принять</button>
-                    <button onClick={() => decideTz(false)} className="px-3 py-1 rounded bg-red-600 text-white text-sm font-semibold">Отклонить</button>
+                    <button onClick={() => decideTz(true)} style={{ background:"#6ee7a8", color:"#0a0a0a", border:"none", borderRadius:8, padding:"6px 12px", fontWeight:700, cursor:"pointer", fontSize:13 }}>Принять</button>
+                    <button onClick={() => decideTz(false)} style={{ background:"#f8a3a3", color:"#0a0a0a", border:"none", borderRadius:8, padding:"6px 12px", fontWeight:700, cursor:"pointer", fontSize:13 }}>Отклонить</button>
                   </div>
                 ) : (
                   <div className="text-xs opacity-60 mt-2">{isProposer ? "Ожидает подтверждения другой стороны" : "Решение принимает сторона задачи"}</div>
@@ -3968,12 +4050,12 @@ function TaskModal({ task, client, profile, projects, realtimeTick, onClose, onS
           </div>
         )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
-          <select className="bg-zinc-800 rounded px-2 py-2" value={form.projectId} onChange={e => set("projectId", e.target.value)}>
+          <StyledSelect value={form.projectId} onChange={e => set("projectId", e.target.value)}>
             <option value="">Без проекта (личная)</option>
             {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
+          </StyledSelect>
           {form.assignedTo ? (
-            <div className="bg-zinc-800 rounded px-2 py-2 flex items-center gap-2">
+            <div style={{ ...BASE_INPUT, display:"flex", alignItems:"center", gap:8 }}>
               <span className="text-xs opacity-60 shrink-0">Исполнитель:</span>
               <span className="truncate flex-1">{assigneeName || "—"}</span>
               <button type="button" onClick={clearAssignee}
@@ -3981,14 +4063,14 @@ function TaskModal({ task, client, profile, projects, realtimeTick, onClose, onS
             </div>
           ) : (
             <div style={{ position: "relative" }}>
-              <input className="w-full bg-zinc-800 rounded px-2 py-2" placeholder="Исполнитель: поиск по имени/почте"
+              <StyledInput placeholder="Исполнитель: поиск по имени/почте"
                 value={execQuery} onChange={e => setExecQuery(e.target.value)}
                 onBlur={() => setTimeout(() => setExecResults([]), 200)} />
               {execResults.length > 0 && (
-                <div className="absolute left-0 right-0 z-50 mt-1 bg-zinc-800 border border-white/10 rounded overflow-hidden">
+                <div style={{ position:"absolute", left:0, right:0, zIndex:50, marginTop:4, background:"#141414", border:"1px solid rgba(255,255,255,0.10)", borderRadius:8, overflow:"hidden" }}>
                   {execResults.map(u => (
                     <div key={u.id} onMouseDown={() => selectAssignee(u)}
-                      className="px-3 py-2 cursor-pointer text-sm hover:bg-zinc-700 flex items-center gap-2">
+                      className="px-3 py-2 cursor-pointer text-sm hover:bg-white/5 flex items-center gap-2">
                       <span className="text-zinc-100">{u.name || u.email}</span>
                       {u.name && <span className="text-zinc-500 text-xs truncate">{u.email}</span>}
                     </div>
@@ -3997,13 +4079,10 @@ function TaskModal({ task, client, profile, projects, realtimeTick, onClose, onS
               )}
             </div>
           )}
-          <select className="bg-zinc-800 rounded px-2 py-2" value={form.status} onChange={e => set("status", e.target.value)}>
-            {TASK_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-          <select className="bg-zinc-800 rounded px-2 py-2" value={form.priority} onChange={e => set("priority", e.target.value)}>
+          <StyledSelect value={form.priority} onChange={e => set("priority", e.target.value)}>
             {TASK_PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
-          </select>
-          <input type="date" className="bg-zinc-800 rounded px-2 py-2" value={form.dueDate || ""} onChange={e => set("dueDate", e.target.value)} />
+          </StyledSelect>
+          <StyledInput type="date" value={form.dueDate || ""} onChange={e => set("dueDate", e.target.value)} />
         </div>
 
         {!isNew && (
@@ -4045,12 +4124,12 @@ function TaskModal({ task, client, profile, projects, realtimeTick, onClose, onS
                ))}
              </div>}
             <div className="flex gap-2 items-end">
-              <textarea value={cmtText} onChange={e => setCmtText(e.target.value)} rows={2}
+              <StyledTextarea value={cmtText} onChange={e => setCmtText(e.target.value)} rows={2}
                         onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) sendComment(); }}
                         placeholder="Сообщение… (Ctrl+Enter — отправить)"
-                        className="flex-1 bg-zinc-800 rounded px-3 py-2 text-sm" style={{ resize: "none" }} />
+                        style={{ flex:1, resize:"none", fontSize:13 }} />
               <button onClick={sendComment} disabled={cmtSending || !cmtText.trim()}
-                      className="px-3 py-2 rounded bg-amber-500 text-black text-sm font-semibold whitespace-nowrap">
+                      className={BTN.primary} style={{ whiteSpace:"nowrap" }}>
                 {cmtSending ? "…" : "Отправить"}</button>
             </div>
             <label className="flex items-center gap-1 text-xs mt-1 opacity-80">
@@ -4062,9 +4141,18 @@ function TaskModal({ task, client, profile, projects, realtimeTick, onClose, onS
         <div className="flex justify-between mt-3">
           {!isNew ? <button onClick={() => confirmDel ? remove() : setConfirmDel(true)} className="text-red-400 text-sm">{confirmDel ? "Точно удалить?" : "Удалить"}</button> : <span />}
           <div className="flex gap-2">
-            <button onClick={onClose} className="px-3 py-1.5 rounded bg-zinc-700">Отмена</button>
-            {!isNew && task.assignedTo === profile.id && task.status === "Новая" && <button onClick={accept} className="px-3 py-1.5 rounded bg-emerald-600 text-white font-semibold">Принять в работу</button>}
-            <button onClick={save} disabled={saving} className="px-3 py-1.5 rounded bg-amber-500 text-black font-semibold">
+            {!isNew && (task.authorId === profile.id || profile.role === "admin") &&
+             task.status !== "Готово" && task.status !== "Отменена" && (
+              <button disabled={saving} onClick={async () => {
+                setSaving(true);
+                try { await setTaskStatus(client, task.id, "Отменена");
+                      await notifyTask(client, "task_status", task.id, profile.id); onSaved(); }
+                catch (e) { showToast("Ошибка: " + (e.message || ""), "error"); }
+                finally { setSaving(false); }
+              }} className={BTN.ghost}>Отменить задачу</button>
+            )}
+            <button onClick={onClose} className={BTN.ghost}>Отмена</button>
+            <button onClick={save} disabled={saving} className={BTN.primary}>
               {saving ? "…" : "Сохранить"}</button>
           </div>
         </div>
