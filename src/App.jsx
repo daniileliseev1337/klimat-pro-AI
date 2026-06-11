@@ -3,7 +3,7 @@ import { supabase } from "./lib/supabase";
 import { diffLines } from "./lib/lineDiff";
 import { isPushSupported, getPushState, enablePush, disablePush } from "./lib/push";
 import { periodRange, prevPeriodRange, granularityFor, periodBalance, trendDir, financeSeries, expenseByCategory, receivables, myTasks, ownerReceived, mySharesTotals, myProjectIncomeForMonth, selectionTotals, projectIncomeTxs, viewerShareOnProject, portfolioMineTotal } from "./lib/dashboardMetrics";
-import { tasksAttention } from "./lib/taskUi.js";
+import { dueState, dueSuffix, DUE_COLORS, PRIORITY_ORDER, tasksAttention } from "./lib/taskUi.js";
 import NotificationBell from "./components/NotificationBell";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -4073,13 +4073,67 @@ function TaskModal({ task, client, profile, projects, realtimeTick, onClose, onS
   );
 }
 
-function TasksBoard({ tasks, onOpen, onReload, client, profile, badge, showToast }) {
-  // колонки доски — без «Отменена» (намеренно); при добавлении статусов в TASK_STATUSES обновить вручную
+// Карточка задачи на доске — стиль B (мокап 2026-06-11). UserAvatar — общий компонент сайта.
+function TaskCardBoard({ t, onOpen, draggable, onDragStart }) {
+  const today = todayStr();
+  const due = dueState(t.dueDate, today);
+  const pm = TASK_PRIORITY_META[t.priority] || TASK_PRIORITY_META["Обычный"];
+  const done = t.status === "Готово";
+  return (
+    <div draggable={draggable} onDragStart={onDragStart} onClick={() => onOpen(t)}
+      style={{
+        background: "#141414", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 13,
+        padding: 14, marginBottom: 11, cursor: "pointer", opacity: done ? 0.72 : 1,
+      }}>
+      <div style={{ marginBottom: 9 }}>
+        <span style={{
+          fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em",
+          padding: "3px 9px", borderRadius: 20, background: pm.bg, color: pm.color,
+        }}>{pm.label}</span>
+      </div>
+      <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.35, color: "#f5f5f2" }}>{t.title}</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10, fontSize: 12, color: "#9b9ca4" }}>
+        {t.projectName ? <>📁 {t.projectName}</> : <>👤 Личная задача</>}
+      </div>
+      {t.hasOpenQuestion && (
+        <div style={{
+          marginTop: 10, fontSize: 11, color: "#e8c860", background: "#e8c8601a",
+          border: "1px solid #e8c86033", borderRadius: 7, padding: "5px 9px",
+        }}>💬 Есть вопрос</div>
+      )}
+      <div style={{ height: 1, background: "rgba(255,255,255,0.06)", margin: "12px 0" }} />
+      <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+        <UserAvatar name={t.assigneeName} size={26} />
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 12, color: "#cfd0d4", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {t.assigneeName || "— не назначен"}
+          </div>
+          <div style={{ fontSize: 10, color: "#55565c" }}>
+            автор: {t.authorName || "—"} · {fmtD((t.createdAt || "").slice(0, 10))}
+          </div>
+        </div>
+        <span style={{
+          marginLeft: "auto", fontSize: 11.5, whiteSpace: "nowrap",
+          color: DUE_COLORS[due.level], fontWeight: due.level === "overdue" ? 700 : 400,
+        }}>
+          {t.dueDate ? `📅 ${fmtD(t.dueDate)}${due.days !== null && !done ? ` · ${dueSuffix(due.days)}` : ""}` : "—"}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function TasksBoard({ tasks, onOpen, onReload, client, profile, showToast }) {
+  // колонки доски — без «Отменена» (намеренно; отменённые видны фильтром в списке)
   const cols = ["Новая", "В работе", "На проверке", "Готово"];
   const [dragId, setDragId] = useState(null);
   const move = async (taskId, toStatus) => {
     const t = tasks.find(x => x.id === taskId);
     if (!t || t.status === toStatus) return;
+    // клиентское правило workflow: в «Готово» — только автор (или админ); сервер тоже проверит
+    if (toStatus === "Готово" && t.authorId !== profile.id && profile.role !== "admin") {
+      showToast("В «Готово» переводит только автор задачи", "error"); return;
+    }
     try {
       await setTaskStatus(client, taskId, toStatus);
       await notifyTask(client, "task_status", taskId, profile.id);
@@ -4092,22 +4146,32 @@ function TasksBoard({ tasks, onOpen, onReload, client, profile, badge, showToast
     }
   };
   return (
-    <div className="flex gap-3 overflow-x-auto">
-      {cols.map(col => (
-        <div key={col} onDragOver={e => e.preventDefault()}
-             onDrop={() => { if (dragId) move(dragId, col); setDragId(null); }}
-             className="min-w-[200px] flex-1 bg-zinc-900/50 rounded p-2">
-          <div className="text-xs uppercase opacity-60 mb-2">{col}</div>
-          {tasks.filter(t => t.status === col).map(t => (
-            <div key={t.id} draggable onDragStart={() => setDragId(t.id)} onClick={() => onOpen(t)}
-                 className="bg-zinc-800 rounded p-2 mb-2 cursor-pointer">
-              <div className="text-sm font-medium">{t.title}</div>
-              <div className="text-xs opacity-60">{t.projectName || "личная"} · {t.assigneeName || "—"}</div>
-              {t.dueDate && <div className="text-xs opacity-50">⏱ {t.dueDate}</div>}
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(230px, 1fr))", gap: 14, alignItems: "start", overflowX: "auto" }}>
+      {cols.map(col => {
+        const meta = TASK_STATUS_META[col];
+        const colTasks = tasks.filter(t => t.status === col);
+        return (
+          <div key={col} onDragOver={e => e.preventDefault()}
+               onDrop={() => { if (dragId) move(dragId, col); setDragId(null); }}
+               style={{ border: "1px solid rgba(255,255,255,0.05)", borderRadius: 14, overflow: "hidden" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 14px", background: meta.color + "14" }}>
+              <span style={{ fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.06em", color: meta.color }}>{col}</span>
+              <span style={{ marginLeft: "auto", fontSize: 11, fontWeight: 800, borderRadius: 20, padding: "1px 9px", background: "rgba(0,0,0,0.3)", color: meta.color }}>{colTasks.length}</span>
             </div>
-          ))}
-        </div>
-      ))}
+            <div style={{ padding: 12, background: "rgba(255,255,255,0.012)" }}>
+              {colTasks.map(t => (
+                <TaskCardBoard key={t.id} t={t} onOpen={onOpen}
+                  draggable onDragStart={() => setDragId(t.id)} />
+              ))}
+              <button onClick={() => onOpen({ status: col, priority: "Обычный" })} style={{
+                width: "100%", textAlign: "center", background: "transparent",
+                border: "1px dashed rgba(255,255,255,0.10)", color: "#62646b",
+                borderRadius: 9, padding: 9, fontSize: 12, cursor: "pointer",
+              }}>+ задача</button>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
