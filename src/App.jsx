@@ -2575,6 +2575,87 @@ function Dashboard({ projects, txs, tasks, onDrillStage, sharesByProject = {}, m
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+// PROJECT VISIBILITY MODAL (№9) — «глаз»: кто и почему видит проект.
+// Приватность: администраторы видят всё, но здесь НЕ перечисляются (они не в команде,
+// и мы их не светим — чтобы участники не знали, кто из админов смотрит).
+// ════════════════════════════════════════════════════════════════════════════
+function ProjectVisibilityModal({ project, client, profile, onClose }) {
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    fetchProjectMembers(client, project.id)
+      .then(m => { if (alive) setMembers(m); })
+      .catch(() => {})
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [project.id]); // eslint-disable-line
+
+  const vis = project.visibility || "private";
+  const visInfo = {
+    private:     { label: "Личный",     note: "Видят только владелец и добавленные в команду." },
+    team:        { label: "Командный",  note: "Виден всем одобренным пользователям системы." },
+    marketplace: { label: "Маркетплейс", note: project.takenBy ? "Взят исполнителем; виден владельцу, команде и исполнителю." : "В поиске исполнителя — виден всем одобренным пользователям." },
+  }[vis] || { label: vis, note: "" };
+
+  const ownerIsMe = project.ownerId === profile?.id;
+
+  return (
+    <Modal title="Кто видит проект" onClose={onClose} icon={<Eye size={16} />} maxWidth={440}>
+      <div style={{ fontSize: 13, color: "#a8a8a3", marginBottom: 14 }}>
+        Проект <b style={{ color: "#fafaf7" }}>{project.name}</b>
+      </div>
+
+      {/* Режим видимости */}
+      <div style={{ padding: "10px 12px", borderRadius: 10, background: "rgba(212,175,55,0.05)", border: "1px solid rgba(212,175,55,0.15)", marginBottom: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: "#d4af37" }}>{visInfo.label}</div>
+        <div style={{ fontSize: 12, color: "#a8a8a3", marginTop: 2, lineHeight: 1.45 }}>{visInfo.note}</div>
+      </div>
+
+      {/* Владелец */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+        <Crown size={16} strokeWidth={2.2} style={{ color: "#d4af37", flexShrink: 0 }} />
+        <span style={{ fontSize: 13, color: "#fafaf7" }}>Владелец{ownerIsMe ? " · вы" : ""}</span>
+      </div>
+
+      {/* Исполнитель маркетплейса */}
+      {vis === "marketplace" && project.takenBy && project.executor && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+          <UserCheck size={16} strokeWidth={2.2} style={{ color: "#6ee7a8", flexShrink: 0 }} />
+          <span style={{ fontSize: 13, color: "#fafaf7" }}>Исполнитель · {project.executor}</span>
+        </div>
+      )}
+
+      {/* Команда */}
+      <div style={{ marginTop: 10 }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: "#6b6b67", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Команда проекта</div>
+        {loading ? (
+          <div style={{ fontSize: 12, color: "#6b6b67" }}>Загрузка…</div>
+        ) : members.length === 0 ? (
+          <div style={{ fontSize: 12, color: "#6b6b67", fontStyle: "italic" }}>Команда пуста — добавить можно в карточке проекта</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {members.map(m => (
+              <div key={m.user_id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <UserAvatar name={m.name} email={m.email} size={24} />
+                <span style={{ fontSize: 12, color: "#fafaf7", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name || m.email}</span>
+                <span style={{ fontSize: 10, fontWeight: 600, color: m.member_role === "editor" ? "#6ee7a8" : "#93c5fd" }}>
+                  {m.member_role === "editor" ? "Редактор" : "Просмотр"}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div style={{ fontSize: 10, color: "#404040", marginTop: 14, lineHeight: 1.4 }}>
+        Администраторы имеют доступ ко всем проектам, но в этом списке не отображаются.
+      </div>
+    </Modal>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 // PROJECTS — список + CRUD через Supabase
 // ════════════════════════════════════════════════════════════════════════════
 function Projects({ projects, setProjects, clients, client, profile, ownerId, showToast, initialStageFilter = "Активные", sharesByProject, setSharesByProject, pendingProjectId, onProjectOpened, setPaymentsByProject }) {
@@ -2585,6 +2666,7 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
   const [selectMode, setSelectMode]   = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [sortBy, setSortBy]           = useState("default"); // №4: сортировка списка проектов
+  const [eyeProject, setEyeProject]   = useState(null);      // №9: «глаз» — кто видит проект
 
   // Открыть карточку проекта по клику из уведомления (Центр уведомлений → onNavigate /projects/<id>).
   useEffect(() => {
@@ -2962,9 +3044,12 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
                   </div>
                   {/* ═══ КНОПКИ ДЕЙСТВИЙ ═══ */}
                   <div style={{display:"flex",flexDirection:"column",gap:4,flexShrink:0,alignItems:"flex-end"}}>
-                    {/* Владелец или admin: редактировать + удалить + маркетплейс */}
+                    {/* Владелец или admin: глаз видимости + редактировать + удалить + маркетплейс */}
                     {(p.ownerId===profile?.id||profile?.role==="admin")&&(
                       <>
+                        <button onClick={()=>setEyeProject(p)} className={BTN.edit} title="Кто видит проект">
+                          <Eye size={14} strokeWidth={2.2} />
+                        </button>
                         <button onClick={()=>setModal(p)} className={BTN.edit}>✏️</button>
                         <button onClick={()=>{if(confirmDel===p.id){del(p.id);}else{setConfirmDel(p.id);}}}
                           style={{
@@ -3078,6 +3163,10 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
           );
         })()}
       </div>
+
+      {eyeProject && (
+        <ProjectVisibilityModal project={eyeProject} client={client} profile={profile} onClose={() => setEyeProject(null)} />
+      )}
 
       {modal&&(
         <Modal title={modal==="add"?"Новый проект":"Редактировать проект"} onClose={()=>!saving&&setModal(null)}>
@@ -6775,7 +6864,7 @@ function ReportViewer({ projects, onClose }) {
       <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafc;min-height:100vh;padding:32px 24px;">
         <div style="max-width:1050px;margin:0 auto;">
           <div style="background:linear-gradient(135deg,#0a0a0a,#1c1c1a);border-radius:16px;padding:28px 36px;color:white;margin-bottom:20px;">
-            <div style="font-size:21px;font-weight:900;letter-spacing:-.02em;margin-bottom:4px;"><span style="color:#a5b4fc;">Д</span>АНИИЛ — Отчёт по проектам</div>
+            <div style="font-size:21px;font-weight:900;letter-spacing:-.02em;margin-bottom:4px;"><span style="color:#d4af37;">КЛИМАТ-ПРО</span> — Отчёт по проектам</div>
             <div style="font-size:13px;opacity:.7;">Сформирован ${dateStr} · ${labels[stage]} · ${visible.length} проектов</div>
             <div style="display:flex;gap:14px;margin-top:18px;flex-wrap:wrap;">
               ${[
@@ -6847,7 +6936,7 @@ function ReportViewer({ projects, onClose }) {
         <div style={{maxWidth:1050,margin:"0 auto",padding:"28px 24px"}}>
           <div style={{background:"linear-gradient(135deg,#0a0a0a,#1c1c1a)",borderRadius:16,padding:"28px 36px",color:"white",marginBottom:20}}>
             <div style={{fontSize:21,fontWeight:900,letterSpacing:"-.02em",marginBottom:4}}>
-              <span style={{color:"#a5b4fc"}}>Д</span>АНИИЛ — Отчёт по проектам
+              <span style={{color:"#d4af37"}}>КЛИМАТ-ПРО</span> — Отчёт по проектам
             </div>
             <div style={{fontSize:13,opacity:.7}}>Сформирован {dateStr} · {labels[stage]} · {visible.length} проектов</div>
             <div style={{display:"flex",gap:14,marginTop:18,flexWrap:"wrap"}}>
