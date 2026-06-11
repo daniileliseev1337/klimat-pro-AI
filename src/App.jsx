@@ -3746,13 +3746,15 @@ function TaskWorkflowButton({ task, client, profile, showToast, onChanged }) {
     buttons = (
       <>
         {big("📤 Отправить на проверку", () => go("На проверке"))}
-        {selfTask && isAuthor && big("✓ Завершить", () => go("Готово"), "#6ee7a8")}
+        {/* «Готово» сервер разрешает ТОЛЬКО реальному автору (only_author_can_complete,
+            без админ-исключения) — кнопку завершения показываем только ему */}
+        {selfTask && task.authorId === profile.id && big("✓ Завершить", () => go("Готово"), "#6ee7a8")}
       </>
     );
   } else if (task.status === "На проверке" && isAuthor) {
     buttons = (
       <>
-        {big("✓ Принять — завершено", () => go("Готово"), "#6ee7a8")}
+        {task.authorId === profile.id && big("✓ Принять — завершено", () => go("Готово"), "#6ee7a8")}
         {big("↩ Есть замечания", () => setRevising(true), "#e8c860")}
       </>
     );
@@ -4246,8 +4248,9 @@ function TasksBoard({ tasks, onOpen, onReload, client, profile, showToast }) {
   const move = async (taskId, toStatus) => {
     const t = tasks.find(x => x.id === taskId);
     if (!t || t.status === toStatus) return;
-    // клиентское правило workflow: в «Готово» — только автор (или админ); сервер тоже проверит
-    if (toStatus === "Готово" && t.authorId !== profile.id && profile.role !== "admin") {
+    // клиентское правило workflow: в «Готово» — только автор; сервер (only_author_can_complete)
+    // не делает исключения и для админа — UI не предлагает то, что сервер запретит
+    if (toStatus === "Готово" && t.authorId !== profile.id) {
       showToast("В «Готово» переводит только автор задачи", "error"); return;
     }
     try {
@@ -4295,7 +4298,7 @@ function TasksBoard({ tasks, onOpen, onReload, client, profile, showToast }) {
 function TasksView({ client, profile, projects, showToast }) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState("list");
+  const [view, setView] = useState("board"); // доска — главный вид (решение владельца)
   const [fProject, setFProject] = useState("");
   const [fStatus, setFStatus] = useState("");
   const [onlyMine, setOnlyMine] = useState(false);
