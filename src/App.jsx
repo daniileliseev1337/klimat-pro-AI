@@ -3,6 +3,7 @@ import { supabase } from "./lib/supabase";
 import { diffLines } from "./lib/lineDiff";
 import { isPushSupported, getPushState, enablePush, disablePush } from "./lib/push";
 import { periodRange, prevPeriodRange, granularityFor, periodBalance, trendDir, financeSeries, expenseByCategory, receivables, myTasks, ownerReceived, mySharesTotals, myProjectIncomeForMonth, selectionTotals, projectIncomeTxs, viewerShareOnProject, portfolioMineTotal } from "./lib/dashboardMetrics";
+import { tasksAttention } from "./lib/taskUi.js";
 import NotificationBell from "./components/NotificationBell";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -195,9 +196,18 @@ function taskJsToDb(t) {
 }
 export const TASK_STATUSES = ["Новая", "В работе", "На проверке", "Готово", "Отменена"];
 export const TASK_PRIORITIES = ["Низкий", "Обычный", "Высокий"];
-const TASK_STATUS_BADGE = {
-  "Новая": "bg-zinc-600", "В работе": "bg-amber-600", "На проверке": "bg-sky-600",
-  "Готово": "bg-emerald-600", "Отменена": "bg-zinc-800",
+// Цвета статусов задач — согласованы со STAGE_META сайта (зол./бирюза/зел.).
+const TASK_STATUS_META = {
+  "Новая":       { color: "#93c5fd" },
+  "В работе":    { color: "#d4af37" },
+  "На проверке": { color: "#2dd4bf" },
+  "Готово":      { color: "#6ee7a8" },
+  "Отменена":    { color: "#62646b" },
+};
+const TASK_PRIORITY_META = {
+  "Высокий": { bg: "#f8a3a31f", color: "#f8a3a3", label: "🔴 Высокий" },
+  "Обычный": { bg: "#d4af371f", color: "#e8c860", label: "Обычный" },
+  "Низкий":  { bg: "rgba(255,255,255,0.06)", color: "#9b9ca4", label: "Низкий" },
 };
 
 // ── v3.0 6.4b: версии ТЗ и комментарии задач ──
@@ -715,9 +725,9 @@ async function deleteTask(client, id) {
   const { error } = await client.from("project_tasks").delete().eq("id", id);
   if (error) throw error;
 }
-async function notifyTask(client, type, taskId, initiatorId) {
+async function notifyTask(client, type, taskId, initiatorId, extra = {}) {
   try {
-    await client.functions.invoke("web-push-notify", { body: { type, taskId, initiatorId } });
+    await client.functions.invoke("web-push-notify", { body: { type, taskId, initiatorId, ...extra } });
   } catch (e) { console.warn("task notify failed:", e); }
 }
 
@@ -4109,6 +4119,8 @@ function TasksView({ client, profile, projects, showToast }) {
   const [fProject, setFProject] = useState("");
   const [fStatus, setFStatus] = useState("");
   const [onlyMine, setOnlyMine] = useState(false);
+  const [fPriority, setFPriority] = useState("");
+  const [sortBy, setSortBy] = useState("due"); // 'due' | 'priority' | 'created'
   const [editing, setEditing] = useState(null);
   // ref на открытую задачу: realtime-колбэк читает editingRef.current, чтобы
   // открытие/закрытие модалки не пересоздавало канал (иначе churn -> потеря событий).
@@ -4119,13 +4131,13 @@ function TasksView({ client, profile, projects, showToast }) {
     setLoading(true);
     try {
       const list = await fetchTasks(client, {
-        projectId: fProject || null, status: fStatus || null,
+        projectId: fProject || null, status: view === "list" ? (fStatus || null) : null,
         assignedTo: onlyMine ? profile.id : null,
       });
       setTasks(list);
     } catch (e) { showToast("Ошибка загрузки задач: " + (e.message || ""), "error"); }
     finally { setLoading(false); }
-  }, [fProject, fStatus, onlyMine, client, profile, showToast]);
+  }, [fProject, fStatus, onlyMine, client, profile, showToast, view]);
   useEffect(() => { reload(); }, [reload]);
 
   // ── 6.4b: Realtime-подписка на project_tasks ──
@@ -4177,47 +4189,74 @@ function TasksView({ client, profile, projects, showToast }) {
     return () => { client.removeChannel(channel); };
   }, [client, canSeeRow]);
 
-  const badge = (s) => TASK_STATUS_BADGE[s] || "bg-zinc-600";
+  const today = todayStr();
+  const shown = tasks.filter(t => !fPriority || t.priority === fPriority);
+  const activeCount = shown.filter(t => t.status !== "Готово" && t.status !== "Отменена").length;
+  const attentionCount = tasksAttention(shown, today);
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex gap-2">
-          <button onClick={() => setView("list")} className={view === "list" ? "font-bold" : "opacity-60"}>Список</button>
-          <button onClick={() => setView("board")} className={view === "board" ? "font-bold" : "opacity-60"}>Доска</button>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, letterSpacing: "-0.01em" }}>Задачи</h2>
+          <p style={{ margin: "3px 0 0", fontSize: 12, color: "#62646b" }}>
+            {activeCount} активных{attentionCount > 0 ? ` · ${attentionCount} требуют внимания` : ""}
+          </p>
         </div>
-        <button onClick={() => setEditing({ status: "Новая", priority: "Обычный" })}
-                className="px-3 py-1.5 rounded bg-amber-500 text-black font-semibold">+ Новая задача</button>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "inline-flex", background: "#141414", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: 3, gap: 2 }}>
+            {[["board", "▦ Доска"], ["list", "≣ Список"]].map(([v, l]) => (
+              <button key={v} onClick={() => setView(v)} style={{
+                border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, padding: "6px 14px", borderRadius: 7,
+                background: view === v ? "#d4af37" : "transparent", color: view === v ? "#0a0a0a" : "#9b9ca4",
+              }}>{l}</button>
+            ))}
+          </div>
+          <button onClick={() => setEditing({ status: "Новая", priority: "Обычный" })} className={BTN.primary}>+ Новая задача</button>
+        </div>
       </div>
-      <div className="flex flex-wrap gap-2 mb-3">
-        <select value={fProject} onChange={e => setFProject(e.target.value)} className="bg-zinc-800 rounded px-2 py-1">
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16, alignItems: "center" }}>
+        <StyledSelect value={fProject} onChange={e => setFProject(e.target.value)} style={{ width: "auto", padding: "6px 10px", fontSize: 13 }}>
           <option value="">Все проекты</option>
           {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-        </select>
-        <select value={fStatus} onChange={e => setFStatus(e.target.value)} className="bg-zinc-800 rounded px-2 py-1">
-          <option value="">Все статусы</option>
-          {TASK_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
-        <label className="flex items-center gap-1 text-sm">
-          <input type="checkbox" checked={onlyMine} onChange={e => setOnlyMine(e.target.checked)} /> только мои
+        </StyledSelect>
+        {view === "list" && (
+          <StyledSelect value={fStatus} onChange={e => setFStatus(e.target.value)} style={{ width: "auto", padding: "6px 10px", fontSize: 13 }}>
+            <option value="">Все статусы</option>
+            {TASK_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+          </StyledSelect>
+        )}
+        <StyledSelect value={fPriority} onChange={e => setFPriority(e.target.value)} style={{ width: "auto", padding: "6px 10px", fontSize: 13 }}>
+          <option value="">Любой приоритет</option>
+          {TASK_PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
+        </StyledSelect>
+        {view === "list" && (
+          <StyledSelect value={sortBy} onChange={e => setSortBy(e.target.value)} style={{ width: "auto", padding: "6px 10px", fontSize: 13 }}>
+            <option value="due">Сортировка: по сроку</option>
+            <option value="priority">Сортировка: по приоритету</option>
+            <option value="created">Сортировка: по дате постановки</option>
+          </StyledSelect>
+        )}
+        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#9b9ca4" }}>
+          <input type="checkbox" checked={onlyMine} onChange={e => setOnlyMine(e.target.checked)} style={{ accentColor: "#d4af37" }} /> только мои
         </label>
       </div>
       {loading ? <div className="opacity-60">Загрузка…</div> :
-       view === "board" ? <TasksBoard tasks={tasks} onOpen={setEditing} onReload={reload} client={client} profile={profile} badge={badge} showToast={showToast} /> :
+       view === "board" ? <TasksBoard tasks={shown} onOpen={setEditing} onReload={reload} client={client} profile={profile} showToast={showToast} /> :
        <div className="overflow-x-auto" style={{ WebkitOverflowScrolling: "touch" }}>
          <table className="w-full text-sm" style={{ minWidth: 560 }}>
            <thead><tr className="text-left opacity-60">
              <th>Статус</th><th>Задача</th><th>Проект</th><th>Исполнитель</th><th>Приоритет</th><th>Срок</th>
            </tr></thead>
            <tbody>
-             {tasks.map(t => (
+             {shown.map(t => (
                <tr key={t.id} onClick={() => setEditing(t)} className="cursor-pointer hover:bg-zinc-800/50">
-                 <td><span className={"px-2 py-0.5 rounded text-xs text-white " + badge(t.status)}>{t.status}</span></td>
+                 <td><span className="px-2 py-0.5 rounded text-xs text-white" style={{ background: (TASK_STATUS_META[t.status]||{}).color }}>{t.status}</span></td>
                  <td>{t.title}</td><td>{t.projectName || "—"}</td><td>{t.assigneeName || "—"}</td>
                  <td>{t.priority}</td><td>{t.dueDate || "—"}</td>
                </tr>
              ))}
-             {!tasks.length && <tr><td colSpan={6} className="opacity-60 py-4">Задач нет</td></tr>}
+             {!shown.length && <tr><td colSpan={6} className="opacity-60 py-4">Задач нет</td></tr>}
            </tbody>
          </table>
        </div>}
