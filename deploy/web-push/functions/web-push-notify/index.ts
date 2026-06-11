@@ -158,7 +158,7 @@ Deno.serve(async (req: Request) => {
         body = `📌 Вам назначена задача: ${task.title}`;
       } else if (type === "task_status") {
         base = baseIds([task.author_id, task.assigned_to], initiator);
-        body = `🔄 Задача «${task.title}» → ${task.status}`;
+        body = (b.customText as string) || `🔄 Задача «${task.title}» → ${task.status}`;
       } else {
         const members = await projectMembers(task.project_id);
         const owner = await projectOwner(task.project_id);
