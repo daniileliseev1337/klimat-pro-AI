@@ -2575,82 +2575,75 @@ function Dashboard({ projects, txs, tasks, onDrillStage, sharesByProject = {}, m
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// PROJECT VISIBILITY MODAL (№9) — «глаз»: кто и почему видит проект.
-// Приватность: администраторы видят всё, но здесь НЕ перечисляются (они не в команде,
-// и мы их не светим — чтобы участники не знали, кто из админов смотрит).
+// PROJECT VISIBILITY MODAL (№9) — «глаз»: поимённо КТО и ПО КАКОЙ ПРИЧИНЕ видит проект.
+// Собирает реальный список пользователей: владелец, исполнитель, команда, а для
+// командных/свободно-маркетплейсных проектов — все одобренные пользователи.
 // ════════════════════════════════════════════════════════════════════════════
 function ProjectVisibilityModal({ project, client, profile, onClose }) {
-  const [members, setMembers] = useState([]);
+  const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
+  const vis = project.visibility || "private";
+
   useEffect(() => {
     let alive = true;
-    fetchProjectMembers(client, project.id)
-      .then(m => { if (alive) setMembers(m); })
-      .catch(() => {})
-      .finally(() => { if (alive) setLoading(false); });
+    (async () => {
+      try {
+        const members = await fetchProjectMembers(client, project.id).catch(() => []);
+        // командный ИЛИ свободный маркетплейс → видят ВСЕ одобренные пользователи
+        const broadcast = vis === "team" || (vis === "marketplace" && !project.takenBy);
+        const all = broadcast ? await searchApprovedUsers(client, "").catch(() => []) : [];
+        // приоритет причины (меньше = главнее): владелец 0, исполнитель 1, команда 2, broadcast 3
+        const map = new Map();
+        const put = (id, name, email, reason, priority) => {
+          if (!id) return;
+          const ex = map.get(id);
+          if (!ex || priority < ex.priority) map.set(id, { id, name, email, reason, priority });
+        };
+        put(project.ownerId, project.ownerId === profile?.id ? (profile.name || profile.email) : null, null, "Владелец", 0);
+        if (project.takenBy) put(project.takenBy, project.executor || null, null, "Взял в работу", 1);
+        for (const m of members) put(m.user_id, m.name, m.email, m.member_role === "editor" ? "Команда · редактор" : "Команда · просмотр", 2);
+        if (broadcast) {
+          const reason = vis === "team" ? "Командный — видят все" : "Маркетплейс — видят все";
+          for (const u of all) put(u.id, u.name, u.email, reason, 3);
+          // search_approved_users исключает самого себя — добавим текущего пользователя вручную
+          if (profile?.id) put(profile.id, profile.name || profile.email, profile.email, reason, 3);
+        }
+        const list = [...map.values()].sort((a, b) => a.priority - b.priority);
+        if (alive) setRows(list);
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
     return () => { alive = false; };
   }, [project.id]); // eslint-disable-line
 
-  const vis = project.visibility || "private";
-  const visInfo = {
-    private:     { label: "Личный",     note: "Видят только владелец и добавленные в команду." },
-    team:        { label: "Командный",  note: "Виден всем одобренным пользователям системы." },
-    marketplace: { label: "Маркетплейс", note: project.takenBy ? "Взят исполнителем; виден владельцу, команде и исполнителю." : "В поиске исполнителя — виден всем одобренным пользователям." },
-  }[vis] || { label: vis, note: "" };
-
-  const ownerIsMe = project.ownerId === profile?.id;
+  const reasonColor = (p) => p === 0 ? "#d4af37" : p === 1 ? "#6ee7a8" : p === 2 ? "#93c5fd" : "#a8a8a3";
 
   return (
-    <Modal title="Кто видит проект" onClose={onClose} icon={<Eye size={16} />} maxWidth={440}>
+    <Modal title="Кто видит проект" onClose={onClose} icon={<Eye size={16} />} maxWidth={460}>
       <div style={{ fontSize: 13, color: "#a8a8a3", marginBottom: 14 }}>
         Проект <b style={{ color: "#fafaf7" }}>{project.name}</b>
       </div>
-
-      {/* Режим видимости */}
-      <div style={{ padding: "10px 12px", borderRadius: 10, background: "rgba(212,175,55,0.05)", border: "1px solid rgba(212,175,55,0.15)", marginBottom: 14 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: "#d4af37" }}>{visInfo.label}</div>
-        <div style={{ fontSize: 12, color: "#a8a8a3", marginTop: 2, lineHeight: 1.45 }}>{visInfo.note}</div>
-      </div>
-
-      {/* Владелец */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-        <Crown size={16} strokeWidth={2.2} style={{ color: "#d4af37", flexShrink: 0 }} />
-        <span style={{ fontSize: 13, color: "#fafaf7" }}>Владелец{ownerIsMe ? " · вы" : ""}</span>
-      </div>
-
-      {/* Исполнитель маркетплейса */}
-      {vis === "marketplace" && project.takenBy && project.executor && (
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-          <UserCheck size={16} strokeWidth={2.2} style={{ color: "#6ee7a8", flexShrink: 0 }} />
-          <span style={{ fontSize: 13, color: "#fafaf7" }}>Исполнитель · {project.executor}</span>
+      {loading ? (
+        <div style={{ fontSize: 12, color: "#6b6b67", padding: "12px 0" }}>Загрузка…</div>
+      ) : rows.length === 0 ? (
+        <div style={{ fontSize: 13, color: "#a8a8a3" }}>Проект видите только вы.</div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {rows.map(r => {
+            const isMe = r.id === profile?.id;
+            return (
+              <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                <UserAvatar name={r.name} email={r.email} size={28} />
+                <span style={{ fontSize: 13, color: "#fafaf7", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {r.name || r.email || "Пользователь"}{isMe ? " · вы" : ""}
+                </span>
+                <span style={{ fontSize: 10, fontWeight: 600, color: reasonColor(r.priority), whiteSpace: "nowrap" }}>{r.reason}</span>
+              </div>
+            );
+          })}
         </div>
       )}
-
-      {/* Команда */}
-      <div style={{ marginTop: 10 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, color: "#6b6b67", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Команда проекта</div>
-        {loading ? (
-          <div style={{ fontSize: 12, color: "#6b6b67" }}>Загрузка…</div>
-        ) : members.length === 0 ? (
-          <div style={{ fontSize: 12, color: "#6b6b67", fontStyle: "italic" }}>Команда пуста — добавить можно в карточке проекта</div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {members.map(m => (
-              <div key={m.user_id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <UserAvatar name={m.name} email={m.email} size={24} />
-                <span style={{ fontSize: 12, color: "#fafaf7", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name || m.email}</span>
-                <span style={{ fontSize: 10, fontWeight: 600, color: m.member_role === "editor" ? "#6ee7a8" : "#93c5fd" }}>
-                  {m.member_role === "editor" ? "Редактор" : "Просмотр"}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div style={{ fontSize: 10, color: "#404040", marginTop: 14, lineHeight: 1.4 }}>
-        Администраторы имеют доступ ко всем проектам, но в этом списке не отображаются.
-      </div>
     </Modal>
   );
 }
