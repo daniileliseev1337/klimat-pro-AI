@@ -58,8 +58,7 @@ function useIsMobile(){
 // CONSTANTS — справочники проекта
 // ════════════════════════════════════════════════════════════════════════════
 const PROJECT_STAGES = [
-  "Поиск исполнителя","Переговоры","КП выслано","Договор подписан",
-  "В работе","Сдан заказчику","Оплачен","Архив"
+  "Поиск исполнителя","В работе","Сдан заказчику","Оплачен","Архив"
 ];
 const PROJECT_TYPES = [
   "ОВиК","Слаботочка","BIM","Исполнительная документация",
@@ -78,9 +77,6 @@ const EXPENSE_CATS = [
 
 const STAGE_META = {
   "Поиск исполнителя": { color:"#93c5fd", progress:0   },
-  "Переговоры":        { color:"#6b6b67", progress:10  },
-  "КП выслано":       { color:"#93c5fd", progress:25  },
-  "Договор подписан": { color:"#d4af37", progress:40  },
   "В работе":         { color:"#d4af37", progress:65  },
   "Сдан заказчику":   { color:"#2dd4bf", progress:85  },
   "Оплачен":          { color:"#6ee7a8", progress:100 },
@@ -119,7 +115,7 @@ function projectDbToJs(row) {
     client:         row.client || "",
     executor:       row.executor || "",
     type:           row.type || "ОВиК",
-    stage:          row.stage || "Переговоры",
+    stage:          row.stage || "В работе",
     startDate:      row.start_date || "",
     deadline:       row.deadline || "",
     contractSum:    row.contract_sum != null ? Number(row.contract_sum) : 0,
@@ -151,7 +147,7 @@ function projectJsToDb(p) {
     executor:         (p.executors || []).map(e => e.name).filter(Boolean).join(", ") || null,
     executors:        (p.executors || []).filter(e => e && e.name).map(e => ({ name: e.name, userId: e.userId || null })),
     type:             p.type || null,
-    stage:            p.stage || "Переговоры",
+    stage:            p.stage || "В работе",
     start_date:       p.startDate || null,
     deadline:         p.deadline || null,
     contract_sum:     parseFloat(p.contractSum) || 0,
@@ -1608,6 +1604,7 @@ function AuthScreen({ onAuthenticated, onError }) {
 // PROJECT FORM
 // ════════════════════════════════════════════════════════════════════════════
 function ProjectForm({ initial, onSave, onClose, saving, client, profile, showToast, isOwner }) {
+  const isMobile = useIsMobile(); // моб-баг #1: парные поля 1fr 1fr сворачиваем в колонку на телефоне
   const [f, setF] = useState(initial ? {
     ...initial,
     shares: (initial.shares || []).map(s => ({
@@ -1623,7 +1620,7 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
     // v3.0 платежи (загружаются в useEffect ниже)
     payments: [],
   } : {
-    name: "", client: "", executor: "", type: "ОВиК", stage: "Переговоры",
+    name: "", client: "", executor: "", type: "ОВиК", stage: "В работе",
     startDate: todayStr(), deadline: "", contractSum: "", paidAmount: "", notes: "",
     visibility: "private",
     // v1.2 поля
@@ -1743,7 +1740,7 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
         <StyledInput value={f.name} onChange={e => s("name", e.target.value)}
           placeholder="Н-р: ОВиК Жилой дом пер. Строителей" />
       </Field>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, marginBottom: 12 }}>
         <div>
           <Label>Заказчик / Клиент</Label>
           {client ? (
@@ -1872,7 +1869,7 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
           </div>
         </div>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, marginBottom: 12 }}>
         <div>
           <Label>Тип работ</Label>
           <StyledSelect value={f.type} onChange={e => s("type", e.target.value)}>
@@ -1886,7 +1883,7 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
           </StyledSelect>
         </div>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, marginBottom: 12 }}>
         <div><Label>Дата начала</Label>
           <StyledInput type="date" value={f.startDate} onChange={e => s("startDate", e.target.value)} /></div>
         <div><Label>Дедлайн</Label>
@@ -2103,7 +2100,7 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
           <User size={12} strokeWidth={2.4} />
           Контакты заказчика
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 10, marginBottom: 10 }}>
           <div>
             <Label>Телефон</Label>
             <StyledInput
@@ -2918,11 +2915,9 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
 
   const toggleSelect = (id) => setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
-  const visible = stageFilter === "Свободные"
-    ? projects.filter(p => p.visibility === "marketplace" && !p.takenBy)
-    : stageFilter === "Активные"
-      ? projects.filter(p => !["Оплачен", "Архив"].includes(p.stage))
-      : projects.filter(p => p.stage === stageFilter);
+  const visible = stageFilter === "Активные"
+    ? projects.filter(p => !["Оплачен", "Архив"].includes(p.stage))
+    : projects.filter(p => p.stage === stageFilter);
 
   // №4: варианты сортировки. «default» — порядок из БД (по дате создания, новые сверху).
   // Для админа добавляется «по владельцу» (группировка чужих проектов).
@@ -2949,9 +2944,8 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
     <div>
       <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:20,alignItems:"center"}}>
         <div style={{display:"flex",flexWrap:"wrap",gap:6,flex:1}}>
-          {["Активные","Свободные",...PROJECT_STAGES].map(s=>{
-            const freeCount = projects.filter(p=>p.visibility==="marketplace"&&!p.takenBy).length;
-            const cnt = s==="Активные" ? projects.filter(p=>!["Оплачен","Архив"].includes(p.stage)).length : s==="Свободные" ? freeCount : projects.filter(p=>p.stage===s).length;
+          {["Активные",...PROJECT_STAGES].map(s=>{
+            const cnt = s==="Активные" ? projects.filter(p=>!["Оплачен","Архив"].includes(p.stage)).length : projects.filter(p=>p.stage===s).length;
             return (
               <Chip key={s}
                 label={`${s}${cnt>0?` (${cnt})`:""}`}
@@ -2986,7 +2980,7 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
 
       <div style={{display:"flex",flexDirection:"column",gap:12}}>
         {visibleSorted.length===0
-          ? <Empty text={stageFilter==="Свободные"?"Нет свободных проектов в маркетплейсе":stageFilter==="Все"?"Нет проектов — нажми «Новый проект»":`Нет проектов со стадией «${stageFilter}»`}/>
+          ? <Empty text={stageFilter==="Все"?"Нет проектов — нажми «Новый проект»":`Нет проектов со стадией «${stageFilter}»`}/>
           : visibleSorted.map(p=>{
             const meta = STAGE_META[p.stage]||{color:"#d4af37",progress:0};
             const isAwaitingPayment = p.stage==="Сдан заказчику";
@@ -3273,12 +3267,9 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
                         onClick={async()=>{
                           try{
                             await takeProject(client,p.id);
-                            // Обновляем executor в БД именем исполнителя
+                            // executor/executors и членство в команде (editor) проставляет сам RPC take_project — атомарно
                             const executorName = profile?.name || profile?.email || "";
-                            if (executorName) {
-                              await client.from("projects").update({ executor: executorName }).eq("id", p.id);
-                            }
-                            setProjects(prev=>prev.map(x=>x.id===p.id?{...x,takenBy:profile?.id,stage:"В работе",executor:executorName}:x));
+                            setProjects(prev=>prev.map(x=>x.id===p.id?{...x,takenBy:profile?.id,stage:"В работе",executor:executorName,executors:[...(x.executors||[]).filter(e=>e.userId!==profile?.id),{name:executorName,userId:profile?.id}]}:x));
                             showToast("✓ Проект взят в работу");
                             // Уведомление владельцу проекта
                             sendPush(client,"project_taken",p.ownerId,{
@@ -6208,6 +6199,7 @@ function MembersManager({ projectId, profile, client, showToast, canManage }) {
 // CLIENT FORM — форма создания/редактирования клиента (v1.5)
 // ════════════════════════════════════════════════════════════════════════════
 function ClientForm({ initial, onSave, onClose, saving }) {
+  const isMobile = useIsMobile(); // моб: парные поля 1fr 1fr сворачиваем в колонку на телефоне
   const [f, setF] = useState(initial || {
     name: "", phone: "", email: "", telegram: "",
     clientType: "individual", category: "regular",
@@ -6222,7 +6214,7 @@ function ClientForm({ initial, onSave, onClose, saving }) {
           placeholder="ФИО или название организации" autoFocus />
       </Field>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, marginBottom: 12 }}>
         <div>
           <Label>Тип клиента</Label>
           <StyledSelect value={f.clientType} onChange={e => s("clientType", e.target.value)}>
@@ -6257,7 +6249,7 @@ function ClientForm({ initial, onSave, onClose, saving }) {
         }}>
           <PhoneIcon size={12} strokeWidth={2.4} /> Контакты
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 10, marginBottom: 10 }}>
           <div>
             <Label>Телефон</Label>
             <StyledInput type="tel" value={f.phone} onChange={e => s("phone", e.target.value)} placeholder="+7 999 123-45-67" />
@@ -6292,7 +6284,7 @@ function ClientForm({ initial, onSave, onClose, saving }) {
           <StyledInput value={f.legalName} onChange={e => s("legalName", e.target.value)}
             placeholder='ООО "Стройинвест"' />
         </Field>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 10, marginBottom: 10 }}>
           <div>
             <Label>ИНН</Label>
             <StyledInput value={f.inn} onChange={e => s("inn", e.target.value)} placeholder="7700000000" />
@@ -7378,7 +7370,6 @@ function ReportViewer({ projects, onClose }) {
   const dateStr       = now.toLocaleDateString("ru-RU",{day:"numeric",month:"long",year:"numeric"});
 
   const stageColor = {
-    "Переговоры":"#a8a8a3","КП выслано":"#93c5fd","Договор подписан":"#d4af37",
     "В работе":"#d4af37","Сдан заказчику":"#6ee7a8","Оплачен":"#6ee7a8","Архив":"#404040"
   };
 
