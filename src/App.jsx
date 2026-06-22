@@ -4810,8 +4810,8 @@ function TaskCardBoard({ t, onOpen, draggable, onDragStart, photos = [], client 
   const done = t.status === "Готово";
   return (
     <div draggable={draggable} onDragStart={onDragStart} onClick={() => onOpen(t)}
+      onMouseMove={spotlightMove} className="kp-card"
       style={{
-        background: "#141414", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 13,
         padding: 14, marginBottom: 11, cursor: "pointer", opacity: done ? 0.72 : 1,
       }}>
       <div style={{ marginBottom: 9 }}>
