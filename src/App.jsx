@@ -2797,7 +2797,7 @@ function ProjectVisibilityModal({ project, client, profile, onClose }) {
 // ════════════════════════════════════════════════════════════════════════════
 // PROJECTS — список + CRUD через Supabase
 // ════════════════════════════════════════════════════════════════════════════
-function Projects({ projects, setProjects, clients, client, profile, ownerId, showToast, initialStageFilter = "Активные", sharesByProject, setSharesByProject, pendingProjectId, onProjectOpened, setPaymentsByProject }) {
+function Projects({ projects, setProjects, clients, client, profile, ownerId, showToast, initialStageFilter = "Активные", sharesByProject, setSharesByProject, pendingProjectId, onProjectOpened, setPaymentsByProject, onMakeReport }) {
   const [modal, setModal]             = useState(null);
   const [stageFilter, setStageFilter] = useState(initialStageFilter);
   const [confirmDel, setConfirmDel]   = useState(null);
@@ -3315,6 +3315,11 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
                   </div>
                 ))}
               </div>
+              <button onClick={()=>onMakeReport && onMakeReport(sel)} style={{
+                marginTop:10,width:"100%",padding:"9px 14px",borderRadius:10,
+                background:"#d4af37",border:"none",color:"#1c1c1a",
+                fontSize:13,fontWeight:800,cursor:"pointer",
+              }}>📄 Сформировать отчёт по выбранным ({sel.length})</button>
             </div>
           );
         })()}
@@ -7352,238 +7357,255 @@ function BackupPanel({ projects, txs, client, ownerId, onImported, onClose, show
 // ════════════════════════════════════════════════════════════════════════════
 // REPORT VIEWER (тот же что в v1, без существенных изменений)
 // ════════════════════════════════════════════════════════════════════════════
-function ReportViewer({ projects, onClose }) {
+// Насыщенные цвета стадий для СВЕТЛОЙ печатной темы (контраст текста на белом).
+const REPORT_STAGE_COLOR = {
+  "Поиск исполнителя":"#3b6fb0","В работе":"#b08900","Сдан заказчику":"#0a8f5b",
+  "Оплачен":"#0a8f5b","Архив":"#555",
+};
+
+// Таблица отчёта (ПК). isClient прячет колонки «Оплачено»/«Остаток».
+function ReportTable({ projects, isClient, fmtDeadline }) {
+  const cols = isClient
+    ? ["Проект / Клиент","Тип работ","Исполнитель","Стадия","По договору","Дедлайн"]
+    : ["Проект / Клиент","Тип работ","Исполнитель","Стадия","По договору","Оплачено","Остаток","Дедлайн"];
+  return (
+    <div style={{background:"#fff",borderRadius:14,border:"1px solid #e6e9ee",overflow:"hidden",marginBottom:18}}>
+      <table style={{width:"100%",borderCollapse:"collapse"}}>
+        <thead>
+          <tr style={{background:"#f0f3f7"}}>
+            {cols.map((h,i)=>(
+              <th key={h} style={{padding:"10px 14px",fontSize:9.5,fontWeight:700,textTransform:"uppercase",
+                letterSpacing:".1em",color:"#5b626d",borderBottom:"2px solid #e6e9ee",
+                textAlign:i>=4?"right":"left"}}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {projects.map((p,i)=>{
+            const contract=+p.contractSum||0,paid=+p.paidAmount||0,debt=contract-paid;
+            const c=REPORT_STAGE_COLOR[p.stage]||"#b08900";
+            return (
+              <tr key={p.id} style={{background:i%2===0?"#fff":"#fafbfc"}}>
+                <td style={{padding:"10px 14px",borderBottom:"1px solid #eef1f4"}}>
+                  <div style={{fontWeight:700,color:"#0a0a0a",fontSize:13}}>{p.name}</div>
+                  {p.client&&<div style={{color:"#5b626d",fontSize:11,marginTop:1}}>{p.client}</div>}
+                </td>
+                <td style={{padding:"10px 14px",borderBottom:"1px solid #eef1f4",fontSize:12,color:"#404040"}}>{p.type||"—"}</td>
+                <td style={{padding:"10px 14px",borderBottom:"1px solid #eef1f4",fontSize:12,color:"#404040"}}>{p.executor||"—"}</td>
+                <td style={{padding:"10px 14px",borderBottom:"1px solid #eef1f4"}}>
+                  <span style={{display:"inline-block",padding:"2px 9px",borderRadius:20,fontSize:11,fontWeight:700,background:c+"1f",color:c}}>{p.stage}</span>
+                </td>
+                <td style={{padding:"10px 14px",borderBottom:"1px solid #eef1f4",textAlign:"right",fontWeight:600,color:"#0a0a0a",fontSize:13}}>{contract>0?fmt(contract):"—"}</td>
+                {!isClient&&<td style={{padding:"10px 14px",borderBottom:"1px solid #eef1f4",textAlign:"right",fontWeight:700,color:"#0a8f5b",fontSize:13}}>{paid>0?fmt(paid):"—"}</td>}
+                {!isClient&&<td style={{padding:"10px 14px",borderBottom:"1px solid #eef1f4",textAlign:"right",fontWeight:700,fontSize:13,color:debt>0?"#cc3333":"#0a8f5b"}}>{contract>0?(debt>0?fmt(debt):"✓"):"—"}</td>}
+                <td style={{padding:"10px 14px",borderBottom:"1px solid #eef1f4",textAlign:"right",fontSize:12,color:"#5b626d"}}>{fmtDeadline(p.deadline)}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// Карточки отчёта (телефон). Каждый проект — карточка «поле: значение».
+function ReportCards({ projects, isClient, fmtDeadline }) {
+  const Row = ({ label, value, color }) => (
+    <div style={{display:"flex",justifyContent:"space-between",gap:10,fontSize:12.5,padding:"3px 0"}}>
+      <span style={{color:"#5b626d"}}>{label}</span>
+      <span style={{color:color||"#1c1c1a",fontWeight:600,textAlign:"right"}}>{value}</span>
+    </div>
+  );
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:18}}>
+      {projects.map(p=>{
+        const contract=+p.contractSum||0,paid=+p.paidAmount||0,debt=contract-paid;
+        const c=REPORT_STAGE_COLOR[p.stage]||"#b08900";
+        return (
+          <div key={p.id} style={{background:"#fff",borderRadius:12,border:"1px solid #e6e9ee",padding:"12px 14px"}}>
+            <div style={{fontWeight:800,color:"#0a0a0a",fontSize:14}}>{p.name}</div>
+            {p.client&&<div style={{color:"#5b626d",fontSize:12}}>{p.client}</div>}
+            <div style={{marginTop:8,borderTop:"1px solid #eef1f4",paddingTop:6}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,fontSize:12.5,padding:"3px 0"}}>
+                <span style={{color:"#5b626d"}}>Стадия</span>
+                <span style={{display:"inline-block",padding:"1px 9px",borderRadius:20,fontSize:11,fontWeight:700,background:c+"1f",color:c}}>{p.stage}</span>
+              </div>
+              <Row label="Тип" value={p.type||"—"}/>
+              <Row label="Исполнитель" value={p.executor||"—"}/>
+              <Row label="По договору" value={contract>0?fmt(contract):"—"}/>
+              {!isClient&&<Row label="Оплачено" value={paid>0?fmt(paid):"—"} color="#0a8f5b"/>}
+              {!isClient&&<Row label="Остаток" value={contract>0?(debt>0?fmt(debt):"✓"):"—"} color={debt>0?"#cc3333":"#0a8f5b"}/>}
+              <Row label="Дедлайн" value={fmtDeadline(p.deadline)}/>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Презентационный документ отчёта — ЕДИНЫЙ источник для экрана и печати.
+// Только JSX (React экранирует текст) → XSS невозможен (раньше был innerHTML).
+function ReportDocument({ projects, mode, dateStr, sourceLabel, isMobile }) {
+  const isClient = mode === "client";
+  const totalContract = projects.reduce((s,p)=>s+(+p.contractSum||0),0);
+  const totalPaid     = projects.reduce((s,p)=>s+(+p.paidAmount||0),0);
+  const totalDebt     = totalContract - totalPaid;
+  const fmtDeadline = (d)=> d ? new Date(d+"T00:00:00").toLocaleDateString("ru-RU",{day:"numeric",month:"short"}) : "—";
+
+  const kpis = isClient
+    ? [{l:"Сумма договоров",v:fmt(totalContract),c:"#bcd3ff"}]
+    : [
+        {l:"Сумма договоров",v:fmt(totalContract),c:"#bcd3ff"},
+        {l:"Получено",       v:fmt(totalPaid),     c:"#7ef0c0"},
+        {l:"К получению",    v:fmt(totalDebt),     c:totalDebt>0?"#ffb0b0":"#7ef0c0"},
+        {l:"% оплаты",       v:`${totalContract>0?Math.round(totalPaid/totalContract*100):0}%`, c:"#fff"},
+      ];
+
+  return (
+    <div style={{fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",background:"#f4f6f9",
+                 minHeight:"100%",padding:isMobile?"18px 12px":"28px 24px",
+                 WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>
+      <div style={{maxWidth:1050,margin:"0 auto"}}>
+
+        <div style={{background:"linear-gradient(135deg,#0a0a0a,#1c1c1a)",borderRadius:16,
+                     padding:isMobile?"20px 18px":"28px 36px",color:"#fff",marginBottom:18}}>
+          <div style={{fontSize:isMobile?18:21,fontWeight:900,letterSpacing:"-.02em",marginBottom:4}}>
+            <span style={{color:"#d4af37"}}>КЛИМАТ-ПРО</span> — Отчёт по проектам
+          </div>
+          <div style={{fontSize:12.5,opacity:.72}}>Сформирован {dateStr} · {sourceLabel} · {projects.length} проектов</div>
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":`repeat(${kpis.length},minmax(120px,1fr))`,gap:10,marginTop:16}}>
+            {kpis.map(k=>(
+              <div key={k.l} style={{background:"rgba(255,255,255,.12)",borderRadius:12,padding:"11px 16px"}}>
+                <div style={{fontSize:9.5,opacity:.72,textTransform:"uppercase",letterSpacing:".1em",fontWeight:700}}>{k.l}</div>
+                <div style={{fontSize:isMobile?16:19,fontWeight:900,color:k.c,marginTop:4}}>{k.v}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {projects.length===0
+          ? <div style={{textAlign:"center",padding:48,color:"#8a8f98",fontSize:14}}>Нет проектов</div>
+          : isMobile
+            ? <ReportCards projects={projects} isClient={isClient} fmtDeadline={fmtDeadline}/>
+            : <ReportTable projects={projects} isClient={isClient} fmtDeadline={fmtDeadline}/>}
+
+        {projects.some(p=>p.notes)&&(
+          <div style={{background:"#fff",borderRadius:12,border:"1px solid #e6e9ee",padding:"16px 20px",marginBottom:16}}>
+            <div style={{fontSize:11,fontWeight:700,color:"#5b626d",textTransform:"uppercase",letterSpacing:".1em",marginBottom:10}}>Примечания</div>
+            {projects.filter(p=>p.notes).map(p=>(
+              <div key={p.id} style={{marginBottom:6,fontSize:13,color:"#1c1c1a"}}>
+                <b>{p.name}:</b> <span style={{color:"#404040"}}>{p.notes}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div style={{textAlign:"center",fontSize:12,color:"#9aa1ab",paddingBottom:16}}>КЛИМАТ-ПРО · {dateStr}</div>
+      </div>
+    </div>
+  );
+}
+
+function ReportViewer({ projects, onClose, presetProjects = null }) {
+  const isMobile = useIsMobile();
   const [stage, setStage] = useState("all");
+  const [mode, setMode] = useState("full");        // full | client
   const [showPreview, setShowPreview] = useState(false);
 
   const stages = ["all", ...PROJECT_STAGES.filter(s => s !== "Архив")];
   const labels  = {"all":"Все активные",...Object.fromEntries(PROJECT_STAGES.map(s=>[s,s]))};
 
-  const visible = stage === "all"
-    ? projects.filter(p => p.stage !== "Архив")
-    : projects.filter(p => p.stage === stage);
+  const visible = presetProjects
+    ? presetProjects
+    : (stage === "all" ? projects.filter(p => p.stage !== "Архив") : projects.filter(p => p.stage === stage));
 
-  const totalContract = visible.reduce((s,p)=>s+(+p.contractSum||0),0);
-  const totalPaid     = visible.reduce((s,p)=>s+(+p.paidAmount||0),0);
-  const totalDebt     = totalContract - totalPaid;
-  const now           = new Date();
-  const dateStr       = now.toLocaleDateString("ru-RU",{day:"numeric",month:"long",year:"numeric"});
+  const dateStr     = new Date().toLocaleDateString("ru-RU",{day:"numeric",month:"long",year:"numeric"});
+  const sourceLabel = presetProjects ? "Выбранные проекты" : labels[stage];
 
-  const stageColor = {
-    "В работе":"#d4af37","Сдан заказчику":"#6ee7a8","Оплачен":"#6ee7a8","Архив":"#404040"
-  };
-
+  // @media print: печатаем ТОЛЬКО область отчёта (тот же React-DOM), без innerHTML-дубля.
   useEffect(() => {
     const id = "report-print-style";
     if (document.getElementById(id)) return;
-    const s = document.createElement("style");
-    s.id = id;
-    s.textContent = `
+    const st = document.createElement("style");
+    st.id = id;
+    st.textContent = `
       @media print {
-        body > * { display: none !important; }
-        #report-print-root { display: block !important; }
-        #report-print-root .no-print { display: none !important; }
-      }
-      @media screen {
-        #report-print-root { display: none; }
+        body * { visibility: hidden !important; }
+        #report-print-area, #report-print-area * { visibility: visible !important; }
+        #report-print-area { position: absolute !important; left: 0; top: 0; width: 100%; }
+        .report-no-print { display: none !important; }
       }
     `;
-    document.head.appendChild(s);
+    document.head.appendChild(st);
     return () => { const el=document.getElementById(id); if(el) el.remove(); };
   }, []);
 
-  useEffect(() => {
-    if (!showPreview) return;
-    let el = document.getElementById("report-print-root");
-    if (!el) { el = document.createElement("div"); el.id = "report-print-root"; document.body.appendChild(el); }
-    const sc = stageColor;
-    const rows = visible.map((p,i) => {
-      const contract=+p.contractSum||0, paid=+p.paidAmount||0, debt=contract-paid;
-      const c=sc[p.stage]||"#d4af37";
-      return `<tr style="background:${i%2===0?"white":"#fafafa"}">
-        <td style="padding:10px 14px;border-bottom:1px solid #f1f5f9;">
-          <div style="font-weight:700;color:#0a0a0a;font-size:13px;">${p.name}</div>
-          ${p.client?`<div style="color:#6b6b67;font-size:11px;margin-top:1px;">${p.client}</div>`:""}
-        </td>
-        <td style="padding:10px 14px;border-bottom:1px solid #f1f5f9;font-size:12px;color:#404040;">${p.type||"—"}</td>
-        <td style="padding:10px 14px;border-bottom:1px solid #f1f5f9;font-size:12px;color:#404040;">${p.executor||"—"}</td>
-        <td style="padding:10px 14px;border-bottom:1px solid #f1f5f9;">
-          <span style="display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;background:${c}22;color:${c};">${p.stage}</span>
-        </td>
-        <td style="padding:10px 14px;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:600;color:#0a0a0a;font-size:13px;">${contract>0?fmt(contract):"—"}</td>
-        <td style="padding:10px 14px;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:700;color:#6ee7a8;font-size:13px;">${paid>0?fmt(paid):"—"}</td>
-        <td style="padding:10px 14px;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:700;font-size:13px;color:${debt>0?"#f8a3a3":"#6ee7a8"};">${contract>0?(debt>0?fmt(debt):"✓"):"—"}</td>
-        <td style="padding:10px 14px;border-bottom:1px solid #f1f5f9;text-align:right;font-size:12px;color:#6b6b67;">${p.deadline?new Date(p.deadline+"T00:00:00").toLocaleDateString("ru-RU",{day:"numeric",month:"short"}):"—"}</td>
-      </tr>`;
-    }).join("");
-    el.innerHTML = `
-      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafc;min-height:100vh;padding:32px 24px;">
-        <div style="max-width:1050px;margin:0 auto;">
-          <div style="background:linear-gradient(135deg,#0a0a0a,#1c1c1a);border-radius:16px;padding:28px 36px;color:white;margin-bottom:20px;">
-            <div style="font-size:21px;font-weight:900;letter-spacing:-.02em;margin-bottom:4px;"><span style="color:#d4af37;">КЛИМАТ-ПРО</span> — Отчёт по проектам</div>
-            <div style="font-size:13px;opacity:.7;">Сформирован ${dateStr} · ${labels[stage]} · ${visible.length} проектов</div>
-            <div style="display:flex;gap:14px;margin-top:18px;flex-wrap:wrap;">
-              ${[
-                {l:"Сумма договоров",v:fmt(totalContract),c:"#93c5fd"},
-                {l:"Получено",v:fmt(totalPaid),c:"#6ee7b7"},
-                {l:"К получению",v:fmt(totalDebt),c:totalDebt>0?"#f8a3a3":"#6ee7b7"},
-                {l:"% оплаты",v:`${totalContract>0?Math.round(totalPaid/totalContract*100):0}%`,c:"white"},
-              ].map(k=>`<div style="background:rgba(255,255,255,.12);border-radius:12px;padding:12px 18px;min-width:130px;">
-                <div style="font-size:10px;opacity:.7;text-transform:uppercase;letter-spacing:.1em;font-weight:700;">${k.l}</div>
-                <div style="font-size:19px;font-weight:900;color:${k.c};margin-top:4px;">${k.v}</div>
-              </div>`).join("")}
-            </div>
-          </div>
-          ${visible.length===0
-            ? `<div style="text-align:center;padding:48px;color:#a8a8a3;">Нет проектов</div>`
-            : `<div style="background:white;border-radius:14px;border:1px solid #fafaf7;overflow:hidden;margin-bottom:20px;">
-                <table style="width:100%;border-collapse:collapse;">
-                  <thead><tr style="background:#f8fafc;">
-                    ${["Проект / Клиент","Тип работ","Исполнитель","Стадия","По договору","Оплачено","Остаток","Дедлайн"].map((h,i)=>`<th style="padding:10px 14px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#a8a8a3;border-bottom:2px solid #fafaf7;text-align:${i>=4?"right":"left"};">${h}</th>`).join("")}
-                  </tr></thead>
-                  <tbody>${rows}</tbody>
-                </table>
-              </div>`}
-          ${visible.some(p=>p.notes)?`<div style="background:white;border-radius:12px;border:1px solid #fafaf7;padding:18px 22px;margin-bottom:16px;">
-            <div style="font-size:11px;font-weight:700;color:#a8a8a3;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;">Примечания</div>
-            ${visible.filter(p=>p.notes).map(p=>`<div style="margin-bottom:6px;font-size:13px;"><b>${p.name}:</b> <span style="color:#404040;">${p.notes}</span></div>`).join("")}
-          </div>`:""}
-          <div style="text-align:center;font-size:12px;color:#cbd5e1;padding-top:8px;">КЛИМАТ-ПРО · ${dateStr}</div>
-        </div>
-      </div>`;
-    return () => { const e=document.getElementById("report-print-root"); if(e) e.innerHTML=""; };
-  }, [showPreview, stage, visible]);
-
   if (showPreview) return (
-    <div style={{position:"fixed",inset:0,zIndex:200,background:"white",overflowY:"auto"}}>
-      <div style={{
-        position:"sticky",top:0,zIndex:10,
-        background:"#1c1c1a",padding:"10px 24px",
-        display:"flex",justifyContent:"space-between",alignItems:"center",
-        boxShadow:"0 2px 12px rgba(0,0,0,.3)"
+    <div style={{position:"fixed",inset:0,zIndex:200,background:"#f4f6f9",overflowY:"auto"}}>
+      <div className="report-no-print" style={{
+        position:"sticky",top:0,zIndex:10,background:"#1c1c1a",padding:isMobile?"10px 14px":"10px 24px",
+        display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,boxShadow:"0 2px 12px rgba(0,0,0,.3)"
       }}>
-        <span style={{color:"white",fontWeight:700,fontSize:14}}>📄 Отчёт готов</span>
-        <div style={{display:"flex",gap:10,alignItems:"center"}}>
-          <div style={{
-            background:"rgba(255,255,255,.1)",borderRadius:8,
-            padding:"7px 14px",display:"flex",alignItems:"center",gap:8,
-          }}>
-            <span style={{fontSize:13,color:"#a5b4fc",fontWeight:600}}>🖨 Для PDF нажми</span>
-            <kbd style={{
-              background:"white",color:"#1c1c1a",borderRadius:5,
-              padding:"2px 8px",fontFamily:"monospace",fontSize:13,fontWeight:800,
-            }}>Ctrl+P</kbd>
-            <span style={{fontSize:12,color:"#e8c860"}}>или</span>
-            <kbd style={{
-              background:"white",color:"#1c1c1a",borderRadius:5,
-              padding:"2px 8px",fontFamily:"monospace",fontSize:13,fontWeight:800,
-            }}>Cmd+P</kbd>
-            <span style={{fontSize:12,color:"#e8c860"}}>→ «Сохранить как PDF»</span>
-          </div>
-          <button onClick={()=>setShowPreview(false)} style={{
-            padding:"8px 14px",borderRadius:8,background:"#1c1c1a",border:"none",
-            color:"white",fontWeight:600,fontSize:13,cursor:"pointer"
-          }}>← Назад</button>
+        <button onClick={()=>setShowPreview(false)} style={{
+          padding:"8px 14px",borderRadius:8,background:"rgba(255,255,255,.12)",border:"none",
+          color:"#fff",fontWeight:600,fontSize:13,cursor:"pointer"
+        }}>← Назад</button>
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          {!isMobile&&<span style={{fontSize:12,color:"#9aa1ab"}}>или Ctrl/Cmd+P</span>}
+          <button onClick={()=>window.print()} style={{
+            padding:"8px 16px",borderRadius:8,background:"#d4af37",border:"none",
+            color:"#1c1c1a",fontWeight:800,fontSize:13,cursor:"pointer"
+          }}>🖨 Печать / Сохранить PDF</button>
         </div>
       </div>
-      <div id="report-inline" style={{
-        fontFamily:"system-ui,sans-serif",background:"#f8fafc",minHeight:"calc(100vh - 52px)"
-      }}>
-        <div style={{maxWidth:1050,margin:"0 auto",padding:"28px 24px"}}>
-          <div style={{background:"linear-gradient(135deg,#0a0a0a,#1c1c1a)",borderRadius:16,padding:"28px 36px",color:"white",marginBottom:20}}>
-            <div style={{fontSize:21,fontWeight:900,letterSpacing:"-.02em",marginBottom:4}}>
-              <span style={{color:"#d4af37"}}>КЛИМАТ-ПРО</span> — Отчёт по проектам
-            </div>
-            <div style={{fontSize:13,opacity:.7}}>Сформирован {dateStr} · {labels[stage]} · {visible.length} проектов</div>
-            <div style={{display:"flex",gap:14,marginTop:18,flexWrap:"wrap"}}>
-              {[
-                {l:"Сумма договоров",v:fmt(totalContract),c:"#93c5fd"},
-                {l:"Получено",       v:fmt(totalPaid),     c:"#6ee7b7"},
-                {l:"К получению",    v:fmt(totalDebt),     c:totalDebt>0?"#f8a3a3":"#6ee7b7"},
-                {l:"% оплаты",       v:`${totalContract>0?Math.round(totalPaid/totalContract*100):0}%`, c:"white"},
-              ].map(k=>(
-                <div key={k.l} style={{background:"rgba(255,255,255,.12)",borderRadius:12,padding:"12px 18px",minWidth:130}}>
-                  <div style={{fontSize:10,opacity:.7,textTransform:"uppercase",letterSpacing:".1em",fontWeight:700}}>{k.l}</div>
-                  <div style={{fontSize:19,fontWeight:900,color:k.c,marginTop:4}}>{k.v}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-          {visible.length===0
-            ? <div style={{textAlign:"center",padding:48,color:"#a8a8a3",fontSize:14}}>Нет проектов</div>
-            : <div style={{background:"white",borderRadius:14,border:"1px solid #fafaf7",overflowX:"auto",WebkitOverflowScrolling:"touch",marginBottom:20}}>
-                <table style={{width:"100%",borderCollapse:"collapse",minWidth:760}}>
-                  <thead>
-                    <tr style={{background:"#f8fafc"}}>
-                      {["Проект / Клиент","Тип работ","Исполнитель","Стадия","По договору","Оплачено","Остаток","Дедлайн"].map((h,i)=>(
-                        <th key={h} style={{padding:"10px 14px",fontSize:10,fontWeight:700,textTransform:"uppercase",
-                          letterSpacing:".1em",color:"#a8a8a3",borderBottom:"2px solid #fafaf7",
-                          textAlign:i>=4?"right":"left"}}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {visible.map((p,i)=>{
-                      const contract=+p.contractSum||0,paid=+p.paidAmount||0,debt=contract-paid;
-                      const c=stageColor[p.stage]||"#d4af37";
-                      return (
-                        <tr key={p.id} style={{background:i%2===0?"white":"#fafafa"}}>
-                          <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9"}}>
-                            <div style={{fontWeight:700,color:"#0a0a0a",fontSize:13}}>{p.name}</div>
-                            {p.client&&<div style={{color:"#6b6b67",fontSize:11,marginTop:1}}>{p.client}</div>}
-                          </td>
-                          <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9",fontSize:12,color:"#404040"}}>{p.type||"—"}</td>
-                          <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9",fontSize:12,color:"#404040"}}>{p.executor||"—"}</td>
-                          <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9"}}>
-                            <span style={{display:"inline-block",padding:"2px 9px",borderRadius:20,fontSize:11,fontWeight:700,background:c+"22",color:c}}>{p.stage}</span>
-                          </td>
-                          <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9",textAlign:"right",fontWeight:600,color:"#0a0a0a",fontSize:13}}>{contract>0?fmt(contract):"—"}</td>
-                          <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9",textAlign:"right",fontWeight:700,color:"#6ee7a8",fontSize:13}}>{paid>0?fmt(paid):"—"}</td>
-                          <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9",textAlign:"right",fontWeight:700,fontSize:13,color:debt>0?"#f8a3a3":"#6ee7a8"}}>{contract>0?(debt>0?fmt(debt):"✓"):"—"}</td>
-                          <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9",textAlign:"right",fontSize:12,color:"#6b6b67"}}>{p.deadline?new Date(p.deadline+"T00:00:00").toLocaleDateString("ru-RU",{day:"numeric",month:"short"}):"—"}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>}
-          {visible.some(p=>p.notes)&&(
-            <div style={{background:"white",borderRadius:12,border:"1px solid #fafaf7",padding:"18px 22px",marginBottom:16}}>
-              <div style={{fontSize:11,fontWeight:700,color:"#a8a8a3",textTransform:"uppercase",letterSpacing:".1em",marginBottom:10}}>Примечания</div>
-              {visible.filter(p=>p.notes).map(p=>(
-                <div key={p.id} style={{marginBottom:6,fontSize:13}}>
-                  <b>{p.name}:</b> <span style={{color:"#404040"}}>{p.notes}</span>
-                </div>
-              ))}
-            </div>
-          )}
-          <div style={{textAlign:"center",fontSize:12,color:"#cbd5e1",paddingBottom:32}}>
-            КЛИМАТ-ПРО · {dateStr}
-          </div>
-        </div>
+      <div id="report-print-area">
+        <ReportDocument projects={visible} mode={mode} dateStr={dateStr} sourceLabel={sourceLabel} isMobile={isMobile}/>
       </div>
     </div>
   );
 
   return (
-    <Modal title="📄 Экспорт отчёта" onClose={onClose} maxWidth={440}>
+    <Modal title="📄 Экспорт отчёта" onClose={onClose} maxWidth={460}>
       <p style={{fontSize:13,color:"#a8a8a3",marginBottom:16,lineHeight:1.6}}>
-        Отчёт откроется прямо здесь. Нажми «Печать / PDF» — браузер сохранит красивый PDF который можно отправить заказчику.
+        {presetProjects
+          ? `Отчёт по выбранным проектам (${presetProjects.length}). Нажми «Открыть», затем «Печать / Сохранить PDF».`
+          : "Отчёт откроется здесь. Нажми «Печать / Сохранить PDF» — браузер сохранит документ для отправки заказчику."}
       </p>
+
       <div style={{marginBottom:16}}>
-        <p style={{fontSize:10,fontWeight:700,color:"#6b6b67",textTransform:"uppercase",
-          letterSpacing:"0.12em",marginBottom:8}}>Фильтр по стадии</p>
-        <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-          {stages.map(s=>(
-            <button key={s} onClick={()=>setStage(s)} style={{
-              padding:"5px 12px",borderRadius:20,fontSize:12,fontWeight:600,cursor:"pointer",
-              background:stage===s?"#d4af37":"#141414",
-              color:stage===s?"white":"#a8a8a3",
-              border:"none",transition:"all .15s",
-            }}>{labels[s]}</button>
+        <p style={{fontSize:10,fontWeight:700,color:"#6b6b67",textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:8}}>Вид отчёта</p>
+        <div style={{display:"flex",gap:6}}>
+          {[{k:"full",l:"Полный"},{k:"client",l:"Для заказчика"}].map(o=>(
+            <button key={o.k} onClick={()=>setMode(o.k)} style={{
+              flex:1,padding:"8px 12px",borderRadius:10,fontSize:12.5,fontWeight:700,cursor:"pointer",
+              background:mode===o.k?"#d4af37":"#141414",
+              color:mode===o.k?"#1c1c1a":"#cfcfca",
+              border:`1px solid ${mode===o.k?"#d4af37":"rgba(255,255,255,0.10)"}`,transition:"all .15s",
+            }}>{o.l}</button>
           ))}
         </div>
+        <p style={{fontSize:11,color:"#6b6b67",marginTop:6,lineHeight:1.4}}>
+          {mode==="client" ? "Без «Оплачено» и «Остаток» — только договор, стадии и сроки." : "Все финансы: договор, оплачено, остаток, % оплаты."}
+        </p>
       </div>
+
+      {!presetProjects && (
+        <div style={{marginBottom:16}}>
+          <p style={{fontSize:10,fontWeight:700,color:"#6b6b67",textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:8}}>Фильтр по стадии</p>
+          <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+            {stages.map(s=>(
+              <button key={s} onClick={()=>setStage(s)} style={{
+                padding:"5px 12px",borderRadius:20,fontSize:12,fontWeight:600,cursor:"pointer",
+                background:stage===s?"#d4af37":"#141414",
+                color:stage===s?"#1c1c1a":"#a8a8a3",
+                border:`1px solid ${stage===s?"#d4af37":"rgba(255,255,255,0.08)"}`,transition:"all .15s",
+              }}>{labels[s]}</button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div style={{
         padding:"12px 16px",background:"#141414",borderRadius:12,marginBottom:16,
         display:"flex",justifyContent:"space-between",alignItems:"center",
@@ -7593,7 +7615,7 @@ function ReportViewer({ projects, onClose }) {
       </div>
       <button onClick={()=>setShowPreview(true)} style={{
         width:"100%",padding:14,borderRadius:14,background:"#d4af37",border:"none",
-        color:"white",fontSize:15,fontWeight:700,cursor:"pointer",
+        color:"#1c1c1a",fontSize:15,fontWeight:800,cursor:"pointer",
       }}>
         👁 Открыть отчёт
       </button>
@@ -7636,6 +7658,7 @@ export default function App() {
   const [clients, setClients]       = useState([]); // v1.5
 
   const [reportModal, setReportModal] = useState(false);
+  const [reportProjects, setReportProjects] = useState(null); // null = все/фильтр по стадии; массив = отчёт по выбранным
   const [backupModal, setBackupModal] = useState(false);
   const [profileModal, setProfileModal] = useState(false); // v1.5
 
@@ -7938,7 +7961,7 @@ export default function App() {
             />
             {/* Кнопка отчёта — акцентная, в фирменном цвете */}
             <button
-              onClick={() => setReportModal(true)}
+              onClick={() => { setReportProjects(null); setReportModal(true); }}
               style={{
                 fontSize: 12,
                 padding: "6px 12px",
@@ -8125,7 +8148,7 @@ export default function App() {
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
           >
             {tab === "dashboard" && <Dashboard projects={projects} txs={txs} tasks={tasks} onDrillStage={(stage) => { setPendingStageFilter(stage); setTab("projects"); }} sharesByProject={sharesByProject} myShares={myShares} ownerId={profile.id} paymentsByProject={paymentsByProject} />}
-            {tab === "projects" && <Projects projects={projects} setProjects={setProjects} clients={clients} client={supabase} profile={profile} ownerId={profile.id} showToast={showToast} initialStageFilter={pendingStageFilter} sharesByProject={sharesByProject} setSharesByProject={setSharesByProject} pendingProjectId={pendingProjectId} onProjectOpened={() => setPendingProjectId(null)} setPaymentsByProject={setPaymentsByProject} />}
+            {tab === "projects" && <Projects projects={projects} setProjects={setProjects} clients={clients} client={supabase} profile={profile} ownerId={profile.id} showToast={showToast} initialStageFilter={pendingStageFilter} sharesByProject={sharesByProject} setSharesByProject={setSharesByProject} pendingProjectId={pendingProjectId} onProjectOpened={() => setPendingProjectId(null)} setPaymentsByProject={setPaymentsByProject} onMakeReport={(sel)=>{ setReportProjects(sel); setReportModal(true); }} />}
             {tab === "tasks" && <TasksView client={supabase} profile={profile} projects={projects} showToast={showToast} />}
             {tab === "clients" && <ClientsPage clients={clients} setClients={setClients} projects={projects} client={supabase} ownerId={profile.id} showToast={showToast} />}
             {tab === "finance" && <Finance txs={txs} setTxs={setTxs} client={supabase} ownerId={profile.id} showToast={showToast} projects={projects} sharesByProject={sharesByProject} myShares={myShares} paymentsByProject={paymentsByProject} />}
@@ -8137,7 +8160,7 @@ export default function App() {
 
       <Toast visible={toast.visible} text={toast.text} type={toast.type}/>
 
-      {reportModal && <ReportViewer projects={projects} onClose={()=>setReportModal(false)}/>}
+      {reportModal && <ReportViewer projects={projects} presetProjects={reportProjects} onClose={()=>{ setReportModal(false); setReportProjects(null); }}/>}
       {backupModal && <BackupPanel
         projects={projects}
         txs={txs}
