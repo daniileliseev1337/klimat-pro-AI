@@ -528,30 +528,38 @@ git -C "F:\Сайт\redesign-v2-fresh" -c safe.directory=* -c core.fsyncMethod=w
 - Create: `supabase/migrations/20260622_0006_get_project_activity.sql`
 
 **Interfaces:**
-- Consumes: таблица `activity_log` (Task 1), `can_access_project_comments`, `is_admin` (существуют).
+- Consumes: таблица `activity_log` (Task 1), `is_project_member`, `is_approved`, `is_admin` (существуют).
 - Produces: `get_project_activity(p_project_id uuid, p_limit int default 100) returns setof activity_log`.
   Фронт зовёт через `rpc('get_project_activity', { p_project_id, p_limit })`.
+
+ВАЖНО (выявлено при реализации): гейт = **точное зеркало `projects_select`** (20260611_0002), НЕ
+`can_access_project_comments` — последнее для `team`-проекта пускает любого approved (шире, чем
+видимость проекта) и дало бы утечку истории team-проекта посторонним.
 
 - [ ] **Step 1: Написать миграцию**
 
 ```sql
--- 20260622_0006: лента истории проекта. Гейт доступа = can_access_project_comments (как tasks_select).
+-- 20260622_0006: лента истории проекта. Гейт = зеркало projects_select (owner/admin/team-член/marketplace-approved).
 -- Финанс-события (is_financial) — только владельцу/админу.
 create or replace function public.get_project_activity(p_project_id uuid, p_limit int default 100)
 returns setof public.activity_log
 language plpgsql stable security definer set search_path = public, pg_temp as $$
+declare v_is_owner boolean; v_can boolean;
 begin
-  if not public.can_access_project_comments(p_project_id) then
-    return;  -- нет доступа к проекту → пустой результат
+  select (owner_id = auth.uid()) into v_is_owner from public.projects where id = p_project_id;
+  v_can := coalesce(v_is_owner, false)
+    or public.is_admin()
+    or exists (select 1 from public.projects p
+               where p.id = p_project_id and p.visibility = 'team' and public.is_project_member(p_project_id))
+    or exists (select 1 from public.projects p
+               where p.id = p_project_id and p.visibility = 'marketplace' and public.is_approved());
+  if not v_can then
+    return;
   end if;
   return query
     select a.* from public.activity_log a
     where a.project_id = p_project_id
-      and (
-        a.is_financial = false
-        or public.is_admin()
-        or exists (select 1 from public.projects p where p.id = p_project_id and p.owner_id = auth.uid())
-      )
+      and (a.is_financial = false or coalesce(v_is_owner, false) or public.is_admin())
     order by a.created_at desc
     limit p_limit;
 end; $$;
@@ -798,7 +806,7 @@ git -C "F:\Сайт\redesign-v2-fresh" -c safe.directory=* -c core.fsyncMethod=w
 **Spec coverage:** §3 охват → Tasks 2–5; §4 схема → Task 1; §5 механизм (триггеры + RPC diff) → Tasks 2–5;
 §6 доступ/приватность → Task 6; §7 фронт → Task 8; §8 техдолг (activity_log/log_activity в репо) → Task 1;
 §9 критерии верификации → Tasks 2–6 (per-task) + Task 7 (E2E); §10 вне scope — не реализуется (ок);
-§11 ловушки (replace-all → Task 5; дубль исполнитель↔команда — принят; гейт=can_access_project_comments → Task 6).
+§11 ловушки (replace-all → Task 5; дубль исполнитель↔команда — принят; гейт=зеркало projects_select → Task 6).
 **Placeholder scan:** код миграций полный; фронт-интеграция вкладки описана через якоря + полный код
 компонента/обёртки/лейблов (точная вставка — по Grep таб-структуры на исполнении). **Type consistency:**
 `log_activity_ext` сигнатура единая во всех задачах; `get_project_activity(uuid,int)`; `fetchProjectActivity`
