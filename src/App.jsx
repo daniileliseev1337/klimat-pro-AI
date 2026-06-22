@@ -246,6 +246,7 @@ function clientDbToJs(row) {
     address:     row.address || "",
     city:        row.city || "",
     notes:       row.notes || "",
+    userId:      row.user_id || null,
     createdAt:   row.created_at,
     updatedAt:   row.updated_at,
   };
@@ -606,6 +607,26 @@ async function searchApprovedUsers(client, query) {
   const { data, error } = await client.rpc("search_approved_users", { p_query: query || "" });
   if (error) throw error;
   return data || [];
+}
+
+// D роль заказчика (фаза 1): проекты-заказы текущего пользователя (безопасная проекция).
+async function fetchMyClientProjects(client) {
+  const { data, error } = await client.rpc("get_my_client_projects");
+  if (error) throw error;
+  return (data || []).map(r => ({
+    id: r.id, name: r.name, stage: r.stage,
+    startDate: r.start_date, deadline: r.deadline,
+    contractSum: r.contract_sum, paidAmount: r.paid_amount, executor: r.executor,
+  }));
+}
+async function amIClient(client) {
+  const { data, error } = await client.rpc("am_i_client");
+  if (error) return false;
+  return !!data;
+}
+async function setClientUser(client, clientId, userId) {
+  const { error } = await client.rpc("set_client_user", { p_client_id: clientId, p_user_id: userId });
+  if (error) throw error;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -6571,7 +6592,7 @@ function MembersManager({ projectId, profile, client, showToast, canManage }) {
 // ════════════════════════════════════════════════════════════════════════════
 // CLIENT FORM — форма создания/редактирования клиента (v1.5)
 // ════════════════════════════════════════════════════════════════════════════
-function ClientForm({ initial, onSave, onClose, saving }) {
+function ClientForm({ initial, onSave, onClose, saving, client, showToast, onLinked }) {
   const isMobile = useIsMobile(); // моб: парные поля 1fr 1fr сворачиваем в колонку на телефоне
   const [f, setF] = useState(initial || {
     name: "", phone: "", email: "", telegram: "",
@@ -6579,6 +6600,28 @@ function ClientForm({ initial, onSave, onClose, saving }) {
     legalName: "", inn: "", address: "", city: "", notes: "",
   });
   const s = (k, v) => setF(p => ({ ...p, [k]: v }));
+
+  // D роль заказчика: привязка аккаунта к этой записи (только для существующей записи).
+  const [linkedUserId, setLinkedUserId] = useState(initial?.userId || null);
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [linkQuery, setLinkQuery] = useState("");
+  const [linkResults, setLinkResults] = useState([]);
+  useEffect(() => {
+    if (!client || !linkQuery.trim()) { setLinkResults([]); return; }
+    const t = setTimeout(async () => {
+      try { setLinkResults(await searchApprovedUsers(client, linkQuery)); } catch { setLinkResults([]); }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [linkQuery]); // eslint-disable-line
+  const doLink = async (user) => {
+    if (!initial?.id) return;
+    try {
+      await setClientUser(client, initial.id, user ? user.id : null);
+      setLinkedUserId(user ? user.id : null);
+      setLinkOpen(false); setLinkQuery(""); setLinkResults([]);
+      onLinked && onLinked(user ? user.id : null);
+    } catch (e) { showToast && showToast("Ошибка: " + (e.message || ""), "error"); }
+  };
 
   return (
     <div>
@@ -6676,12 +6719,72 @@ function ClientForm({ initial, onSave, onClose, saving }) {
         <StyledTextarea rows={2} value={f.notes} onChange={e => s("notes", e.target.value)} placeholder="Особенности работы, важные детали..." />
       </Field>
 
+      {initial?.id && (
+      <Field label="Доступ заказчика (аккаунт)">
+        {linkedUserId ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 13, color: "#6ee7a8" }}>✓ аккаунт привязан</span>
+            <button type="button" className={BTN.ghost} onClick={() => doLink(null)}>Отвязать</button>
+          </div>
+        ) : linkOpen ? (
+          <div>
+            <StyledInput value={linkQuery} onChange={e => setLinkQuery(e.target.value)}
+              placeholder="Поиск пользователя по имени/email…" autoFocus />
+            {linkResults.length > 0 && (
+              <div style={{ marginTop: 6, border: "1px solid #2a2a2e", borderRadius: 8, overflow: "hidden" }}>
+                {linkResults.map(u => (
+                  <button key={u.id} type="button" onClick={() => doLink(u)} style={{
+                    display: "block", width: "100%", textAlign: "left", padding: "8px 12px",
+                    background: "transparent", border: "none", color: "#fafaf7", cursor: "pointer", fontSize: 13 }}>
+                    {u.name || u.email} <span style={{ color: "#6b6b67" }}>· {u.email}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <button type="button" className={BTN.ghost} onClick={() => setLinkOpen(true)}>Привязать аккаунт</button>
+        )}
+      </Field>
+      )}
+
       <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
         <button onClick={onClose} className={BTN.ghost} style={{ flex: 1 }} disabled={saving}>Отмена</button>
         <button onClick={() => onSave(f)} className={BTN.primary} style={{ flex: 2, opacity: saving ? 0.6 : 1 }} disabled={saving}>
           {saving ? "Сохраняем..." : "Сохранить"}
         </button>
       </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// CLIENT ORDERS — раздел "Мои заказы" (D роль заказчика, фаза 1, read-only проекция)
+// ════════════════════════════════════════════════════════════════════════════
+function ClientOrdersPage({ orders }) {
+  if (!orders?.length) return <Empty text="Заказов пока нет" />;
+  const money = n => (Number(n) || 0).toLocaleString("ru-RU");
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {orders.map(o => (
+        <div key={o.id} style={{ padding: "14px 16px", borderRadius: 12, background: "#141414",
+          border: "1px solid rgba(255,255,255,0.05)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 15, fontWeight: 600, color: "#fafaf7" }}>{o.name}</span>
+            <span style={{ fontSize: 12, padding: "3px 10px", borderRadius: 20,
+              background: "rgba(212,175,55,0.15)", color: "#d4af37" }}>{o.stage}</span>
+          </div>
+          <div style={{ display: "flex", gap: 18, flexWrap: "wrap", marginTop: 10, fontSize: 13, color: "#a8a8a3" }}>
+            <span>Договор: <b style={{ color: "#fafaf7" }}>{money(o.contractSum)} ₽</b></span>
+            <span>Оплачено: <b style={{ color: "#6ee7a8" }}>{money(o.paidAmount)} ₽</b></span>
+            <span>Остаток: <b style={{ color: "#f3d77b" }}>{money((o.contractSum || 0) - (o.paidAmount || 0))} ₽</b></span>
+          </div>
+          <div style={{ display: "flex", gap: 18, flexWrap: "wrap", marginTop: 6, fontSize: 12, color: "#6b6b67" }}>
+            {o.deadline && <span>Срок: {o.deadline}</span>}
+            {o.executor && <span>Исполнитель: {o.executor}</span>}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -6930,6 +7033,15 @@ function ClientsPage({ clients, setClients, projects, client, ownerId, showToast
             onSave={saveClient}
             onClose={() => setModal(null)}
             saving={saving}
+            client={client}
+            showToast={showToast}
+            onLinked={(uid) => {
+              if (modal && modal.id) {
+                setClients(prev => prev.map(x => x.id === modal.id ? { ...x, userId: uid } : x));
+                setModal(m => (m && m.id) ? { ...m, userId: uid } : m);
+                showToast(uid ? "Аккаунт привязан" : "Аккаунт отвязан");
+              }
+            }}
           />
         </Modal>
       )}
@@ -7980,6 +8092,8 @@ export default function App() {
   const [myShares, setMyShares]     = useState([]);
   const [paymentsByProject, setPaymentsByProject] = useState({});
   const [clients, setClients]       = useState([]); // v1.5
+  const [clientProjects, setClientProjects] = useState([]); // D роль заказчика: мои заказы
+  const [hasClientRole, setHasClientRole]   = useState(false);
 
   const [reportModal, setReportModal] = useState(false);
   const [reportProjects, setReportProjects] = useState(null); // null = все/фильтр по стадии; массив = отчёт по выбранным
@@ -8018,7 +8132,7 @@ export default function App() {
             }
             setUser(session.user);
             setProfile(prof);
-            const [p, t, cl, tk, sh, ms, pb] = await Promise.all([
+            const [p, t, cl, tk, sh, ms, pb, cp, icr] = await Promise.all([
               fetchProjects(supabase).catch(() => []),
               fetchTransactions(supabase).catch(() => []),
               fetchClients(supabase).catch(() => []),
@@ -8026,6 +8140,8 @@ export default function App() {
               fetchProjectShares(supabase).catch(() => ({})),
               getMyShares(supabase).catch(() => []),
               fetchMyPayments(supabase).catch(() => ({})),
+              fetchMyClientProjects(supabase).catch(() => []),
+              amIClient(supabase).catch(() => false),
             ]);
             setProjects(p);
             setTxs(t);
@@ -8034,6 +8150,8 @@ export default function App() {
             setSharesByProject(sh);
             setMyShares(ms);
             setPaymentsByProject(pb);
+            setClientProjects(cp);
+            setHasClientRole(icr);
             setPhase("ready");
           } catch (e) {
             console.warn("Сессия есть, но профиль не загружается:", e);
@@ -8079,7 +8197,7 @@ export default function App() {
     setUser(u);
     setProfile(prof);
     try {
-      const [p, t, cl, tk, sh, ms, pb] = await Promise.all([
+      const [p, t, cl, tk, sh, ms, pb, cp, icr] = await Promise.all([
         fetchProjects(supabase),
         fetchTransactions(supabase),
         fetchClients(supabase).catch(() => []),
@@ -8087,6 +8205,8 @@ export default function App() {
         fetchProjectShares(supabase).catch(() => ({})),
         getMyShares(supabase).catch(() => []),
         fetchMyPayments(supabase).catch(() => ({})),
+        fetchMyClientProjects(supabase).catch(() => []),
+        amIClient(supabase).catch(() => false),
       ]);
       setProjects(p);
       setTxs(t);
@@ -8095,6 +8215,8 @@ export default function App() {
       setSharesByProject(sh);
       setMyShares(ms);
       setPaymentsByProject(pb);
+      setClientProjects(cp);
+      setHasClientRole(icr);
       setPhase("ready");
       showToast(`Добро пожаловать, ${prof.name || prof.email.split("@")[0]}!`);
     } catch (e) {
@@ -8207,6 +8329,7 @@ export default function App() {
     { id: "projects",  label: "Проекты",   Icon: FolderKanban },
     { id: "tasks",     label: "Задачи",    Icon: ListTodo },
     { id: "clients",   label: "Заказчики", Icon: BookUser },
+    ...(hasClientRole ? [{ id: "myorders", label: "Мои заказы", Icon: Package }] : []),
     { id: "finance",   label: "Финансы",   Icon: Receipt },
     { id: "analytics", label: "Аналитика", Icon: BarChart3 },
     ...(profile?.role === "admin" ? [{ id: "admin", label: "Admin", Icon: ShieldCheck }] : []),
@@ -8475,6 +8598,7 @@ export default function App() {
             {tab === "projects" && <Projects projects={projects} setProjects={setProjects} clients={clients} client={supabase} profile={profile} ownerId={profile.id} showToast={showToast} initialStageFilter={pendingStageFilter} sharesByProject={sharesByProject} setSharesByProject={setSharesByProject} pendingProjectId={pendingProjectId} onProjectOpened={() => setPendingProjectId(null)} setPaymentsByProject={setPaymentsByProject} onMakeReport={(sel)=>{ setReportProjects(sel); setReportModal(true); }} />}
             {tab === "tasks" && <TasksView client={supabase} profile={profile} projects={projects} showToast={showToast} />}
             {tab === "clients" && <ClientsPage clients={clients} setClients={setClients} projects={projects} client={supabase} ownerId={profile.id} showToast={showToast} />}
+            {tab === "myorders" && <ClientOrdersPage orders={clientProjects} />}
             {tab === "finance" && <Finance txs={txs} setTxs={setTxs} client={supabase} ownerId={profile.id} showToast={showToast} projects={projects} sharesByProject={sharesByProject} myShares={myShares} paymentsByProject={paymentsByProject} />}
             {tab === "analytics" && <Analytics projects={projects} txs={txs} sharesByProject={sharesByProject} ownerId={profile.id} paymentsByProject={paymentsByProject} />}
             {tab === "admin" && profile?.role === "admin" && <AdminPage profile={profile} client={supabase} showToast={showToast} />}
