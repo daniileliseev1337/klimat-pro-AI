@@ -262,6 +262,15 @@ body::after {
   box-shadow: 0 16px 40px rgba(0,0,0,0.5), 0 0 28px -6px var(--gold-glow);
 }
 
+/* Spotlight — золотистое свечение следует за курсором (координаты --mx/--my из JS) */
+.kp-spotlight { position: relative; }
+.kp-spotlight::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0;
+  border-radius: inherit; transition: opacity 0.2s;
+  background: radial-gradient(360px circle at var(--mx, 50%) var(--my, 50%), rgba(212,175,55,0.10), transparent 60%);
+}
+.kp-spotlight:hover::before { opacity: 1; }
+
 /* Motion-дисциплина: уважать prefers-reduced-motion (отключить декор-анимации) */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

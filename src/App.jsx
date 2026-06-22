@@ -6,6 +6,7 @@ import { isPushSupported, getPushState, enablePush, disablePush } from "./lib/pu
 import { periodRange, prevPeriodRange, granularityFor, periodBalance, trendDir, financeSeries, expenseByCategory, receivables, myTasks, ownerReceived, mySharesTotals, myProjectIncomeForMonth, selectionTotals, projectIncomeTxs, viewerShareOnProject, portfolioMineTotal } from "./lib/dashboardMetrics";
 import { dueState, dueSuffix, DUE_COLORS, PRIORITY_ORDER, tasksAttention } from "./lib/taskUi.js";
 import NotificationBell from "./components/NotificationBell";
+import MagneticButton from "./components/MagneticButton";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, FolderKanban, Wallet, BarChart3,
@@ -1172,11 +1173,20 @@ function Field({ label, children, style = {} }) {
 }
 
 // Базовая карточка — фон чуть светлее основного, тонкая граница, скруглённые углы
+// Spotlight: курсор → CSS-переменные --mx/--my для золотистого свечения (.kp-spotlight в index.css).
+function spotlightMove(e) {
+  const el = e.currentTarget;
+  const r = el.getBoundingClientRect();
+  el.style.setProperty("--mx", `${e.clientX - r.left}px`);
+  el.style.setProperty("--my", `${e.clientY - r.top}px`);
+}
+
 function Card({ children, style = {}, glass = false }) {
   if (glass) {
     return (
       <div
-        className="glass-card"
+        onMouseMove={spotlightMove}
+        className="glass-card kp-spotlight kp-hover-glow"
         style={{ borderRadius: 14, padding: 18, ...style }}
       >
         {children}
@@ -1184,7 +1194,7 @@ function Card({ children, style = {}, glass = false }) {
     );
   }
   return (
-    <div style={{
+    <div onMouseMove={spotlightMove} className="kp-spotlight kp-hover-glow" style={{
       background: "#141414",
       border: "1px solid rgba(255,255,255,0.06)",
       borderRadius: 14,
@@ -1365,7 +1375,7 @@ function KpiCard({ label, value, sub, color = "#d4af37", Icon, format, trend }) 
   const isString = typeof value === "string";
 
   return (
-    <div className="glass-card" style={{ borderRadius: 14, padding: 16, position: "relative", overflow: "hidden" }}>
+    <div onMouseMove={spotlightMove} className="glass-card kp-spotlight kp-hover-glow" style={{ borderRadius: 14, padding: 16, position: "relative", overflow: "hidden" }}>
       {/* Тонкое цветное свечение в углу — акцент в цвет показателя */}
       <div
         aria-hidden
@@ -3341,7 +3351,7 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
             fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all .15s", whiteSpace: "nowrap",
           }}
         >{selectMode ? "Отмена" : "Выбрать"}</button>
-        <button onClick={()=>setModal("add")} className={BTN.primary}>+ Новый проект</button>
+        <MagneticButton onClick={()=>setModal("add")} className={BTN.primary}>+ Новый проект</MagneticButton>
       </div>
 
       <div style={{display:"flex",flexDirection:"column",gap:12}}>
