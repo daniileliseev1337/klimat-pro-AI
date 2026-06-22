@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "./lib/supabase";
 import { diffLines } from "./lib/lineDiff";
 import { isPushSupported, getPushState, enablePush, disablePush } from "./lib/push";
@@ -1605,6 +1606,7 @@ function AuthScreen({ onAuthenticated, onError }) {
 // ════════════════════════════════════════════════════════════════════════════
 function ProjectForm({ initial, onSave, onClose, saving, client, profile, showToast, isOwner }) {
   const isMobile = useIsMobile(); // моб-баг #1: парные поля 1fr 1fr сворачиваем в колонку на телефоне
+  const [activeTab, setActiveTab] = useState("main"); // #7: вкладки формы (main|fin|team|details)
   const [f, setF] = useState(initial ? {
     ...initial,
     shares: (initial.shares || []).map(s => ({
@@ -1736,6 +1738,17 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
 
   return (
     <div>
+      {/* #7: вкладки формы — группируем ~16 блоков, чтобы не вываливать всё сразу */}
+      <div style={{display:"flex",gap:4,marginBottom:16,borderBottom:"1px solid #2a2a2e",overflowX:"auto",whiteSpace:"nowrap"}}>
+        {[{k:"main",l:"📋 Главное"},{k:"fin",l:"💰 Финансы"},{k:"team",l:"👥 Команда"},{k:"details",l:"💬 Детали"}].map(t=>(
+          <button key={t.k} type="button" onClick={()=>setActiveTab(t.k)} style={{
+            padding:"9px 14px",fontSize:13.5,fontWeight:activeTab===t.k?700:500,cursor:"pointer",
+            background:"transparent",border:"none",borderBottom:`2px solid ${activeTab===t.k?"#d4af37":"transparent"}`,
+            color:activeTab===t.k?"#d4af37":"#6b6b67",whiteSpace:"nowrap",
+          }}>{t.l}</button>
+        ))}
+      </div>
+      {activeTab==="main" && (<>
       <Field label="Название проекта">
         <StyledInput value={f.name} onChange={e => s("name", e.target.value)}
           placeholder="Н-р: ОВиК Жилой дом пер. Строителей" />
@@ -1889,6 +1902,8 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
         <div><Label>Дедлайн</Label>
           <StyledInput type="date" value={f.deadline} onChange={e => s("deadline", e.target.value)} /></div>
       </div>
+      </>)}
+      {activeTab==="fin" && (<>
       <div style={{ marginBottom: 12 }}>
         <Label>Сумма договора (₽)</Label>
         <StyledInput type="number" value={f.contractSum} onChange={e => s("contractSum", e.target.value)} placeholder="0" />
@@ -2082,6 +2097,8 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
           </div>
         );
       })()}
+      </>)}
+      {activeTab==="team" && (<>
 
       {/* ═══ НОВАЯ СЕКЦИЯ: Контакты заказчика ═══ */}
       <div style={{
@@ -2129,6 +2146,8 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
           />
         </div>
       </div>
+      </>)}
+      {activeTab==="details" && (<>
 
       {/* ═══ НОВАЯ СЕКЦИЯ: Ссылки на материалы ═══ */}
       <div style={{
@@ -2214,6 +2233,8 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
           </div>
         )}
       </div>
+      </>)}
+      {activeTab==="main" && (<>
 
       <Field label="Видимость">
         <StyledSelect value={f.visibility} onChange={e => s("visibility", e.target.value)}>
@@ -2240,6 +2261,8 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
           сможет увидеть проект и нажать «Взять в работу». После взятия проект уйдёт из маркетплейса.
         </div>
       )}
+      </>)}
+      {activeTab==="team" && (<>
 
       {/* ═══ СЕКЦИЯ: Команда проекта (v1.5 + №7: видна всегда, черновик при создании) ═══ */}
       {client && (
@@ -2327,6 +2350,8 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
           )}
         </div>
       )}
+      </>)}
+      {activeTab==="details" && (<>
 
       {/* ═══ СЕКЦИЯ: Комментарии (v2.0) ═══ */}
       {initial && initial.id && client && (
@@ -2386,9 +2411,10 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
       <Field label="Примечания">
         <StyledTextarea rows={2} value={f.notes} onChange={e => s("notes", e.target.value)} />
       </Field>
+      </>)}
       <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
         <button onClick={onClose} className={BTN.ghost} style={{ flex: 1 }} disabled={saving}>Отмена</button>
-        <button onClick={() => onSave(f)} className={BTN.primary} style={{ flex: 2, opacity: (saving || !paymentsReady) ? 0.6 : 1 }} disabled={saving || !paymentsReady}>
+        <button onClick={() => { if(!f.name||!f.name.trim()){ setActiveTab("main"); showToast("Проверьте вкладку «Главное»: не заполнено название","error"); return; } onSave(f); }} className={BTN.primary} style={{ flex: 2, opacity: (saving || !paymentsReady) ? 0.6 : 1 }} disabled={saving || !paymentsReady}>
           {saving ? "Сохраняем..." : !paymentsReady ? "Загрузка платежей…" : "Сохранить"}
         </button>
       </div>
@@ -2797,6 +2823,207 @@ function ProjectVisibilityModal({ project, client, profile, onClose }) {
 // ════════════════════════════════════════════════════════════════════════════
 // PROJECTS — список + CRUD через Supabase
 // ════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
+// QUICK-EDIT (#7) — быстрое редактирование поля проекта прямо с карточки.
+// Единый компонент через Portal в body (position:fixed по anchorRect — обходит
+// overflow/край/скролл). mode = stage|payment|deadline|executor|team.
+// На мобайле — bottom-sheet. onApplied(patch) — optimistic-апдейт карточки.
+// ════════════════════════════════════════════════════════════════════════════
+const QE_GOLD  = { flex:1, padding:"9px 12px", borderRadius:9, background:"#d4af37", border:"none", color:"#1c1c1a", fontWeight:800, fontSize:13, cursor:"pointer" };
+const QE_GHOST = { flex:1, padding:"9px 12px", borderRadius:9, background:"#1c1c1a", border:"1px solid #2a2a2e", color:"#a8a8a3", fontWeight:600, fontSize:13, cursor:"pointer" };
+const QE_LABEL = { fontSize:11, fontWeight:700, color:"#6b6b67", textTransform:"uppercase", letterSpacing:".1em", marginBottom:8 };
+
+function QEStage({ project, client, onClose, onApplied, showToast }) {
+  const save = async (st) => {
+    if (st === project.stage) { onClose(); return; }
+    onApplied({ stage: st });
+    onClose();
+    const { error } = await client.from("projects").update({ stage: st }).eq("id", project.id);
+    if (error) { onApplied({ stage: project.stage }); showToast("Не удалось сменить стадию", "error"); }
+  };
+  return (
+    <div>
+      <div style={QE_LABEL}>Стадия</div>
+      {PROJECT_STAGES.map(st => {
+        const active = st === project.stage;
+        const c = STAGE_META[st]?.color || "#d4af37";
+        return (
+          <div key={st} onClick={()=>save(st)} style={{
+            display:"flex",alignItems:"center",gap:8,padding:"9px 11px",borderRadius:8,cursor:"pointer",
+            background:active?"#d4af37":"transparent",color:active?"#1c1c1a":"#cfcfca",fontWeight:active?700:500,fontSize:13,
+          }}
+            onMouseOver={e=>{ if(!active) e.currentTarget.style.background="#2a2a2a"; }}
+            onMouseOut={e=>{ if(!active) e.currentTarget.style.background="transparent"; }}>
+            <span style={{width:8,height:8,borderRadius:"50%",background:active?"#1c1c1a":c,flexShrink:0}}/>
+            {st}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function QEDeadline({ project, client, onClose, onApplied, showToast }) {
+  const [val, setVal] = useState(project.deadline || "");
+  const save = async () => {
+    onApplied({ deadline: val || null });
+    onClose();
+    const { error } = await client.from("projects").update({ deadline: val || null }).eq("id", project.id);
+    if (error) { onApplied({ deadline: project.deadline }); showToast("Не удалось сменить дедлайн", "error"); }
+  };
+  const past = val && val < todayStr();
+  return (
+    <div>
+      <div style={QE_LABEL}>Дедлайн</div>
+      <StyledInput type="date" value={val} autoFocus onChange={e=>setVal(e.target.value)} onKeyDown={e=>{ if(e.key==="Enter") save(); }}/>
+      {past && <div style={{fontSize:11,color:"#f8a3a3",marginTop:4}}>⚠ Дата в прошлом</div>}
+      <div style={{display:"flex",gap:8,marginTop:12}}>
+        <button onClick={onClose} style={QE_GHOST}>Отмена</button>
+        <button onClick={save} style={QE_GOLD}>Сохранить</button>
+      </div>
+    </div>
+  );
+}
+
+function QEPayment({ project, client, onClose, onApplied, showToast, onPaymentsChanged }) {
+  const [amount, setAmount] = useState("");
+  const [date, setDate] = useState(todayStr());
+  const [busy, setBusy] = useState(false);
+  const add = async () => {
+    const amt = +amount;
+    if (!amt || amt <= 0) return;
+    setBusy(true);
+    try {
+      const existing = await fetchProjectPayments(client, project.id);
+      const rows = [...existing.map(p=>({ amount:p.amount, paidOn:p.paidOn, note:p.note||"" })), { amount:amt, paidOn:date, note:"" }];
+      await setProjectPayments(client, project.id, rows);
+      const newPaid = rows.reduce((s,r)=>s+(+r.amount||0),0);
+      onApplied({ paidAmount: newPaid });
+      if (onPaymentsChanged) onPaymentsChanged(project.id, rows);
+      showToast("✓ Платёж добавлен");
+      onClose();
+    } catch(e){ showToast("Ошибка: "+(e.message||""), "error"); }
+    finally { setBusy(false); }
+  };
+  const disabled = busy || !(+amount > 0);
+  return (
+    <div>
+      <div style={QE_LABEL}>Добавить платёж</div>
+      <StyledInput type="number" placeholder="Сумма ₽" value={amount} autoFocus onChange={e=>setAmount(e.target.value)} style={{marginBottom:8}}/>
+      <StyledInput type="date" value={date} onChange={e=>setDate(e.target.value)} style={{marginBottom:12}}/>
+      <div style={{display:"flex",gap:8}}>
+        <button onClick={onClose} style={QE_GHOST}>Отмена</button>
+        <button onClick={add} disabled={disabled} style={{...QE_GOLD, opacity:disabled?0.5:1, cursor:disabled?"default":"pointer"}}>Добавить</button>
+      </div>
+    </div>
+  );
+}
+
+function QEExecutor({ project, client, onClose, onApplied, showToast }) {
+  const [q, setQ] = useState("");
+  const [res, setRes] = useState([]);
+  const execs = project.executors || [];
+  useEffect(()=>{
+    if(!q.trim()){ setRes([]); return; }
+    const t = setTimeout(async()=>{ try{ setRes(await searchApprovedUsers(client, q)); }catch{ setRes([]); } }, 300);
+    return ()=>clearTimeout(t);
+  }, [q]); // eslint-disable-line
+  const apply = async (nextExecs) => {
+    const executorText = nextExecs.map(e=>e.name).filter(Boolean).join(", ") || null;
+    onApplied({ executors: nextExecs, executor: executorText });
+    const { error } = await client.from("projects").update({ executors: nextExecs, executor: executorText }).eq("id", project.id);
+    if (error) showToast("Ошибка сохранения", "error");
+  };
+  const addUser = async (u) => {
+    if (execs.some(e=>e.userId===u.id)) return;
+    await apply([...execs, { name:u.name||u.email, userId:u.id }]);
+    try { await addProjectMember(client, project.id, u.id, "editor"); } catch {}
+    setQ(""); setRes([]);
+  };
+  const remove = async (i) => { await apply(execs.filter((_,j)=>j!==i)); };
+  return (
+    <div>
+      <div style={QE_LABEL}>Исполнители</div>
+      {execs.length>0 && (
+        <div style={{display:"flex",flexDirection:"column",gap:4,marginBottom:8}}>
+          {execs.map((e,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.05)",borderRadius:6,padding:"5px 8px",fontSize:12}}>
+              <UserCheck size={12} strokeWidth={2.2} style={{color:"#d4af37",flexShrink:0}}/>
+              <span style={{flex:1,color:"#fafaf7"}}>{e.name}</span>
+              <button type="button" onClick={()=>remove(i)} style={{background:"none",border:"none",cursor:"pointer",color:"#6b6b67",padding:2,display:"flex"}}><X size={12} strokeWidth={2.4}/></button>
+            </div>
+          ))}
+        </div>
+      )}
+      <StyledInput value={q} autoFocus placeholder="Найти сотрудника…" onChange={e=>setQ(e.target.value)}/>
+      {res.length>0 && (
+        <div style={{marginTop:6,display:"flex",flexDirection:"column"}}>
+          {res.map(u=>{
+            const added = execs.some(e=>e.userId===u.id);
+            return (
+              <div key={u.id} onClick={()=>!added&&addUser(u)} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderRadius:7,cursor:added?"default":"pointer",opacity:added?0.45:1}}
+                onMouseOver={e=>{ if(!added) e.currentTarget.style.background="#2a2a2a"; }} onMouseOut={e=>e.currentTarget.style.background="transparent"}>
+                <UserAvatar name={u.name} email={u.email} size={24}/>
+                <span style={{fontSize:13,color:"#fafaf7"}}>{u.name||u.email}</span>
+                {added ? <Check size={12} strokeWidth={2} style={{marginLeft:"auto",color:"#6b6b67"}}/> : <Plus size={12} strokeWidth={2.4} style={{marginLeft:"auto",color:"#d4af37"}}/>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <button onClick={onClose} style={{...QE_GHOST, marginTop:12, width:"100%", flex:"none"}}>Готово</button>
+    </div>
+  );
+}
+
+function QETeam({ project, client, profile, showToast }) {
+  return (
+    <div>
+      <div style={{...QE_LABEL, marginBottom:10}}>Команда проекта</div>
+      <MembersManager projectId={project.id} profile={profile} client={client} showToast={showToast} canManage={true}/>
+    </div>
+  );
+}
+
+function QuickEditPortal({ project, mode, anchorRect, isMobile, client, profile, showToast, onClose, onApplied, onPaymentsChanged }) {
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    const onScroll = () => onClose();
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("scroll", onScroll, true);
+    return () => { document.removeEventListener("keydown", onKey); window.removeEventListener("scroll", onScroll, true); };
+  }, [onClose]);
+
+  const popStyle = isMobile
+    ? { position:"fixed", left:0, right:0, bottom:0, zIndex:1001, background:"#1e1e20",
+        borderRadius:"20px 20px 0 0", padding:"16px 16px 28px", maxHeight:"82vh", overflowY:"auto" }
+    : (() => {
+        const W = mode==="team" ? 340 : mode==="executor" ? 300 : 250;
+        let left = anchorRect ? anchorRect.left : 100;
+        if (left + W > window.innerWidth - 12) left = window.innerWidth - W - 12;
+        if (left < 12) left = 12;
+        const top = anchorRect ? anchorRect.bottom + 6 : 100;
+        return { position:"fixed", left, top, width:W, zIndex:1001, background:"#1e1e20",
+                 border:"1px solid #2a2a2e", borderRadius:12, boxShadow:"0 8px 32px rgba(0,0,0,.6)",
+                 padding:14, maxHeight:"70vh", overflowY:"auto" };
+      })();
+
+  return createPortal(
+    <>
+      <div onClick={onClose} style={{ position:"fixed", inset:0, zIndex:1000, background:isMobile?"rgba(0,0,0,0.6)":"transparent" }}/>
+      <div style={popStyle} onClick={e=>e.stopPropagation()}>
+        {isMobile && <div style={{width:40,height:4,background:"#3a3a3a",borderRadius:2,margin:"0 auto 14px"}}/>}
+        {mode==="stage"    && <QEStage    project={project} client={client} onClose={onClose} onApplied={onApplied} showToast={showToast}/>}
+        {mode==="deadline" && <QEDeadline project={project} client={client} onClose={onClose} onApplied={onApplied} showToast={showToast}/>}
+        {mode==="payment"  && <QEPayment  project={project} client={client} onClose={onClose} onApplied={onApplied} showToast={showToast} onPaymentsChanged={onPaymentsChanged}/>}
+        {mode==="executor" && <QEExecutor project={project} client={client} onClose={onClose} onApplied={onApplied} showToast={showToast}/>}
+        {mode==="team"     && <QETeam     project={project} client={client} profile={profile} showToast={showToast}/>}
+      </div>
+    </>,
+    document.body
+  );
+}
+
 function Projects({ projects, setProjects, clients, client, profile, ownerId, showToast, initialStageFilter = "Активные", sharesByProject, setSharesByProject, pendingProjectId, onProjectOpened, setPaymentsByProject, onMakeReport }) {
   const [modal, setModal]             = useState(null);
   const [stageFilter, setStageFilter] = useState(initialStageFilter);
@@ -2807,6 +3034,11 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
   const [sortBy, setSortBy]           = useState("default"); // №4: сортировка списка проектов
   const [eyeProject, setEyeProject]   = useState(null);      // №9: «глаз» — кто видит проект
   const [adminShowAll, setAdminShowAll] = useState(false);   // админ: показать чужие личные проекты
+  const isMobile = useIsMobile();
+  const [activeQE, setActiveQE] = useState(null); // #7 quick-edit: {projectId, mode, rect}
+  const openQE  = (e, projectId, mode) => { e.stopPropagation(); setActiveQE({ projectId, mode, rect: e.currentTarget.getBoundingClientRect() }); };
+  const closeQE = () => setActiveQE(null);
+  const applyQE = (id, patch) => setProjects(prev => prev.map(x => x.id === id ? { ...x, ...patch } : x));
 
   // Открыть карточку проекта по клику из уведомления (Центр уведомлений → onNavigate /projects/<id>).
   useEffect(() => {
@@ -2987,6 +3219,8 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
             const isOverdue = p.deadline&&p.deadline<todayS&&!["Оплачен","Архив","Сдан заказчику"].includes(p.stage);
             const paid = +p.paidAmount||0;
             const contract = +p.contractSum||0;
+            const canEdit   = p.ownerId===profile?.id || profile?.role==="admin" || p.takenBy===profile?.id;
+            const canManage = p.ownerId===profile?.id || profile?.role==="admin";
             return (
               <div key={p.id} style={{background:"#141414",border:"1px solid #141414",borderRadius:16,padding:16}}>
                 <div style={{display:"flex",alignItems:"flex-start",gap:12}}>
@@ -3004,8 +3238,10 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:8,marginBottom:6}}>
                       <span style={{color:"white",fontWeight:700,fontSize:15}}>{p.name}</span>
-                      <span style={{fontSize:11,padding:"2px 10px",borderRadius:20,fontWeight:600,
-                        background:meta.color+"22",color:meta.color}}>{p.stage}</span>
+                      <span onClick={canEdit?(e)=>openQE(e,p.id,"stage"):undefined}
+                        style={{fontSize:11,padding:"2px 10px",borderRadius:20,fontWeight:600,
+                        background:meta.color+"22",color:meta.color,cursor:canEdit?"pointer":"default",
+                        border:canEdit?`1px solid ${meta.color}66`:"1px solid transparent"}}>{p.stage}{canEdit&&<span style={{marginLeft:3,fontSize:9}}>▾</span>}</span>
                       <PermissionBadge role={
                         p.ownerId === profile?.id ? "owner"
                           : profile?.role === "admin" ? "admin"
@@ -3021,8 +3257,11 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
                       {p.client&&<span>{p.client}</span>}
                       {p.client&&p.type&&<span style={{margin:"0 6px",color:"#1c1c1a"}}>·</span>}
                       <span style={{color:"#e8c860",fontWeight:600}}>{p.type}</span>
-                      {p.executor&&<><span style={{margin:"0 6px",color:"#1c1c1a"}}>·</span>
-                      <span style={{color:"#d4af37"}}>👤 {p.executor}</span></>}
+                      {p.executor
+                        ? <><span style={{margin:"0 6px",color:"#1c1c1a"}}>·</span>
+                          <span onClick={canManage?(e)=>openQE(e,p.id,"executor"):undefined} style={{color:"#d4af37",cursor:canManage?"pointer":"default"}}>👤 {p.executor}{canManage?" ▾":""}</span></>
+                        : (canManage&&<><span style={{margin:"0 6px",color:"#1c1c1a"}}>·</span>
+                          <span onClick={(e)=>openQE(e,p.id,"executor")} style={{color:"#6b6b67",cursor:"pointer"}}>👤 Назначить</span></>)}
                     </div>
                     <div style={{height:4,background:"#141414",borderRadius:2,overflow:"hidden",marginBottom:10}}>
                       <div style={{height:"100%",borderRadius:2,background:meta.color,
@@ -3030,9 +3269,13 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
                     </div>
                     <div style={{display:"flex",flexWrap:"wrap",gap:"4px 20px",fontSize:12}}>
                       {contract>0&&<span style={{color:"#a8a8a3"}}>Договор: <span style={{color:"#fafaf7",fontWeight:600}}>{fmt(contract)}</span></span>}
-                      {paid>0&&<span style={{color:"#a8a8a3"}}>Оплачено: <span style={{color:"#6ee7a8",fontWeight:600}}>{fmt(paid)}</span></span>}
+                      {paid>0
+                        ? <span onClick={canManage?(e)=>openQE(e,p.id,"payment"):undefined} style={{color:"#a8a8a3",cursor:canManage?"pointer":"default"}}>Оплачено: <span style={{color:"#6ee7a8",fontWeight:600}}>{fmt(paid)}</span>{canManage&&<span style={{marginLeft:4,background:"#d4af37",color:"#1c1c1a",borderRadius:4,fontSize:10,fontWeight:800,padding:"0 4px"}}>+</span>}</span>
+                        : (canManage&&contract>0&&<span onClick={(e)=>openQE(e,p.id,"payment")} style={{color:"#6b6b67",cursor:"pointer"}}>+ платёж</span>)}
                       {contract>0&&paid>0&&<span style={{color:"#a8a8a3"}}>Остаток: <span style={{color:"#d4af37",fontWeight:600}}>{fmt(contract-paid)}</span></span>}
-                      {p.deadline&&<span style={{color:"#a8a8a3"}}>Дедлайн: <span style={{color:isOverdue?"#f8a3a3":"#fafaf7",fontWeight:isOverdue?600:400}}>{fmtD(p.deadline)}</span></span>}
+                      {p.deadline
+                        ? <span onClick={canEdit?(e)=>openQE(e,p.id,"deadline"):undefined} style={{color:"#a8a8a3",cursor:canEdit?"pointer":"default"}}>📅 Дедлайн: <span style={{color:isOverdue?"#f8a3a3":"#fafaf7",fontWeight:isOverdue?600:400}}>{fmtD(p.deadline)}</span>{canEdit?" ▾":""}</span>
+                        : (canEdit&&<span onClick={(e)=>openQE(e,p.id,"deadline")} style={{color:"#6b6b67",cursor:"pointer"}}>📅 Срок</span>)}
                     </div>
                     {contract>0&&paid>0&&(
                       <div style={{display:"flex",alignItems:"center",gap:8,marginTop:8}}>
@@ -3209,6 +3452,9 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
                         <button onClick={()=>setEyeProject(p)} className={BTN.edit} title="Кто видит проект">
                           <Eye size={14} strokeWidth={2.2} />
                         </button>
+                        <button onClick={(e)=>openQE(e,p.id,"team")} className={BTN.edit} title="Команда проекта">
+                          <Users size={14} strokeWidth={2.2} />
+                        </button>
                         <button onClick={()=>setModal(p)} className={BTN.edit}>✏️</button>
                         <button onClick={()=>{if(confirmDel===p.id){del(p.id);}else{setConfirmDel(p.id);}}}
                           style={{
@@ -3328,6 +3574,15 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
       {eyeProject && (
         <ProjectVisibilityModal project={eyeProject} client={client} profile={profile} onClose={() => setEyeProject(null)} />
       )}
+
+      {activeQE && (() => {
+        const proj = projects.find(x => x.id === activeQE.projectId);
+        if (!proj) return null;
+        return <QuickEditPortal project={proj} mode={activeQE.mode} anchorRect={activeQE.rect} isMobile={isMobile}
+          client={client} profile={profile} showToast={showToast} onClose={closeQE}
+          onApplied={(patch)=>applyQE(activeQE.projectId, patch)}
+          onPaymentsChanged={(pid,rows)=>setPaymentsByProject&&setPaymentsByProject(prev=>({...prev,[pid]:rows}))}/>;
+      })()}
 
       {modal&&(
         <Modal title={modal==="add"?"Новый проект":"Редактировать проект"} onClose={()=>!saving&&setModal(null)}>
