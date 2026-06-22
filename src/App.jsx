@@ -658,6 +658,92 @@ async function adminFetchActivityLog(client, limit = 50) {
   return data || [];
 }
 
+// №10: история конкретного проекта (RPC скрывает финанс-события от не-владельца + гейт доступа)
+async function fetchProjectActivity(client, projectId, limit = 100) {
+  const { data, error } = await client.rpc("get_project_activity",
+    { p_project_id: projectId, p_limit: limit });
+  if (error) throw error;
+  return data || [];
+}
+
+// №10: единый словарь лейблов журнала (DRY: админ-журнал + история проекта). Иконки — уже импортированные.
+const ACTIVITY_LABELS = {
+  // учётки
+  user_approved:            { label: "Пользователь одобрен",  color: "#6ee7a8", Icon: UserCheck },
+  user_revoked:             { label: "Доступ отозван",        color: "#f3d77b", Icon: UserMinus },
+  user_deleted:             { label: "Пользователь удалён",   color: "#f8a3a3", Icon: Trash2 },
+  role_changed:             { label: "Изменена роль",         color: "#d4af37", Icon: ShieldCheck },
+  password_reset_by_admin:  { label: "Сброс пароля админом",  color: "#f3d77b", Icon: KeyRound },
+  // проект
+  project_created:          { label: "Проект создан",         color: "#6ee7a8", Icon: FolderKanban },
+  project_renamed:          { label: "Проект переименован",   color: "#a8a8a3", Icon: Pencil },
+  project_stage_changed:    { label: "Стадия изменена",       color: "#d4af37", Icon: BadgeCheck },
+  project_client_changed:   { label: "Заказчик изменён",      color: "#a8a8a3", Icon: User },
+  project_deadline_changed: { label: "Дедлайн изменён",       color: "#f3d77b", Icon: Calendar },
+  project_visibility_changed:{ label: "Видимость изменена",   color: "#a8a8a3", Icon: Eye },
+  project_executors_changed:{ label: "Исполнители изменены",  color: "#a8a8a3", Icon: Users },
+  project_contract_changed: { label: "Сумма договора",        color: "#2dd4bf", Icon: Wallet },
+  project_deleted:          { label: "Проект удалён",         color: "#f8a3a3", Icon: Trash2 },
+  // деньги
+  payment_added:            { label: "Платёж добавлен",       color: "#6ee7a8", Icon: Wallet },
+  payment_removed:          { label: "Платёж удалён",         color: "#f8a3a3", Icon: Wallet },
+  share_added:              { label: "Доля добавлена",        color: "#6ee7a8", Icon: Wallet },
+  share_changed:            { label: "Доля изменена",         color: "#d4af37", Icon: Wallet },
+  share_removed:            { label: "Доля удалена",          color: "#f8a3a3", Icon: Wallet },
+  // команда
+  member_added:             { label: "Участник добавлен",     color: "#6ee7a8", Icon: UserPlus },
+  member_removed:           { label: "Участник удалён",       color: "#f8a3a3", Icon: UserMinus },
+  member_role_changed:      { label: "Роль участника",        color: "#d4af37", Icon: ShieldCheck },
+  // задачи
+  task_created:             { label: "Задача создана",        color: "#6ee7a8", Icon: ListTodo },
+  task_status_changed:      { label: "Статус задачи",         color: "#d4af37", Icon: ListTodo },
+  task_assigned:            { label: "Задача назначена",      color: "#a8a8a3", Icon: ListTodo },
+  task_deleted:             { label: "Задача удалена",        color: "#f8a3a3", Icon: Trash2 },
+};
+
+// №10: презентационная лента событий (переиспользуется админ-журналом и историей проекта)
+function ActivityFeed({ items }) {
+  if (!items?.length) return <Empty text="Журнал пуст" />;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      {items.map(a => {
+        const cfg = ACTIVITY_LABELS[a.action] || { label: a.action, color: "#a8a8a3", Icon: Activity };
+        const d = a.details || {};
+        let detail = null;
+        if (d.from !== undefined && d.to !== undefined) detail = `${d.from ?? "—"} → ${d.to ?? "—"}`;
+        else if (d.amount != null) detail = `${Number(d.amount).toLocaleString("ru-RU")} ₽${d.paid_on ? " · " + d.paid_on : ""}`;
+        else if (d.label) detail = `${d.label}${d.value != null ? " · " + d.value : ""}`;
+        else if (d.name) detail = d.name;
+        else if (d.title) detail = d.title;
+        return (
+          <div key={a.id} style={{
+            display: "flex", alignItems: "center", gap: 12, padding: "8px 14px", borderRadius: 10,
+            background: "#141414", border: "1px solid rgba(255,255,255,0.04)",
+          }}>
+            <span style={{
+              width: 28, height: 28, borderRadius: 6, display: "inline-flex",
+              alignItems: "center", justifyContent: "center",
+              background: `${cfg.color}1a`, color: cfg.color, flexShrink: 0,
+            }}>
+              <cfg.Icon size={13} strokeWidth={2.2} />
+            </span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12, color: "#fafaf7" }}>
+                <span style={{ fontWeight: 500 }}>{cfg.label}</span>
+                {detail && <span style={{ color: "#6b6b67" }}> · {detail}</span>}
+                {a.target_email && <span style={{ color: "#a8a8a3" }}> · {a.target_email}</span>}
+              </div>
+              <div style={{ fontSize: 10, color: "#6b6b67", marginTop: 2 }}>
+                {(a.actor_email || "система")} · {new Date(a.created_at).toLocaleString("ru-RU")}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 async function fetchTopClients(client, limit = 5) {
   const { data, error } = await client.rpc("top_clients", { p_limit: limit });
   if (error) throw error;
@@ -1641,6 +1727,20 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
   });
   const s = (k, v) => setF(p => ({ ...p, [k]: v }));
 
+  // №10: история действий проекта (5-я вкладка) — грузим при открытии вкладки, без realtime
+  const [projActivity, setProjActivity] = useState([]);
+  const [actLoading, setActLoading] = useState(false);
+  useEffect(() => {
+    if (activeTab !== "history" || !initial?.id || !client) return;
+    let alive = true;
+    setActLoading(true);
+    fetchProjectActivity(client, initial.id)
+      .then(rows => { if (alive) setProjActivity(rows); })
+      .catch(() => { if (alive) setProjActivity([]); })
+      .finally(() => { if (alive) setActLoading(false); });
+    return () => { alive = false; };
+  }, [activeTab, initial?.id]); // eslint-disable-line
+
   // №7: autocomplete команды при создании (нет project.id для прямой записи в БД)
   const [teamQuery, setTeamQuery]     = useState("");
   const [teamResults, setTeamResults] = useState([]);
@@ -1748,7 +1848,7 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
     <div>
       {/* #7: вкладки формы — группируем ~16 блоков, чтобы не вываливать всё сразу */}
       <div style={{display:"flex",gap:4,marginBottom:16,borderBottom:"1px solid #2a2a2e",overflowX:"auto",whiteSpace:"nowrap"}}>
-        {[{k:"main",l:"📋 Главное"},{k:"fin",l:"💰 Финансы"},{k:"team",l:"👥 Команда"},{k:"details",l:"💬 Детали"}].map(t=>(
+        {[{k:"main",l:"📋 Главное"},{k:"fin",l:"💰 Финансы"},{k:"team",l:"👥 Команда"},{k:"details",l:"💬 Детали"},...(initial?.id?[{k:"history",l:"🕘 История"}]:[])].map(t=>(
           <button key={t.k} type="button" onClick={()=>setActiveTab(t.k)} style={{
             padding:"9px 14px",fontSize:13.5,fontWeight:activeTab===t.k?700:500,cursor:"pointer",
             background:"transparent",border:"none",borderBottom:`2px solid ${activeTab===t.k?"#d4af37":"transparent"}`,
@@ -2419,6 +2519,11 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
       <Field label="Примечания">
         <StyledTextarea rows={2} value={f.notes} onChange={e => s("notes", e.target.value)} />
       </Field>
+      </>)}
+      {activeTab==="history" && (<>
+        {initial && initial.id
+          ? (actLoading ? <Empty text="Загружаем историю…" /> : <ActivityFeed items={projActivity} />)
+          : <Empty text="История доступна после сохранения проекта" />}
       </>)}
       <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
         <button onClick={onClose} className={BTN.ghost} style={{ flex: 1 }} disabled={saving}>Отмена</button>
@@ -7323,51 +7428,7 @@ function AdminPage({ profile, client, showToast }) {
       {/* Раздел "Журнал событий" */}
       {section === "activity" && (
         <div>
-          {loading ? (
-            <Empty text="Загружаем..." />
-          ) : activity.length === 0 ? (
-            <Empty text="Журнал пуст" />
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {activity.map(a => {
-                const labels = {
-                  user_approved: { label: "Пользователь одобрен", color: "#6ee7a8", Icon: UserCheck },
-                  user_revoked:  { label: "Доступ отозван",       color: "#f3d77b", Icon: UserMinus },
-                  user_deleted:  { label: "Пользователь удалён",  color: "#f8a3a3", Icon: Trash2 },
-                  role_changed:  { label: "Изменена роль",        color: "#d4af37", Icon: ShieldCheck },
-                };
-                const cfg = labels[a.action] || { label: a.action, color: "#a8a8a3", Icon: Activity };
-                return (
-                  <div key={a.id} style={{
-                    display: "flex", alignItems: "center", gap: 12,
-                    padding: "8px 14px", borderRadius: 10,
-                    background: "#141414",
-                    border: "1px solid rgba(255,255,255,0.04)",
-                  }}>
-                    <span style={{
-                      width: 28, height: 28, borderRadius: 6,
-                      display: "inline-flex", alignItems: "center", justifyContent: "center",
-                      background: `${cfg.color}1a`, color: cfg.color, flexShrink: 0,
-                    }}>
-                      <cfg.Icon size={13} strokeWidth={2.2} />
-                    </span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12, color: "#fafaf7" }}>
-                        <span style={{ fontWeight: 500 }}>{cfg.label}:</span>{" "}
-                        <span style={{ color: "#a8a8a3" }}>{a.target_email || "—"}</span>
-                        {a.details?.from && a.details?.to && (
-                          <span style={{ color: "#6b6b67" }}> ({a.details.from} → {a.details.to})</span>
-                        )}
-                      </div>
-                      <div style={{ fontSize: 10, color: "#6b6b67", marginTop: 2 }}>
-                        {a.actor_email} · {new Date(a.created_at).toLocaleString("ru-RU")}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          {loading ? <Empty text="Загружаем..." /> : <ActivityFeed items={activity} />}
         </div>
       )}
 
