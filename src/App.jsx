@@ -1183,12 +1183,29 @@ function spotlightMove(e) {
   el.style.setProperty("--my", `${e.clientY - r.top}px`);
 }
 
+// 3D-tilt + spotlight для крупных карточек (Card/KpiCard). Уважает reduced-motion.
+function tiltMove(e) {
+  const el = e.currentTarget;
+  const r = el.getBoundingClientRect();
+  const px = (e.clientX - r.left) / r.width;
+  const py = (e.clientY - r.top) / r.height;
+  el.style.setProperty("--mx", `${e.clientX - r.left}px`);
+  el.style.setProperty("--my", `${e.clientY - r.top}px`);
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const ry = (px - 0.5) * 14;
+  const rx = -(py - 0.5) * 14;
+  el.style.transform = `perspective(900px) rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg) translateY(-2px)`;
+}
+function tiltLeave(e) {
+  e.currentTarget.style.transform = "";
+}
+
 function Card({ children, style = {}, glass = false }) {
   if (glass) {
     return (
       <div
-        onMouseMove={spotlightMove}
-        className="glass-card kp-spotlight kp-hover-glow"
+        onMouseMove={tiltMove} onMouseLeave={tiltLeave}
+        className="glass-card kp-spotlight kp-hover-glow gold-ingot"
         style={{ borderRadius: 14, padding: 18, ...style }}
       >
         {children}
@@ -1196,7 +1213,7 @@ function Card({ children, style = {}, glass = false }) {
     );
   }
   return (
-    <div onMouseMove={spotlightMove} className="kp-spotlight kp-hover-glow" style={{
+    <div onMouseMove={tiltMove} onMouseLeave={tiltLeave} className="kp-spotlight kp-hover-glow gold-ingot" style={{
       background: "#141414",
       border: "1px solid rgba(255,255,255,0.06)",
       borderRadius: 14,
@@ -1377,7 +1394,7 @@ function KpiCard({ label, value, sub, color = "#d4af37", Icon, format, trend }) 
   const isString = typeof value === "string";
 
   return (
-    <div onMouseMove={spotlightMove} className="glass-card kp-spotlight kp-hover-glow" style={{ borderRadius: 14, padding: 16, position: "relative", overflow: "hidden" }}>
+    <div onMouseMove={tiltMove} onMouseLeave={tiltLeave} className="glass-card kp-spotlight kp-hover-glow gold-ingot" style={{ borderRadius: 14, padding: 16, position: "relative", overflow: "hidden" }}>
       {/* Тонкое цветное свечение в углу — акцент в цвет показателя */}
       <div
         aria-hidden
