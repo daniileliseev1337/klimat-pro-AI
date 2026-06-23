@@ -20,42 +20,45 @@
 @tailwind utilities;
 
 :root {
+  /* БАЗОВЫЙ РЕЖИМ = ВЫСОКИЙ КОНТРАСТ (раньше был опц. .hc, теперь дефолт для всех).
+     Премиально-тусклые значения заменены на яркие/контрастные. Откат — вернуть прежние hex.
+     Доп-режим «Android / макс. чёткость» (.hc ниже) усиливает контраст ещё сильнее. */
   /* ── ПОВЕРХНОСТИ ─────────────────────────────────────────────────────── */
   /* Базовый фон — чистый чёрный с минимальной тёплой смягчённостью.
      Отличается от абсолютной темноты на 2-3% яркости, что даёт
      ощущение материального чёрного, а не выключенного экрана. */
-  --bg-base: #0a0a0a;
+  --bg-base: #050505;
 
   /* Карточки — едва светлее фона, чтобы создавать ощущение поднятости
      без визуальной полосатости интерфейса. */
-  --bg-elevated: #141414;
+  --bg-elevated: #242420;
 
   /* Модальные окна и поднятые элементы — ещё на ступень светлее.
      Плюс лёгкая тёплая нотка для ощущения подсветки. */
-  --bg-higher: #1c1c1a;
+  --bg-higher: #2e2e29;
 
   /* Стеклянный эффект для премиальных карточек */
   --bg-glass: rgba(255, 255, 255, 0.025);
 
   /* ── ГРАНИЦЫ ─────────────────────────────────────────────────────────── */
-  --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-default: rgba(255, 255, 255, 0.10);
-  --border-strong: rgba(255, 255, 255, 0.16);
+  --border-subtle: rgba(255, 255, 255, 0.16);
+  --border-default: rgba(255, 255, 255, 0.24);
+  --border-strong: rgba(255, 255, 255, 0.34);
   --border-gold-subtle: rgba(212, 175, 55, 0.15);
   --border-gold: rgba(212, 175, 55, 0.30);
 
   /* ── ТЕКСТ ───────────────────────────────────────────────────────────── */
   /* Тёплый почти-белый — гармонирует с золотым акцентом и не утомляет */
-  --text-primary: #fafaf7;
-  --text-secondary: #a8a8a3;
-  --text-tertiary: #6b6b67;
-  --text-quaternary: #404040;
+  --text-primary: #ffffff;
+  --text-secondary: #dcdcd6;
+  --text-tertiary: #adada5;
+  --text-quaternary: #6a6a66;
 
   /* ── ЗОЛОТОЙ АКЦЕНТ ──────────────────────────────────────────────────── */
   /* Антикварное золото — благородный приглушённый оттенок,
      близкий к настоящему металлу с лёгкой патиной. */
-  --gold: #d4af37;
-  --gold-bright: #e8c860;       /* для hover-состояний */
+  --gold: #e6c65c;
+  --gold-bright: #f1da7e;       /* для hover-состояний */
   --gold-soft: #c9a431;          /* для границ и акцентов */
   --gold-bg-subtle: rgba(212, 175, 55, 0.06);
   --gold-bg: rgba(212, 175, 55, 0.12);
@@ -119,12 +122,14 @@ input, textarea, select, button {
   модалки), чтобы создать визуальный фокус без излишнего шума.
 */
 .glass-card {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.012));
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  /* iPhone-style «liquid glass»: меньше молочной заливки + умеренный blur + saturate
+     для сочности (без saturate матовое стекло уходит в серый «мутный» налёт). */
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.022), rgba(255, 255, 255, 0.006));
+  backdrop-filter: blur(10px) saturate(1.7);
+  -webkit-backdrop-filter: blur(10px) saturate(1.7);
   border: 1px solid var(--border-default);
   box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.04),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.06),
     0 1px 3px 0 rgba(0, 0, 0, 0.6);
 }
 
@@ -333,9 +338,28 @@ input, textarea, select, button {
 .kp-card:hover::before { opacity: .85; }
 .kp-card:hover::after { opacity: 1; }
 
+/* Фолбэк для браузеров без mask-composite (старый Android WebView / Chrome):
+   там псевдо-рамка ::before не вырезается маской — заливает карточку золотом
+   или не рисуется вовсе («рамок нет»). Отключаем псевдо-рамку и даём обычную
+   золотую границу. var(--border-gold) автоматически тянется и в теме контраста. */
+@supports not ((-webkit-mask-composite: xor) or (mask-composite: exclude)) {
+  .gold-ingot::before,
+  .kp-card::before { display: none; }
+  .gold-ingot { border: 1px solid var(--border-gold); }
+  .kp-card { border-color: var(--border-gold); }
+}
+
 /* Stagger-появление блоков (через inline animation-delay на элементах) */
 @keyframes kp-rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
 .kp-rise { animation: kp-rise 0.6s cubic-bezier(.22,1,.36,1) both; }
+
+/* Кнопка версии: мягкая золотая пульсация, когда доступна новая версия сайта.
+   prefers-reduced-motion ниже глушит её вместе со всеми анимациями. */
+@keyframes kp-update-pulse {
+  0%, 100% { box-shadow: 0 0 9px -3px var(--gold-glow); }
+  50%      { box-shadow: 0 0 16px 0 var(--gold-glow); }
+}
+.kp-update-glow { animation: kp-update-pulse 1.8s ease-in-out infinite; }
 
 /* Motion-дисциплина: уважать prefers-reduced-motion (отключить декор-анимации) */
 @media (prefers-reduced-motion: reduce) {
@@ -348,29 +372,42 @@ input, textarea, select, button {
   .kp-hover-glow:hover { transform: none; }
 }
 
+/* Подписи осей recharts: var() в SVG-атрибуте (tick={{fill:"var(--…)"}}) НЕ резолвится,
+   поэтому цвет задаём через CSS. Контраст теперь базовый → применяем по умолчанию (не
+   только в .hc). var(--text-tertiary) под .hc сам станет ярче. В печатной области отчёта
+   (белый фон) — тёмный fill, иначе подписи исчезнут. */
+.recharts-cartesian-axis-tick text { fill: var(--text-tertiary) !important; }
+#report-print-area .recharts-cartesian-axis-tick text { fill: #555 !important; }
+
 /* ──────────────────────────────────────────────────────────────────────────
-   РЕЖИМ ВЫСОКОГО КОНТРАСТА (.hc на <html>) — для тусклых матриц (часто Android).
-   Включается per-device тумблером в «Профиле», хранится в localStorage('kp-hc').
-   Переопределяет переменные палитры → весь текст/фон/рамки на var() реагируют.
-   Дефолт (без .hc) остаётся премиальным — для качественных OLED-экранов.
+   РЕЖИМ «Android / МАКСИМАЛЬНАЯ ЧЁТКОСТЬ» (.hc на <html>) — per-device тумблер
+   в «Профиле», localStorage('kp-hc'). Высокий контраст уже базовый (в :root выше);
+   этот режим усиливает его ещё и «обезвреживает» эффекты, ненадёжные на слабых/старых
+   Android-браузерах: плотное непрозрачное стекло без размытия, без 3D-наклона карточек,
+   сплошные золотые рамки вместо градиентных (mask-composite там может не работать).
    ────────────────────────────────────────────────────────────────────────── */
 .hc {
-  --bg-base: #050505;
-  --bg-elevated: #242420;
-  --bg-higher: #2e2e29;
-  --text-primary: #ffffff;
-  --text-secondary: #dcdcd6;
-  --text-tertiary: #adada5;
-  --text-quaternary: #6a6a66;
-  --border-subtle: rgba(255, 255, 255, 0.16);
-  --border-default: rgba(255, 255, 255, 0.24);
-  --border-strong: rgba(255, 255, 255, 0.34);
-  --gold: #e6c65c;
-  --gold-bright: #f1da7e;
+  --text-secondary: #ededed;
+  --text-tertiary: #c8c8c2;
+  --border-subtle: rgba(255, 255, 255, 0.30);
+  --border-default: rgba(255, 255, 255, 0.44);
+  --border-strong: rgba(255, 255, 255, 0.58);
+  --gold: #f1da7e;
+  --gold-bright: #f7e7a0;
 }
-.hc .kp-card { border-color: var(--border-default); }
-.hc .kp-card::before { opacity: .8; }
-.hc .gold-ingot::before { opacity: .85; }
-/* Оси recharts задают fill инлайн-атрибутом (CSS-переменные в SVG-атрибутах не
-   работают) — в режиме контраста подсвечиваем подписи осей через класс. */
-.hc .recharts-cartesian-axis-tick text { fill: var(--text-tertiary) !important; }
+/* Плотное непрозрачное стекло — без размытия и прозрачности (чёткость на слабых матрицах) */
+.hc .glass-card {
+  background: var(--bg-elevated);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+/* Сплошные золотые рамки вместо градиентных (mask-composite ненадёжен на старом Android) */
+.hc .kp-card::before,
+.hc .gold-ingot::before { display: none; }
+.hc .kp-card,
+.hc .gold-ingot { border: 1px solid var(--gold); }
+/* Без 3D-наклона — он растеризует карточку в текстуру и мылит цифры. CSS !important
+   перебивает inline-transform от JS (tiltMove); сам JS тоже проверяет .hc и не наклоняет. */
+.hc .kp-card,
+.hc .glass-card,
+.hc .gold-ingot { transform: none !important; }

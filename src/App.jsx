@@ -1191,12 +1191,35 @@ function tiltMove(e) {
   el.style.setProperty("--mx", `${e.clientX - r.left}px`);
   el.style.setProperty("--my", `${e.clientY - r.top}px`);
   if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  const ry = (px - 0.5) * 14;
-  const rx = -(py - 0.5) * 14;
-  el.style.transform = `perspective(900px) rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg) translateY(-2px)`;
+  // Режим «Android / макс. чёткость»: без наклона — 3D-transform растеризует карточку и мылит цифры.
+  if (document.documentElement.classList.contains("hc")) return;
+  const ry = (px - 0.5) * 7;
+  const rx = -(py - 0.5) * 7;
+  el.style.transform = `perspective(1100px) rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg) translateY(-2px)`;
 }
 function tiltLeave(e) {
   e.currentTarget.style.transform = "";
+}
+
+// Перезагрузка на актуальную версию: сначала забираем свежий service worker и ждём,
+// пока он возьмёт управление, и только потом reload — иначе старый SW отдаёт
+// закэшированный бандл и «обновление не срабатывает с первого раза».
+async function reloadToLatest() {
+  try {
+    if ("serviceWorker" in navigator) {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg) {
+        await reg.update();
+        if (reg.installing || reg.waiting) {
+          await new Promise((res) => {
+            const t = setTimeout(res, 3000); // не зависать дольше 3 c
+            navigator.serviceWorker.addEventListener("controllerchange", () => { clearTimeout(t); res(); }, { once: true });
+          });
+        }
+      }
+    }
+  } catch { /* SW недоступен — просто перезагрузим */ }
+  window.location.reload();
 }
 
 function Card({ children, style = {}, glass = false }) {
@@ -7246,13 +7269,13 @@ function ProfileModal({ profile, client, onClose, onProfileUpdated, showToast })
         Имя и должность видят другие участники команды. Email и роль изменить нельзя.
       </div>
 
-      {/* ── Высокий контраст (этого устройства) ──────────────────────────── */}
+      {/* ── Режим «Android / макс. чёткость» (этого устройства) ──────────── */}
       <div style={{
         marginBottom: 16, padding: "12px 14px", borderRadius: 10,
         background: "var(--gold-bg-subtle)", border: "1px solid var(--border-gold-subtle)",
       }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-          <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text-primary)" }}>Высокий контраст</span>
+          <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text-primary)" }}>Android / макс. чёткость</span>
           <button onClick={toggleHc} aria-pressed={hc} style={{
             width: 36, height: 20, borderRadius: 10, border: "none", cursor: "pointer",
             transition: "all 0.2s", padding: 0, flexShrink: 0,
@@ -7265,7 +7288,7 @@ function ProfileModal({ profile, client, onClose, onProfileUpdated, showToast })
           </button>
         </div>
         <p style={{ fontSize: 11, color: "var(--text-tertiary)", margin: "8px 0 0", lineHeight: 1.5 }}>
-          Если интерфейс выглядит тускло или блёкло (часто на Android-экранах) — включите. Настройка действует только на этом устройстве.
+          Высокий контраст уже включён у всех. Этот режим — для слабых или старых Android-экранов: делает стекло плотным, убирает размытие и 3D-наклон, рисует сплошные золотые рамки — чтобы всё точно читалось и отображалось. Действует только на этом устройстве.
         </p>
       </div>
 
@@ -8139,11 +8162,36 @@ export default function App() {
   const [errorMsg, setErrorMsg] = useState("");
   const isMobile = useIsMobile();
 
-  // Регистрация service worker (канал Web Push). vite-plugin-pwa отдаёт /sw.js.
+  // Признак «доступна новая версия сайта» — для индикатора на кнопке версии в шапке.
+  const [updateReady, setUpdateReady] = useState(false);
+
+  // Регистрация service worker (канал Web Push) + детектор новой версии.
   useEffect(() => {
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch((e) => console.warn("SW reg failed", e));
-    }
+    if (!("serviceWorker" in navigator)) return;
+    const hadController = !!navigator.serviceWorker.controller;
+    let reg, iv;
+    const onVis = () => { if (document.visibilityState === "visible" && reg) reg.update().catch(() => {}); };
+    navigator.serviceWorker.register("/sw.js").then((r) => {
+      reg = r;
+      // новый воркер устанавливается поверх работающего → есть обновление
+      reg.addEventListener("updatefound", () => {
+        const nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener("statechange", () => {
+          if (nw.state === "installed" && navigator.serviceWorker.controller) setUpdateReady(true);
+        });
+      });
+      iv = setInterval(() => reg.update().catch(() => {}), 60000); // проверять сервер раз в минуту
+      document.addEventListener("visibilitychange", onVis);
+    }).catch((e) => console.warn("SW reg failed", e));
+    // новый SW перехватил управление (и прежний контроллер уже был) → точно обновление
+    const onCtrl = () => { if (hadController) setUpdateReady(true); };
+    navigator.serviceWorker.addEventListener("controllerchange", onCtrl);
+    return () => {
+      if (iv) clearInterval(iv);
+      document.removeEventListener("visibilitychange", onVis);
+      navigator.serviceWorker.removeEventListener("controllerchange", onCtrl);
+    };
   }, []);
 
   const [user, setUser]       = useState(null);
@@ -8584,18 +8632,37 @@ export default function App() {
               {new Date().toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })}
             </div>
             <button
-              onClick={() => location.reload()}
-              title={"Версия сборки: " + __BUILD_ID__ + "\nНажмите, чтобы загрузить актуальную версию"}
+              onClick={reloadToLatest}
+              className={updateReady ? "kp-update-glow" : undefined}
+              title={updateReady
+                ? "Доступна новая версия сайта — нажмите, чтобы обновить\nТекущая сборка: " + __BUILD_ID__
+                : "Версия сборки: " + __BUILD_ID__ + "\nНажмите, чтобы загрузить актуальную версию"}
               style={{
-                fontSize: 9, color: "var(--text-quaternary)", marginLeft: 2, padding: "1px 6px",
-                background: "none", border: "1px solid transparent", borderRadius: 5, cursor: "pointer",
+                position: "relative",
+                fontSize: 9, color: updateReady ? "var(--gold-bright)" : "var(--text-quaternary)",
+                marginLeft: 2, padding: "1px 6px",
+                background: updateReady ? "var(--gold-bg-subtle)" : "none",
+                border: "1px solid " + (updateReady ? "var(--border-gold)" : "transparent"),
+                borderRadius: 5, cursor: "pointer",
                 fontFamily: "inherit", letterSpacing: "0.02em", lineHeight: 1.2, transition: "all .18s",
-                whiteSpace: "nowrap",
+                whiteSpace: "nowrap", fontWeight: updateReady ? 700 : 400,
               }}
-              onMouseOver={e => { e.currentTarget.style.color = "var(--gold)"; e.currentTarget.style.borderColor = "var(--border-gold-subtle)"; }}
-              onMouseOut={e => { e.currentTarget.style.color = "var(--text-quaternary)"; e.currentTarget.style.borderColor = "transparent"; }}
+              onMouseOver={e => { e.currentTarget.style.color = "var(--gold)"; e.currentTarget.style.borderColor = "var(--border-gold)"; }}
+              onMouseOut={e => {
+                e.currentTarget.style.color = updateReady ? "var(--gold-bright)" : "var(--text-quaternary)";
+                e.currentTarget.style.borderColor = updateReady ? "var(--border-gold)" : "transparent";
+              }}
             >
               v{__BUILD_ID__}
+              {updateReady && (
+                <span aria-label="Есть обновление" style={{
+                  position: "absolute", top: -5, right: -5,
+                  minWidth: 13, height: 13, padding: "0 1px", borderRadius: "50%",
+                  background: "#e5484d", color: "#fff",
+                  fontSize: 9, fontWeight: 800, lineHeight: "13px", textAlign: "center",
+                  boxShadow: "0 0 0 1.5px var(--bg-base)",
+                }}>!</span>
+              )}
             </button>
           </div>
           {/* Бейдж администратора и email */}
