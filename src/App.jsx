@@ -203,12 +203,12 @@ const TASK_STATUS_META = {
   "В работе":    { color: "#d4af37" },
   "На проверке": { color: "#2dd4bf" },
   "Готово":      { color: "#6ee7a8" },
-  "Отменена":    { color: "#62646b" },
+  "Отменена":    { color: "var(--text-tertiary)" },
 };
 const TASK_PRIORITY_META = {
   "Высокий": { bg: "#f8a3a31f", color: "#f8a3a3", label: "🔴 Высокий" },
   "Обычный": { bg: "#d4af371f", color: "#e8c860", label: "Обычный" },
-  "Низкий":  { bg: "rgba(255,255,255,0.06)", color: "#9b9ca4", label: "Низкий" },
+  "Низкий":  { bg: "rgba(255,255,255,0.06)", color: "var(--text-secondary)", label: "Низкий" },
 };
 
 // ── v3.0 6.4b: версии ТЗ и комментарии задач ──
@@ -700,12 +700,12 @@ const ACTIVITY_LABELS = {
   password_reset_by_admin:  { label: "Сброс пароля админом",  color: "#f3d77b", Icon: KeyRound },
   // проект
   project_created:          { label: "Проект создан",         color: "#6ee7a8", Icon: FolderKanban },
-  project_renamed:          { label: "Проект переименован",   color: "#a8a8a3", Icon: Pencil },
+  project_renamed:          { label: "Проект переименован",   color: "var(--text-secondary)", Icon: Pencil },
   project_stage_changed:    { label: "Стадия изменена",       color: "#d4af37", Icon: BadgeCheck },
-  project_client_changed:   { label: "Заказчик изменён",      color: "#a8a8a3", Icon: User },
+  project_client_changed:   { label: "Заказчик изменён",      color: "var(--text-secondary)", Icon: User },
   project_deadline_changed: { label: "Дедлайн изменён",       color: "#f3d77b", Icon: Calendar },
-  project_visibility_changed:{ label: "Видимость изменена",   color: "#a8a8a3", Icon: Eye },
-  project_executors_changed:{ label: "Исполнители изменены",  color: "#a8a8a3", Icon: Users },
+  project_visibility_changed:{ label: "Видимость изменена",   color: "var(--text-secondary)", Icon: Eye },
+  project_executors_changed:{ label: "Исполнители изменены",  color: "var(--text-secondary)", Icon: Users },
   project_contract_changed: { label: "Сумма договора",        color: "#2dd4bf", Icon: Wallet },
   project_deleted:          { label: "Проект удалён",         color: "#f8a3a3", Icon: Trash2 },
   // деньги
@@ -721,7 +721,7 @@ const ACTIVITY_LABELS = {
   // задачи
   task_created:             { label: "Задача создана",        color: "#6ee7a8", Icon: ListTodo },
   task_status_changed:      { label: "Статус задачи",         color: "#d4af37", Icon: ListTodo },
-  task_assigned:            { label: "Задача назначена",      color: "#a8a8a3", Icon: ListTodo },
+  task_assigned:            { label: "Задача назначена",      color: "var(--text-secondary)", Icon: ListTodo },
   task_deleted:             { label: "Задача удалена",        color: "#f8a3a3", Icon: Trash2 },
 };
 
@@ -731,7 +731,7 @@ function ActivityFeed({ items }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       {items.map(a => {
-        const cfg = ACTIVITY_LABELS[a.action] || { label: a.action, color: "#a8a8a3", Icon: Activity };
+        const cfg = ACTIVITY_LABELS[a.action] || { label: a.action, color: "var(--text-secondary)", Icon: Activity };
         const d = a.details || {};
         let detail = null;
         if (d.from !== undefined && d.to !== undefined) detail = `${d.from ?? "—"} → ${d.to ?? "—"}`;
@@ -753,10 +753,10 @@ function ActivityFeed({ items }) {
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 12, color: "#fafaf7" }}>
                 <span style={{ fontWeight: 500 }}>{cfg.label}</span>
-                {detail && <span style={{ color: "#6b6b67" }}> · {detail}</span>}
-                {a.target_email && <span style={{ color: "#a8a8a3" }}> · {a.target_email}</span>}
+                {detail && <span style={{ color: "var(--text-tertiary)" }}> · {detail}</span>}
+                {a.target_email && <span style={{ color: "var(--text-secondary)" }}> · {a.target_email}</span>}
               </div>
-              <div style={{ fontSize: 10, color: "#6b6b67", marginTop: 2 }}>
+              <div style={{ fontSize: 10, color: "var(--text-tertiary)", marginTop: 2 }}>
                 {(a.actor_email || "система")} · {new Date(a.created_at).toLocaleString("ru-RU")}
               </div>
             </div>
@@ -1150,7 +1150,7 @@ function AnimatedNumber({ value, format, duration = 700 }) {
 // ════════════════════════════════════════════════════════════════════════════
 const BTN = {
   primary: "px-4 py-2 rounded-lg bg-[#d4af37] hover:bg-[#e8c860] text-[#0a0a0a] text-sm font-semibold transition-all duration-200 active:scale-[0.98]",
-  ghost: "px-4 py-2 rounded-lg border border-white/10 text-[#9b9ca4] hover:text-white hover:border-white/20 text-sm font-medium transition-all duration-200 active:scale-[0.98]",
+  ghost: "px-4 py-2 rounded-lg border border-white/10 text-[var(--text-secondary)] hover:text-white hover:border-white/20 text-sm font-medium transition-all duration-200 active:scale-[0.98]",
   danger: "px-2 py-1 rounded text-[#62646b] hover:text-[#f8a3a3] text-sm transition-colors duration-200",
   edit: "px-2 py-1 rounded text-[#62646b] hover:text-[#d4af37] text-sm transition-colors duration-200",
 };
@@ -1161,7 +1161,7 @@ function Label({ children }) {
       fontSize: 10,
       textTransform: "uppercase",
       letterSpacing: "0.10em",
-      color: "#62646b",
+      color: "var(--text-tertiary)",
       marginBottom: 6,
       fontWeight: 600,
       margin: "0 0 6px 0",
@@ -1227,11 +1227,11 @@ function Card({ children, style = {}, glass = false }) {
 function SectionTitle({ children, icon }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-      {icon && <span style={{ color: "#62646b", display: "flex" }}>{icon}</span>}
+      {icon && <span style={{ color: "var(--text-tertiary)", display: "flex" }}>{icon}</span>}
       <p style={{
         fontSize: 11,
         fontWeight: 600,
-        color: "#9b9ca4",
+        color: "var(--text-secondary)",
         textTransform: "uppercase",
         letterSpacing: "0.10em",
         margin: 0,
@@ -1252,7 +1252,7 @@ function Chip({ label, active, onClick }) {
         fontWeight: 500,
         cursor: "pointer",
         background: active ? "rgba(212,175,55,0.15)" : "rgba(255,255,255,0.04)",
-        color: active ? "#e8c860" : "#9b9ca4",
+        color: active ? "#e8c860" : "var(--text-secondary)",
         border: `1px solid ${active ? "rgba(212,175,55,0.30)" : "rgba(255,255,255,0.06)"}`,
         transition: "all 0.18s cubic-bezier(0.16, 1, 0.3, 1)",
         fontFamily: "inherit",
@@ -1359,7 +1359,7 @@ function Modal({ title, onClose, children, maxWidth = 480, icon }) {
               style={{
                 background: "rgba(255,255,255,0.04)",
                 border: "1px solid rgba(255,255,255,0.06)",
-                color: "#9b9ca4",
+                color: "var(--text-secondary)",
                 width: 30, height: 30,
                 borderRadius: 8,
                 cursor: "pointer",
@@ -1367,7 +1367,7 @@ function Modal({ title, onClose, children, maxWidth = 480, icon }) {
                 transition: "all 0.18s",
               }}
               onMouseOver={(e) => { e.currentTarget.style.color = "#f7f8f8"; e.currentTarget.style.background = "rgba(255,255,255,0.08)"; }}
-              onMouseOut={(e) => { e.currentTarget.style.color = "#9b9ca4"; e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }}
+              onMouseOut={(e) => { e.currentTarget.style.color = "var(--text-secondary)"; e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }}
             >
               <X size={16} strokeWidth={2.2} />
             </button>
@@ -1422,7 +1422,7 @@ function KpiCard({ label, value, sub, color = "#d4af37", Icon, format, trend }) 
           </div>
           {sub && (
             <div style={{
-              fontSize: 11, color: "#62646b", marginTop: 6,
+              fontSize: 11, color: "var(--text-tertiary)", marginTop: 6,
               display: "flex", alignItems: "center", gap: 4,
             }}>
               {trend === "up" && <TrendingUp size={11} style={{ color: "#6ee7a8" }}/>}
@@ -1544,7 +1544,7 @@ function AuthScreen({ onAuthenticated, onError }) {
           }}>КЛИМАТ-ПРО</div>
           <div style={{
             fontSize: 11,
-            color: "#62646b",
+            color: "var(--text-tertiary)",
             fontWeight: 500,
             opacity: 0.6,
             marginBottom: 6,
@@ -1553,7 +1553,7 @@ function AuthScreen({ onAuthenticated, onError }) {
           </div>
           <div style={{
             fontSize: 11,
-            color: "#62646b",
+            color: "var(--text-tertiary)",
             textTransform: "uppercase",
             letterSpacing: "0.14em",
             fontWeight: 500,
@@ -1587,7 +1587,7 @@ function AuthScreen({ onAuthenticated, onError }) {
               }}>
                 Заявка отправлена
               </div>
-              <p style={{ fontSize: 13, color: "#9b9ca4", marginBottom: 20, lineHeight: 1.55 }}>
+              <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 20, lineHeight: 1.55 }}>
                 Аккаунт <span style={{ color: "#e8c860", fontWeight: 500 }}>{email}</span> создан
                 и ожидает одобрения администратором. После одобрения вы сможете войти.
               </p>
@@ -1674,7 +1674,7 @@ function AuthScreen({ onAuthenticated, onError }) {
                   : (mode === "signin" ? "Войти" : "Зарегистрироваться")}
               </button>
 
-              <div style={{ textAlign: "center", fontSize: 12, color: "#62646b" }}>
+              <div style={{ textAlign: "center", fontSize: 12, color: "var(--text-tertiary)" }}>
                 {mode === "signin" ? (
                   <>Нет аккаунта?{" "}
                     <button
@@ -1710,7 +1710,7 @@ function AuthScreen({ onAuthenticated, onError }) {
                 )}
               </div>
               {mode === "signin" && (
-                <div style={{ textAlign: "center", fontSize: 11, color: "#62646b", marginTop: 10 }}>
+                <div style={{ textAlign: "center", fontSize: 11, color: "var(--text-tertiary)", marginTop: 10 }}>
                   Забыли пароль? Обратитесь к администратору
                 </div>
               )}
@@ -1901,7 +1901,7 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
           <button key={t.k} type="button" onClick={()=>setActiveTab(t.k)} style={{
             padding:"9px 14px",fontSize:13.5,fontWeight:activeTab===t.k?700:500,cursor:"pointer",
             background:"transparent",border:"none",borderBottom:`2px solid ${activeTab===t.k?"#d4af37":"transparent"}`,
-            color:activeTab===t.k?"#d4af37":"#6b6b67",whiteSpace:"nowrap",
+            color:activeTab===t.k?"#d4af37":"var(--text-tertiary)",whiteSpace:"nowrap",
           }}>{t.l}</button>
         ))}
       </div>
@@ -1949,12 +1949,12 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
                 }}>
                   {ex.userId
                     ? <UserCheck size={12} strokeWidth={2.2} style={{ color: "#d4af37", flexShrink: 0 }} />
-                    : <User size={12} strokeWidth={2.2} style={{ color: "#6b6b67", flexShrink: 0 }} />
+                    : <User size={12} strokeWidth={2.2} style={{ color: "var(--text-tertiary)", flexShrink: 0 }} />
                   }
                   <span style={{ color: "#fafaf7", flex: 1 }}>{ex.name}</span>
                   <button type="button" onMouseDown={() => removeExecutor(i)} style={{
                     background: "none", border: "none", cursor: "pointer",
-                    color: "#6b6b67", padding: 2, display: "flex", alignItems: "center",
+                    color: "var(--text-tertiary)", padding: 2, display: "flex", alignItems: "center",
                   }}>
                     <X size={12} strokeWidth={2.4} />
                   </button>
@@ -1996,10 +1996,10 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
                       onMouseOut={e => e.currentTarget.style.background = "transparent"}
                     >
                       <span style={{ color: "#fafaf7" }}>{u.name || u.email}</span>
-                      {u.name && <span style={{ color: "#6b6b67" }}>{u.email}</span>}
+                      {u.name && <span style={{ color: "var(--text-tertiary)" }}>{u.email}</span>}
                       {u.id === profile?.id && <span style={{ color: "#d4af37", fontSize: 11 }}>(я)</span>}
                       {alreadyAdded
-                        ? <Check size={10} strokeWidth={2} style={{ marginLeft: "auto", color: "#6b6b67", flexShrink: 0 }} />
+                        ? <Check size={10} strokeWidth={2} style={{ marginLeft: "auto", color: "var(--text-tertiary)", flexShrink: 0 }} />
                         : <Plus size={10} strokeWidth={2.4} style={{ marginLeft: "auto", color: "#d4af37", flexShrink: 0 }} />
                       }
                     </div>
@@ -2079,7 +2079,7 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
           </div>
         ))}
         <button type="button" onClick={addPayment} className={BTN.edit}>+ платёж</button>
-        <div style={{ fontSize: 12, color: "#a8a8a3", marginTop: 4 }}>
+        <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 4 }}>
           Оплачено всего: <span style={{ color: "#6ee7a8", fontWeight: 600 }}>{fmt((f.payments || []).reduce((s, p) => s + (+p.amount || 0), 0))}</span>
         </div>
       </div>
@@ -2143,13 +2143,13 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
                       type="button"
                       onClick={() => removeShare(i)}
                       style={{
-                        background: "transparent", border: "none", color: "#6b6b67",
+                        background: "transparent", border: "none", color: "var(--text-tertiary)",
                         cursor: "pointer", padding: 4,
                         display: "flex", alignItems: "center", justifyContent: "center",
                         transition: "color 0.18s",
                       }}
                       onMouseOver={e => e.currentTarget.style.color = "#f8a3a3"}
-                      onMouseOut={e => e.currentTarget.style.color = "#6b6b67"}
+                      onMouseOut={e => e.currentTarget.style.color = "var(--text-tertiary)"}
                       title="Удалить долю"
                     >
                       <Trash2 size={14} strokeWidth={2} />
@@ -2199,7 +2199,7 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
                         onMouseOut={e => e.currentTarget.style.background = "transparent"}
                       >
                         <span style={{ color: "#fafaf7" }}>{u.name || u.email}</span>
-                        {u.name && <span style={{ color: "#6b6b67" }}>{u.email}</span>}
+                        {u.name && <span style={{ color: "var(--text-tertiary)" }}>{u.email}</span>}
                         <Send size={10} strokeWidth={2} style={{ marginLeft: "auto", color: "#d4af37", flexShrink: 0 }} />
                       </div>
                     ))}
@@ -2343,7 +2343,7 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
         </div>
         {(f.links || []).length === 0 ? (
           <div style={{
-            fontSize: 11, color: "#6b6b67", textAlign: "center",
+            fontSize: 11, color: "var(--text-tertiary)", textAlign: "center",
             padding: "10px 0", fontStyle: "italic",
           }}>
             Yandex Disk, Google Drive, чертежи в облаке, переписки в Telegram...
@@ -2373,14 +2373,14 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
                   style={{
                     background: "transparent",
                     border: "none",
-                    color: "#6b6b67",
+                    color: "var(--text-tertiary)",
                     cursor: "pointer",
                     padding: 4,
                     display: "flex", alignItems: "center", justifyContent: "center",
                     transition: "color 0.18s",
                   }}
                   onMouseOver={e => e.currentTarget.style.color = "#f8a3a3"}
-                  onMouseOut={e => e.currentTarget.style.color = "#6b6b67"}
+                  onMouseOut={e => e.currentTarget.style.color = "var(--text-tertiary)"}
                   title="Удалить ссылку"
                 >
                   <Trash2 size={14} strokeWidth={2} />
@@ -2462,7 +2462,7 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
                         <option value="viewer">Просмотр</option>
                         <option value="editor">Редактор</option>
                       </select>
-                      <button type="button" onClick={() => removeTeamDraft(i)} style={{ background: "none", border: "none", cursor: "pointer", color: "#6b6b67", padding: 2, display: "flex" }}>
+                      <button type="button" onClick={() => removeTeamDraft(i)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-tertiary)", padding: 2, display: "flex" }}>
                         <X size={12} strokeWidth={2.4} />
                       </button>
                     </div>
@@ -2486,9 +2486,9 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
                           onMouseDown={() => { if (!added) { addTeamDraft(u); setTeamQuery(""); setTeamResults([]); } }}
                           style={{ padding: "8px 12px", cursor: added ? "default" : "pointer", fontSize: 12, borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", gap: 8, opacity: added ? 0.45 : 1 }}>
                           <span style={{ color: "#fafaf7" }}>{u.name || u.email}</span>
-                          {u.name && <span style={{ color: "#6b6b67" }}>{u.email}</span>}
+                          {u.name && <span style={{ color: "var(--text-tertiary)" }}>{u.email}</span>}
                           {added
-                            ? <Check size={10} strokeWidth={2} style={{ marginLeft: "auto", color: "#6b6b67" }} />
+                            ? <Check size={10} strokeWidth={2} style={{ marginLeft: "auto", color: "var(--text-tertiary)" }} />
                             : <Plus size={10} strokeWidth={2.4} style={{ marginLeft: "auto", color: "#d4af37" }} />}
                         </div>
                       );
@@ -2520,7 +2520,7 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
         }}>
           <div style={{
             display: "flex", alignItems: "center", gap: 6,
-            fontSize: 11, fontWeight: 600, color: "#a8a8a3",
+            fontSize: 11, fontWeight: 600, color: "var(--text-secondary)",
             textTransform: "uppercase", letterSpacing: "0.10em",
             marginBottom: 12,
           }}>
@@ -2547,7 +2547,7 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
         }}>
           <div style={{
             display: "flex", alignItems: "center", gap: 6,
-            fontSize: 11, fontWeight: 600, color: "#a8a8a3",
+            fontSize: 11, fontWeight: 600, color: "var(--text-secondary)",
             textTransform: "uppercase", letterSpacing: "0.10em",
             marginBottom: 12,
           }}>
@@ -2650,14 +2650,14 @@ function ReceivablesCard({ data }) {
         <span style={{ color: "#e8c860", fontSize: 14, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{fmt(data.total)}</span>
       </div>
       {top.length === 0
-        ? <p style={{ color: "#62646b", fontSize: 13, margin: 0 }}>Все оплаты получены</p>
+        ? <p style={{ color: "var(--text-tertiary)", fontSize: 13, margin: 0 }}>Все оплаты получены</p>
         : top.map(it => (
           <div key={it.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
             <span style={{ color: "#cdced4", fontSize: 13, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it.name}</span>
             <span style={{ color: "#e8c860", fontSize: 12, flexShrink: 0, marginLeft: 8, fontVariantNumeric: "tabular-nums" }}>{fmt(it.remaining)}</span>
           </div>
         ))}
-      {rest > 0 && <p style={{ color: "#62646b", fontSize: 11, margin: "8px 0 0" }}>и ещё {rest}</p>}
+      {rest > 0 && <p style={{ color: "var(--text-tertiary)", fontSize: 11, margin: "8px 0 0" }}>и ещё {rest}</p>}
     </Card>
   );
 }
@@ -2682,7 +2682,7 @@ function MySharesCard({ shares }) {
   );
 }
 
-const EXP_COLORS = ["#d4af37", "#93c5fd", "#f8a3a3", "#6ee7a8", "#b794f6", "#6b6b67"];
+const EXP_COLORS = ["#d4af37", "#93c5fd", "#f8a3a3", "#6ee7a8", "#b794f6", "var(--text-tertiary)"];
 
 function ExpenseByCategoryCard({ data, tt }) {
   return (
@@ -2695,7 +2695,7 @@ function ExpenseByCategoryCard({ data, tt }) {
                 {data.map((e, i) => <Cell key={i} fill={EXP_COLORS[i % EXP_COLORS.length]} stroke="transparent" />)}
               </Pie>
               <Tooltip contentStyle={tt} itemStyle={{ color: "#fafaf7" }} formatter={(v, n) => [fmt(v), n]} />
-              <Legend iconType="circle" iconSize={8} formatter={v => <span style={{ fontSize: 10, color: "#9b9ca4" }}>{v}</span>} />
+              <Legend iconType="circle" iconSize={8} formatter={v => <span style={{ fontSize: 10, color: "var(--text-secondary)" }}>{v}</span>} />
             </PieChart>
           </ResponsiveContainer>
         : <Empty text="Нет расходов за период" />}
@@ -2733,13 +2733,13 @@ function MyTasksCard({ data }) {
         Мои задачи · просрочено {data.counts.overdue} · сегодня {data.counts.today}
       </SectionTitle>
       {rows.length === 0
-        ? <p style={{ color: "#62646b", fontSize: 13, margin: 0 }}>Нет горящих задач</p>
+        ? <p style={{ color: "var(--text-tertiary)", fontSize: 13, margin: 0 }}>Нет горящих задач</p>
         : rows.map(t => {
           const od = t.dueDate < today;
           return (
             <div key={t.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
               <span style={{ color: od ? "#f8a3a3" : "#f7f8f8", fontSize: 13, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.title}</span>
-              <span style={{ color: "#62646b", fontSize: 11, flexShrink: 0, marginLeft: 8 }}>{fmtD(t.dueDate)}</span>
+              <span style={{ color: "var(--text-tertiary)", fontSize: 11, flexShrink: 0, marginLeft: 8 }}>{fmtD(t.dueDate)}</span>
             </div>
           );
         })}
@@ -2807,7 +2807,7 @@ function Dashboard({ projects, txs, tasks, onDrillStage, sharesByProject = {}, m
             <button key={key} onClick={() => setPeriod(key)} style={{
               border: "none", cursor: "pointer", fontSize: 12, padding: "5px 12px", borderRadius: 7,
               background: period === key ? "#d4af37" : "transparent",
-              color: period === key ? "#121214" : "#9b9ca4",
+              color: period === key ? "#121214" : "var(--text-secondary)",
               fontWeight: period === key ? 600 : 400,
             }}>{label}</button>
           ))}
@@ -2831,11 +2831,11 @@ function Dashboard({ projects, txs, tasks, onDrillStage, sharesByProject = {}, m
           <Card>
             <SectionTitle icon={<AlertTriangle size={13} />}>Просроченные дедлайны проектов</SectionTitle>
             {overdue.length === 0
-              ? <p style={{ color: "#62646b", fontSize: 13, margin: 0 }}>Всё в срок</p>
+              ? <p style={{ color: "var(--text-tertiary)", fontSize: 13, margin: 0 }}>Всё в срок</p>
               : overdue.map(p => (
                 <div key={p.id} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
                   <span style={{ color: "#f8a3a3", fontSize: 13, fontWeight: 500, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
-                  <span style={{ color: "#62646b", fontSize: 11, flexShrink: 0, marginLeft: 8 }}>{fmtD(p.deadline)}</span>
+                  <span style={{ color: "var(--text-tertiary)", fontSize: 11, flexShrink: 0, marginLeft: 8 }}>{fmtD(p.deadline)}</span>
                 </div>
               ))}
           </Card>
@@ -2883,7 +2883,7 @@ function Dashboard({ projects, txs, tasks, onDrillStage, sharesByProject = {}, m
                       {stageData.map((e, i) => <Cell key={i} fill={e.fill} stroke="transparent" />)}
                     </Pie>
                     <Tooltip contentStyle={tt} itemStyle={{ color: "#fafaf7" }} formatter={(v, n) => [`${v} проектов`, n]} />
-                    <Legend iconType="circle" iconSize={8} formatter={v => <span style={{ fontSize: 10, color: "#9b9ca4" }}>{v}</span>} />
+                    <Legend iconType="circle" iconSize={8} formatter={v => <span style={{ fontSize: 10, color: "var(--text-secondary)" }}>{v}</span>} />
                   </PieChart>
                 </ResponsiveContainer>
               : <Empty text="Добавь первый проект" />}
@@ -2891,7 +2891,7 @@ function Dashboard({ projects, txs, tasks, onDrillStage, sharesByProject = {}, m
           <Card>
             <SectionTitle icon={<Calendar size={13} />}>Ближайшие дедлайны</SectionTitle>
             {upcoming.length === 0
-              ? <p style={{ color: "#62646b", fontSize: 13, margin: 0 }}>Нет запланированных дедлайнов</p>
+              ? <p style={{ color: "var(--text-tertiary)", fontSize: 13, margin: 0 }}>Нет запланированных дедлайнов</p>
               : upcoming.map(p => (
                 <div key={p.id} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
                   <span style={{ color: "#f7f8f8", fontSize: 13, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
@@ -2951,17 +2951,17 @@ function ProjectVisibilityModal({ project, client, profile, onClose }) {
     return () => { alive = false; };
   }, [project.id]); // eslint-disable-line
 
-  const reasonColor = (p) => p === 0 ? "#d4af37" : p === 1 ? "#6ee7a8" : p === 2 ? "#93c5fd" : "#a8a8a3";
+  const reasonColor = (p) => p === 0 ? "#d4af37" : p === 1 ? "#6ee7a8" : p === 2 ? "#93c5fd" : "var(--text-secondary)";
 
   return (
     <Modal title="Кто видит проект" onClose={onClose} icon={<Eye size={16} />} maxWidth={460}>
-      <div style={{ fontSize: 13, color: "#a8a8a3", marginBottom: 14 }}>
+      <div style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 14 }}>
         Проект <b style={{ color: "#fafaf7" }}>{project.name}</b>
       </div>
       {loading ? (
-        <div style={{ fontSize: 12, color: "#6b6b67", padding: "12px 0" }}>Загрузка…</div>
+        <div style={{ fontSize: 12, color: "var(--text-tertiary)", padding: "12px 0" }}>Загрузка…</div>
       ) : rows.length === 0 ? (
-        <div style={{ fontSize: 13, color: "#a8a8a3" }}>Проект видите только вы.</div>
+        <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>Проект видите только вы.</div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
           {rows.map(r => {
@@ -2992,8 +2992,8 @@ function ProjectVisibilityModal({ project, client, profile, onClose }) {
 // На мобайле — bottom-sheet. onApplied(patch) — optimistic-апдейт карточки.
 // ════════════════════════════════════════════════════════════════════════════
 const QE_GOLD  = { flex:1, padding:"9px 12px", borderRadius:9, background:"#d4af37", border:"none", color:"#1c1c1a", fontWeight:800, fontSize:13, cursor:"pointer" };
-const QE_GHOST = { flex:1, padding:"9px 12px", borderRadius:9, background:"#1c1c1a", border:"1px solid #2a2a2e", color:"#a8a8a3", fontWeight:600, fontSize:13, cursor:"pointer" };
-const QE_LABEL = { fontSize:11, fontWeight:700, color:"#6b6b67", textTransform:"uppercase", letterSpacing:".1em", marginBottom:8 };
+const QE_GHOST = { flex:1, padding:"9px 12px", borderRadius:9, background:"#1c1c1a", border:"1px solid #2a2a2e", color:"var(--text-secondary)", fontWeight:600, fontSize:13, cursor:"pointer" };
+const QE_LABEL = { fontSize:11, fontWeight:700, color:"var(--text-tertiary)", textTransform:"uppercase", letterSpacing:".1em", marginBottom:8 };
 
 function QEStage({ project, client, onClose, onApplied, showToast }) {
   const save = async (st) => {
@@ -3112,7 +3112,7 @@ function QEExecutor({ project, client, onClose, onApplied, showToast }) {
             <div key={i} style={{display:"flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.05)",borderRadius:6,padding:"5px 8px",fontSize:12}}>
               <UserCheck size={12} strokeWidth={2.2} style={{color:"#d4af37",flexShrink:0}}/>
               <span style={{flex:1,color:"#fafaf7"}}>{e.name}</span>
-              <button type="button" onClick={()=>remove(i)} style={{background:"none",border:"none",cursor:"pointer",color:"#6b6b67",padding:2,display:"flex"}}><X size={12} strokeWidth={2.4}/></button>
+              <button type="button" onClick={()=>remove(i)} style={{background:"none",border:"none",cursor:"pointer",color:"var(--text-tertiary)",padding:2,display:"flex"}}><X size={12} strokeWidth={2.4}/></button>
             </div>
           ))}
         </div>
@@ -3127,7 +3127,7 @@ function QEExecutor({ project, client, onClose, onApplied, showToast }) {
                 onMouseOver={e=>{ if(!added) e.currentTarget.style.background="#2a2a2a"; }} onMouseOut={e=>e.currentTarget.style.background="transparent"}>
                 <UserAvatar name={u.name} email={u.email} size={24}/>
                 <span style={{fontSize:13,color:"#fafaf7"}}>{u.name||u.email}</span>
-                {added ? <Check size={12} strokeWidth={2} style={{marginLeft:"auto",color:"#6b6b67"}}/> : <Plus size={12} strokeWidth={2.4} style={{marginLeft:"auto",color:"#d4af37"}}/>}
+                {added ? <Check size={12} strokeWidth={2} style={{marginLeft:"auto",color:"var(--text-tertiary)"}}/> : <Plus size={12} strokeWidth={2.4} style={{marginLeft:"auto",color:"#d4af37"}}/>}
               </div>
             );
           })}
@@ -3365,7 +3365,7 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
             padding: "6px 14px", borderRadius: 8,
             border: `1px solid ${selectMode ? "rgba(110,231,168,0.40)" : "rgba(255,255,255,0.12)"}`,
             background: selectMode ? "rgba(110,231,168,0.10)" : "rgba(255,255,255,0.05)",
-            color: selectMode ? "#6ee7a8" : "#a8a8a3",
+            color: selectMode ? "#6ee7a8" : "var(--text-secondary)",
             fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all .15s", whiteSpace: "nowrap",
           }}
         >{selectMode ? "Отмена" : "Выбрать"}</button>
@@ -3415,7 +3415,7 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
                       {isAwaitingPayment&&<span style={{fontSize:11,color:"#d4af37",fontWeight:600}}>⏳ Ожидает оплаты</span>}
                       {isOverdue&&<span style={{fontSize:11,color:"#f8a3a3",fontWeight:600}}>⚠ Просрочен</span>}
                     </div>
-                    <div style={{fontSize:13,color:"#a8a8a3",marginBottom:10,display:"flex",flexWrap:"wrap",alignItems:"center",gap:"2px 0"}}>
+                    <div style={{fontSize:13,color:"var(--text-secondary)",marginBottom:10,display:"flex",flexWrap:"wrap",alignItems:"center",gap:"2px 0"}}>
                       {p.client&&<span>{p.client}</span>}
                       {p.client&&p.type&&<span style={{margin:"0 6px",color:"#1c1c1a"}}>·</span>}
                       <span style={{color:"#e8c860",fontWeight:600}}>{p.type}</span>
@@ -3423,21 +3423,21 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
                         ? <><span style={{margin:"0 6px",color:"#1c1c1a"}}>·</span>
                           <span onClick={canManage?(e)=>openQE(e,p.id,"executor"):undefined} style={{color:"#d4af37",cursor:canManage?"pointer":"default"}}>👤 {p.executor}{canManage?" ▾":""}</span></>
                         : (canManage&&<><span style={{margin:"0 6px",color:"#1c1c1a"}}>·</span>
-                          <span onClick={(e)=>openQE(e,p.id,"executor")} style={{color:"#6b6b67",cursor:"pointer"}}>👤 Назначить</span></>)}
+                          <span onClick={(e)=>openQE(e,p.id,"executor")} style={{color:"var(--text-tertiary)",cursor:"pointer"}}>👤 Назначить</span></>)}
                     </div>
                     <div style={{height:4,background:"#141414",borderRadius:2,overflow:"hidden",marginBottom:10}}>
                       <div style={{height:"100%",borderRadius:2,background:meta.color,
                         width:`${meta.progress}%`,transition:"width 0.5s"}}/>
                     </div>
                     <div style={{display:"flex",flexWrap:"wrap",gap:"4px 20px",fontSize:12}}>
-                      {contract>0&&<span style={{color:"#a8a8a3"}}>Договор: <span style={{color:"#fafaf7",fontWeight:600}}>{fmt(contract)}</span></span>}
+                      {contract>0&&<span style={{color:"var(--text-secondary)"}}>Договор: <span style={{color:"#fafaf7",fontWeight:600}}>{fmt(contract)}</span></span>}
                       {paid>0
-                        ? <span onClick={canManage?(e)=>openQE(e,p.id,"payment"):undefined} style={{color:"#a8a8a3",cursor:canManage?"pointer":"default"}}>Оплачено: <span style={{color:"#6ee7a8",fontWeight:600}}>{fmt(paid)}</span>{canManage&&<span style={{marginLeft:4,background:"#d4af37",color:"#1c1c1a",borderRadius:4,fontSize:10,fontWeight:800,padding:"0 4px"}}>+</span>}</span>
-                        : (canManage&&contract>0&&<span onClick={(e)=>openQE(e,p.id,"payment")} style={{color:"#6b6b67",cursor:"pointer"}}>+ платёж</span>)}
-                      {contract>0&&paid>0&&<span style={{color:"#a8a8a3"}}>Остаток: <span style={{color:"#d4af37",fontWeight:600}}>{fmt(contract-paid)}</span></span>}
+                        ? <span onClick={canManage?(e)=>openQE(e,p.id,"payment"):undefined} style={{color:"var(--text-secondary)",cursor:canManage?"pointer":"default"}}>Оплачено: <span style={{color:"#6ee7a8",fontWeight:600}}>{fmt(paid)}</span>{canManage&&<span style={{marginLeft:4,background:"#d4af37",color:"#1c1c1a",borderRadius:4,fontSize:10,fontWeight:800,padding:"0 4px"}}>+</span>}</span>
+                        : (canManage&&contract>0&&<span onClick={(e)=>openQE(e,p.id,"payment")} style={{color:"var(--text-tertiary)",cursor:"pointer"}}>+ платёж</span>)}
+                      {contract>0&&paid>0&&<span style={{color:"var(--text-secondary)"}}>Остаток: <span style={{color:"#d4af37",fontWeight:600}}>{fmt(contract-paid)}</span></span>}
                       {p.deadline
-                        ? <span onClick={canEdit?(e)=>openQE(e,p.id,"deadline"):undefined} style={{color:"#a8a8a3",cursor:canEdit?"pointer":"default"}}>📅 Дедлайн: <span style={{color:isOverdue?"#f8a3a3":"#fafaf7",fontWeight:isOverdue?600:400}}>{fmtD(p.deadline)}</span>{canEdit?" ▾":""}</span>
-                        : (canEdit&&<span onClick={(e)=>openQE(e,p.id,"deadline")} style={{color:"#6b6b67",cursor:"pointer"}}>📅 Срок</span>)}
+                        ? <span onClick={canEdit?(e)=>openQE(e,p.id,"deadline"):undefined} style={{color:"var(--text-secondary)",cursor:canEdit?"pointer":"default"}}>📅 Дедлайн: <span style={{color:isOverdue?"#f8a3a3":"#fafaf7",fontWeight:isOverdue?600:400}}>{fmtD(p.deadline)}</span>{canEdit?" ▾":""}</span>
+                        : (canEdit&&<span onClick={(e)=>openQE(e,p.id,"deadline")} style={{color:"var(--text-tertiary)",cursor:"pointer"}}>📅 Срок</span>)}
                     </div>
                     {contract>0&&paid>0&&(
                       <div style={{display:"flex",alignItems:"center",gap:8,marginTop:8}}>
@@ -3445,7 +3445,7 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
                           <div style={{height:"100%",background:"#6ee7a8",borderRadius:2,
                             width:`${Math.min(100,paid/contract*100)}%`}}/>
                         </div>
-                        <span style={{fontSize:10,color:"#6b6b67"}}>{Math.round(paid/contract*100)}%</span>
+                        <span style={{fontSize:10,color:"var(--text-tertiary)"}}>{Math.round(paid/contract*100)}%</span>
                       </div>
                     )}
                     {/* v2.1: индикатор «Моя доля». Для владельца — его остаток; для участника-
@@ -3456,7 +3456,7 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
                       const mine = viewerShareOnProject(p, shs, profile?.id);
                       if (!mine) return null;
                       return (
-                        <div style={{display:"flex",alignItems:"center",gap:6,marginTop:6,fontSize:11,color:"#6b6b67"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:6,marginTop:6,fontSize:11,color:"var(--text-tertiary)"}}>
                           <Users size={12} strokeWidth={2.2}/>
                           <span>Моя доля: <span style={{color:"#e8c860",fontWeight:600}}>{fmt(mine.amount)} ({mine.percent}%)</span></span>
                         </div>
@@ -3576,7 +3576,7 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
                               padding: "4px 10px", borderRadius: 6,
                               background: "rgba(255,255,255,0.04)",
                               border: "1px solid rgba(255,255,255,0.10)",
-                              color: "#a8a8a3",
+                              color: "var(--text-secondary)",
                               fontSize: 11, fontWeight: 500,
                               textDecoration: "none",
                               transition: "all 0.18s",
@@ -3594,7 +3594,7 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
                             onMouseOut={e => {
                               e.currentTarget.style.background = "rgba(255,255,255,0.04)";
                               e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)";
-                              e.currentTarget.style.color = "#a8a8a3";
+                              e.currentTarget.style.color = "var(--text-secondary)";
                             }}
                             title={link.url}
                           >
@@ -3604,7 +3604,7 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
                         ))}
                       </div>
                     )}
-                    {p.notes&&<p style={{margin:"10px 0 0",fontSize:11,color:"#6b6b67",fontStyle:"italic"}}>{p.notes}</p>}
+                    {p.notes&&<p style={{margin:"10px 0 0",fontSize:11,color:"var(--text-tertiary)",fontStyle:"italic"}}>{p.notes}</p>}
                   </div>
                   {/* ═══ КНОПКИ ДЕЙСТВИЙ ═══ */}
                   <div style={{display:"flex",flexDirection:"column",gap:4,flexShrink:0,alignItems:"flex-end"}}>
@@ -3623,7 +3623,7 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
                             padding:"4px 8px",borderRadius:6,border:"none",cursor:"pointer",
                             fontSize:12,fontWeight:700,transition:"all .15s",
                             background:confirmDel===p.id?"#f8a3a333":"transparent",
-                            color:confirmDel===p.id?"#f8a3a3":"#6b6b67",
+                            color:confirmDel===p.id?"#f8a3a3":"var(--text-tertiary)",
                           }}
                           onBlur={()=>setConfirmDel(null)}
                           title={confirmDel===p.id?"Нажми ещё раз чтобы удалить":"Удалить проект"}
@@ -3711,13 +3711,13 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
             <div style={{ position: "sticky", bottom: 0, background: "#101012", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 12, padding: 14, marginTop: 12, zIndex: 30 }}>
               <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 8, fontSize: 13, color: "#d8d8d4" }}>
                 <span>Получено: <b style={{ color: "#6ee7a8" }}>{fmt(t.received)}</b></span>
-                <span>К получению: <b style={{ color: t.remaining > 0 ? "#f8a3a3" : "#6b6b67" }}>{fmt(t.remaining)}</b></span>
+                <span>К получению: <b style={{ color: t.remaining > 0 ? "#f8a3a3" : "var(--text-tertiary)" }}>{fmt(t.remaining)}</b></span>
                 <span>Сумма договоров: <b style={{ color: "#e8c860" }}>{fmt(t.contract)}</b></span>
-                <span style={{ marginLeft: "auto", color: "#62646b" }}>выбрано: {sel.length}</span>
+                <span style={{ marginLeft: "auto", color: "var(--text-tertiary)" }}>выбрано: {sel.length}</span>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 2, maxHeight: 160, overflowY: "auto" }}>
                 {t.breakdown.map(b => (
-                  <div key={b.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#a8a8a3" }}>
+                  <div key={b.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--text-secondary)" }}>
                     <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: 8 }}>{b.name}</span>
                     <span style={{ color: "#6ee7a8", flexShrink: 0 }}>{fmt(b.received)}</span>
                   </div>
@@ -4147,7 +4147,7 @@ function DiffView({ oldText, newText }) {
       {segs.map((s, i) => {
         if (s.type === "del") return <div key={i} style={{ color: "#f8a3a3", background: "rgba(248,163,163,0.08)" }}>- {s.text || " "}</div>;
         if (s.type === "add") return <div key={i} style={{ color: "#6ee7a8", background: "rgba(110,231,168,0.08)" }}>+ {s.text || " "}</div>;
-        return <div key={i} style={{ color: "#a8a8a3" }}>&nbsp;&nbsp;{s.text || " "}</div>;
+        return <div key={i} style={{ color: "var(--text-secondary)" }}>&nbsp;&nbsp;{s.text || " "}</div>;
       })}
     </div>
   );
@@ -4214,7 +4214,7 @@ function TaskPhotoLightbox({ photo, client, onClose }) {
       {url
         ? <img src={url} alt={photo.file_name} onClick={e => e.stopPropagation()}
                style={{ maxWidth: "95vw", maxHeight: "90vh", borderRadius: 8 }} />
-        : <span style={{ color: "#9b9ca4" }}>Загрузка…</span>}
+        : <span style={{ color: "var(--text-secondary)" }}>Загрузка…</span>}
     </div>
   );
 }
@@ -4270,7 +4270,7 @@ function TaskPhotosSection({ task, client, profile, showToast }) {
                onChange={onFile} style={{ display: "none" }} />
       </div>
       {photos.length === 0
-        ? <div style={{ fontSize: 12, color: "#62646b" }}>Фото пока нет</div>
+        ? <div style={{ fontSize: 12, color: "var(--text-tertiary)" }}>Фото пока нет</div>
         : <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {photos.map(p => (
               <div key={p.id} style={{ position: "relative" }}>
@@ -4561,7 +4561,7 @@ function TaskModal({ task, client, profile, projects, realtimeTick, onClose, onS
         <div style={{ marginBottom: 14 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>{isNew ? "Новая задача" : form.title || "Задача"}</h3>
-            {!isNew && (() => { const sm = TASK_STATUS_META[task.status] || { color: "#62646b" }; return (
+            {!isNew && (() => { const sm = TASK_STATUS_META[task.status] || { color: "var(--text-tertiary)" }; return (
               <span style={{ fontSize: 10, fontWeight: 800, padding: "3px 9px", borderRadius: 20, background: sm.color + "1f", color: sm.color }}>{task.status}</span>
             ); })()}
             {!isNew && (() => { const pm = TASK_PRIORITY_META[task.priority] || TASK_PRIORITY_META["Обычный"]; return (
@@ -4569,7 +4569,7 @@ function TaskModal({ task, client, profile, projects, realtimeTick, onClose, onS
             ); })()}
           </div>
           {!isNew && (() => { const due = dueState(task.dueDate, todayStr()); return (
-            <p style={{ margin: "6px 0 0", fontSize: 12, color: "#9b9ca4" }}>
+            <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--text-secondary)" }}>
               {task.projectName ? `📁 ${task.projectName}` : "👤 Личная задача"} · исполнитель: {task.assigneeName || "—"} · автор: {task.authorName || "—"} · поставлена {fmtD((task.createdAt || "").slice(0, 10))}
               {task.dueDate && <> · срок <span style={{ color: DUE_COLORS[due.level], fontWeight: 600 }}>{fmtD(task.dueDate)} ({dueSuffix(due.days)})</span></>}
             </p>
@@ -4777,7 +4777,7 @@ function TaskModal({ task, client, profile, projects, realtimeTick, onClose, onS
 function TaskRowList({ t, onOpen, idx = 0 }) {
   const today = todayStr();
   const due = dueState(t.dueDate, today);
-  const sm = TASK_STATUS_META[t.status] || { color: "#62646b" };
+  const sm = TASK_STATUS_META[t.status] || { color: "var(--text-tertiary)" };
   const pm = TASK_PRIORITY_META[t.priority] || TASK_PRIORITY_META["Обычный"];
   return (
     <div onClick={() => onOpen(t)} onMouseMove={spotlightMove} className="kp-card kp-rise" style={{
@@ -4788,11 +4788,11 @@ function TaskRowList({ t, onOpen, idx = 0 }) {
       <span style={{ fontSize: 10, fontWeight: 800, padding: "3px 9px", borderRadius: 20, background: sm.color + "1f", color: sm.color, whiteSpace: "nowrap" }}>{t.status}</span>
       <span style={{ fontSize: 10, fontWeight: 800, padding: "3px 9px", borderRadius: 20, background: pm.bg, color: pm.color, whiteSpace: "nowrap" }}>{pm.label}</span>
       <span style={{ fontSize: 14, fontWeight: 600, color: "#f5f5f2", flex: 1, minWidth: 160 }}>{t.title}</span>
-      <span style={{ fontSize: 12, color: "#9b9ca4", whiteSpace: "nowrap" }}>{t.projectName ? `📁 ${t.projectName}` : "👤 Личная задача"}</span>
+      <span style={{ fontSize: 12, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>{t.projectName ? `📁 ${t.projectName}` : "👤 Личная задача"}</span>
       <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#cfd0d4", whiteSpace: "nowrap" }}>
         <UserAvatar name={t.assigneeName} size={20} />{t.assigneeName || "—"}
       </span>
-      <span style={{ fontSize: 11, color: "#55565c", whiteSpace: "nowrap" }}>от {fmtD((t.createdAt || "").slice(0, 10))}</span>
+      <span style={{ fontSize: 11, color: "var(--text-tertiary)", whiteSpace: "nowrap" }}>от {fmtD((t.createdAt || "").slice(0, 10))}</span>
       <span style={{ fontSize: 11.5, color: DUE_COLORS[due.level], fontWeight: due.level === "overdue" ? 700 : 400, whiteSpace: "nowrap", minWidth: 90, textAlign: "right" }}>
         {t.dueDate ? `📅 ${fmtD(t.dueDate)}${due.days !== null && t.status !== "Готово" ? ` · ${dueSuffix(due.days)}` : ""}` : "—"}
       </span>
@@ -4821,7 +4821,7 @@ function TaskCardBoard({ t, onOpen, draggable, onDragStart, photos = [], client,
         }}>{pm.label}</span>
       </div>
       <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.35, color: "#f5f5f2" }}>{t.title}</div>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10, fontSize: 12, color: "#9b9ca4" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10, fontSize: 12, color: "var(--text-secondary)" }}>
         {t.projectName ? <>📁 {t.projectName}</> : <>👤 Личная задача</>}
       </div>
       {t.hasOpenQuestion && (
@@ -4836,7 +4836,7 @@ function TaskCardBoard({ t, onOpen, draggable, onDragStart, photos = [], client,
             <TaskPhotoThumb key={p.id} photo={p} client={client} size={46} />
           ))}
           {photos.length > 3 && (
-            <span style={{ fontSize: 11, color: "#9b9ca4", fontWeight: 700 }}>+{photos.length - 3}</span>
+            <span style={{ fontSize: 11, color: "var(--text-secondary)", fontWeight: 700 }}>+{photos.length - 3}</span>
           )}
         </div>
       )}
@@ -4848,7 +4848,7 @@ function TaskCardBoard({ t, onOpen, draggable, onDragStart, photos = [], client,
           <div style={{ fontSize: 12, color: "#cfd0d4", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {t.assigneeName || "— не назначен"}
           </div>
-          <div style={{ fontSize: 10, color: "#55565c", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          <div style={{ fontSize: 10, color: "var(--text-tertiary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             автор: {t.authorName || "—"} · {fmtDM((t.createdAt || "").slice(0, 10))}
           </div>
         </div>
@@ -4907,7 +4907,7 @@ function TasksBoard({ tasks, onOpen, onReload, client, profile, photosByTask = {
               ))}
               <button onClick={() => onOpen({ status: col, priority: "Обычный" })} style={{
                 width: "100%", textAlign: "center", background: "transparent",
-                border: "1px dashed rgba(255,255,255,0.10)", color: "#62646b",
+                border: "1px dashed rgba(255,255,255,0.10)", color: "var(--text-tertiary)",
                 borderRadius: 9, padding: 9, fontSize: 12, cursor: "pointer",
               }}>+ задача</button>
             </div>
@@ -5023,7 +5023,7 @@ function TasksView({ client, profile, projects, showToast }) {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
         <div>
           <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, letterSpacing: "-0.01em" }}>Задачи</h2>
-          <p style={{ margin: "3px 0 0", fontSize: 12, color: "#62646b" }}>
+          <p style={{ margin: "3px 0 0", fontSize: 12, color: "var(--text-tertiary)" }}>
             {activeCount} активных{attentionCount > 0 ? ` · ${attentionCount} требуют внимания` : ""}
           </p>
         </div>
@@ -5032,7 +5032,7 @@ function TasksView({ client, profile, projects, showToast }) {
             {[["board", "▦ Доска"], ["list", "≣ Список"]].map(([v, l]) => (
               <button key={v} onClick={() => setView(v)} style={{
                 border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, padding: "6px 14px", borderRadius: 7,
-                background: view === v ? "#d4af37" : "transparent", color: view === v ? "#0a0a0a" : "#9b9ca4",
+                background: view === v ? "#d4af37" : "transparent", color: view === v ? "#0a0a0a" : "var(--text-secondary)",
               }}>{l}</button>
             ))}
           </div>
@@ -5061,7 +5061,7 @@ function TasksView({ client, profile, projects, showToast }) {
             <option value="created">Сортировка: по дате постановки</option>
           </StyledSelect>
         )}
-        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#9b9ca4" }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text-secondary)" }}>
           <input type="checkbox" checked={onlyMine} onChange={e => setOnlyMine(e.target.checked)} style={{ accentColor: "#d4af37" }} /> только мои
         </label>
       </div>
@@ -5069,7 +5069,7 @@ function TasksView({ client, profile, projects, showToast }) {
        view === "board" ? <TasksBoard tasks={shown} onOpen={setEditing} onReload={reload} client={client} profile={profile} photosByTask={photosByTask} showToast={showToast} /> :
        <div>
          {listShown.map((t, i) => <TaskRowList key={t.id} t={t} onOpen={setEditing} idx={i} />)}
-         {!listShown.length && <div style={{ color: "#62646b", padding: "24px 0", textAlign: "center" }}>Задач нет</div>}
+         {!listShown.length && <div style={{ color: "var(--text-tertiary)", padding: "24px 0", textAlign: "center" }}>Задач нет</div>}
        </div>}
       {editing && <TaskModal task={editing} client={client} profile={profile} projects={projects}
                              realtimeTick={openTaskTick}
@@ -5193,13 +5193,13 @@ function CsvImportModal({ onClose, onImport }) {
           background:"#141414",zIndex:1}}>
           <div>
             <h3 style={{color:"white",fontWeight:700,fontSize:16,margin:0}}>📂 Импорт из банка</h3>
-            {step==="preview" && <p style={{fontSize:11,color:"#6b6b67",marginTop:2}}>
+            {step==="preview" && <p style={{fontSize:11,color:"var(--text-tertiary)",marginTop:2}}>
               Банк: <span style={{color:"#e8c860",fontWeight:600}}>{BANK_LABELS[bank]||bank}</span>
               {" · "}{parsed.length} операций найдено
             </p>}
           </div>
           <button onClick={onClose} style={{
-            background:"#141414",border:"none",color:"#a8a8a3",
+            background:"#141414",border:"none",color:"var(--text-secondary)",
             width:32,height:32,borderRadius:8,cursor:"pointer",fontSize:18,
             display:"flex",alignItems:"center",justifyContent:"center",
           }}>×</button>
@@ -5208,7 +5208,7 @@ function CsvImportModal({ onClose, onImport }) {
         <div style={{padding:"20px 24px"}}>
           {step==="upload" && (
             <div>
-              <p style={{fontSize:13,color:"#a8a8a3",marginBottom:16,lineHeight:1.5}}>
+              <p style={{fontSize:13,color:"var(--text-secondary)",marginBottom:16,lineHeight:1.5}}>
                 Загрузи файл выписки из банка. Поддерживаются CSV (Тинькофф, Сбер, Альфа, Яндекс)
                 и PDF (Яндекс Банк). Все операции пройдут автокатегоризацию,
                 и ты сможешь проверить и подправить категории перед импортом.
@@ -5217,7 +5217,7 @@ function CsvImportModal({ onClose, onImport }) {
               <button onClick={()=>fileRef.current?.click()} disabled={pdfLoading} style={{
                 width:"100%",padding:"32px 16px",borderRadius:14,
                 background:"#141414",border:"2px dashed #1c1c1a",
-                color:pdfLoading?"#6b6b67":"#fafaf7",fontSize:14,fontWeight:600,
+                color:pdfLoading?"var(--text-tertiary)":"#fafaf7",fontSize:14,fontWeight:600,
                 cursor:pdfLoading?"wait":"pointer",
               }}>
                 {pdfLoading ? "Парсим PDF..." : "📁 Выбрать файл (.csv или .pdf)"}
@@ -5238,21 +5238,21 @@ function CsvImportModal({ onClose, onImport }) {
                 {label:"Доходов",  val:toImport.filter(r=>r.type==="income").length,  color:"#d4af37"},
               ].map(s=>(
                 <div key={s.label} style={{textAlign:"center",minWidth:70}}>
-                  <div style={{fontSize:10,color:"#6b6b67",fontWeight:700,textTransform:"uppercase",letterSpacing:".08em"}}>{s.label}</div>
+                  <div style={{fontSize:10,color:"var(--text-tertiary)",fontWeight:700,textTransform:"uppercase",letterSpacing:".08em"}}>{s.label}</div>
                   <div style={{fontSize:18,fontWeight:900,color:s.color,marginTop:2}}>{s.val}</div>
                 </div>
               ))}
             </div>
 
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-              <div style={{fontSize:11,color:"#6b6b67",fontWeight:600}}>
+              <div style={{fontSize:11,color:"var(--text-tertiary)",fontWeight:600}}>
                 Нажми на название чтобы отредактировать. ✂ — автоочистка длинного текста.
               </div>
               <button
                 onClick={()=>setEdited(e=>e.map(r=>({...r,description:cleanDesc(r.description)})))}
                 style={{
                   background:"#141414",border:"1px solid #2d3f55",borderRadius:8,
-                  color:"#a8a8a3",fontSize:11,fontWeight:700,cursor:"pointer",
+                  color:"var(--text-secondary)",fontSize:11,fontWeight:700,cursor:"pointer",
                   padding:"5px 12px",flexShrink:0,whiteSpace:"nowrap",
                 }}>✂ Очистить все названия</button>
             </div>
@@ -5275,7 +5275,7 @@ function CsvImportModal({ onClose, onImport }) {
                     opacity:row.skip?0.35:1,transition:"opacity .15s",
                     background:row.skip?"transparent":(row.type==="income"?"#d4af3708":"transparent"),
                   }}>
-                    <span style={{fontSize:11,color:"#6b6b67",whiteSpace:"nowrap"}}>{fmtD(row.date)}</span>
+                    <span style={{fontSize:11,color:"var(--text-tertiary)",whiteSpace:"nowrap"}}>{fmtD(row.date)}</span>
                     <div style={{minWidth:0}}>
                       <div style={{display:"flex",gap:4,alignItems:"center",marginBottom:3}}>
                         <input
@@ -5294,7 +5294,7 @@ function CsvImportModal({ onClose, onImport }) {
                           onClick={()=>changeDesc(row.id, cleanDesc(row.description))}
                           style={{
                             background:"#141414",border:"none",borderRadius:5,
-                            color:"#6b6b67",fontSize:11,cursor:"pointer",
+                            color:"var(--text-tertiary)",fontSize:11,cursor:"pointer",
                             padding:"3px 6px",flexShrink:0,fontWeight:700,
                           }}>✂</button>
                       </div>
@@ -5339,7 +5339,7 @@ function CsvImportModal({ onClose, onImport }) {
             <div style={{display:"flex",gap:10}}>
               <button onClick={()=>setStep("upload")} style={{
                 flex:1,padding:"12px",borderRadius:12,background:"#141414",border:"none",
-                color:"#a8a8a3",fontSize:14,fontWeight:600,cursor:"pointer",
+                color:"var(--text-secondary)",fontSize:14,fontWeight:600,cursor:"pointer",
               }}>← Назад</button>
               <button onClick={doImport} disabled={importing||toImport.length===0} style={{
                 flex:2,padding:"12px",borderRadius:12,background:"#d4af37",border:"none",
@@ -5357,7 +5357,7 @@ function CsvImportModal({ onClose, onImport }) {
               <div style={{fontSize:18,fontWeight:800,color:"white",marginBottom:8}}>
                 Импорт завершён!
               </div>
-              <div style={{fontSize:13,color:"#6b6b67",marginBottom:24}}>
+              <div style={{fontSize:13,color:"var(--text-tertiary)",marginBottom:24}}>
                 {toImport.length} операций добавлены в финансы
               </div>
               <button onClick={onClose} style={{
@@ -5481,7 +5481,7 @@ function Finance({ txs, setTxs, client, ownerId, showToast, projects = [], share
             </div>
             <div style={{ textAlign: "center" }}>
               <Label>К получению</Label>
-              <div style={{ fontSize: 16, fontWeight: 900, color: projReceivable > 0 ? "#f8a3a3" : "#6b6b67", marginTop: 4 }}>{fmt(projReceivable)}</div>
+              <div style={{ fontSize: 16, fontWeight: 900, color: projReceivable > 0 ? "#f8a3a3" : "var(--text-tertiary)", marginTop: 4 }}>{fmt(projReceivable)}</div>
             </div>
           </div>
         </Card>
@@ -5511,7 +5511,7 @@ function Finance({ txs, setTxs, client, ownerId, showToast, projects = [], share
                     {incByCatFull.map((_,i)=><Cell key={i} fill={PALETTE[i%PALETTE.length]} stroke="transparent"/>)}
                   </Pie>
                   <Tooltip contentStyle={tt} itemStyle={{ color: "#fafaf7" }} formatter={(v,n)=>[fmt(v),n]}/>
-                  <Legend iconType="circle" iconSize={7} verticalAlign="bottom" wrapperStyle={{paddingTop:6,fontSize:10,lineHeight:"15px"}} formatter={v=><span style={{fontSize:10,color:"#a8a8a3"}}>{v}</span>}/>
+                  <Legend iconType="circle" iconSize={7} verticalAlign="bottom" wrapperStyle={{paddingTop:6,fontSize:10,lineHeight:"15px"}} formatter={v=><span style={{fontSize:10,color:"var(--text-secondary)"}}>{v}</span>}/>
                 </PieChart>
               </ResponsiveContainer>
             </Card>
@@ -5525,7 +5525,7 @@ function Finance({ txs, setTxs, client, ownerId, showToast, projects = [], share
                     {expByCat.map((_,i)=><Cell key={i} fill={PALETTE[i%PALETTE.length]} stroke="transparent"/>)}
                   </Pie>
                   <Tooltip contentStyle={tt} itemStyle={{ color: "#fafaf7" }} formatter={(v,n)=>[fmt(v),n]}/>
-                  <Legend iconType="circle" iconSize={7} verticalAlign="bottom" wrapperStyle={{paddingTop:6,fontSize:10,lineHeight:"15px"}} formatter={v=><span style={{fontSize:10,color:"#a8a8a3"}}>{v}</span>}/>
+                  <Legend iconType="circle" iconSize={7} verticalAlign="bottom" wrapperStyle={{paddingTop:6,fontSize:10,lineHeight:"15px"}} formatter={v=><span style={{fontSize:10,color:"var(--text-secondary)"}}>{v}</span>}/>
                 </PieChart>
               </ResponsiveContainer>
             </Card>
@@ -5547,7 +5547,7 @@ function Finance({ txs, setTxs, client, ownerId, showToast, projects = [], share
                   overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                   {t.description||t.category}
                 </div>
-                <div style={{fontSize:11,color:"#6b6b67",marginTop:2}}>{t.category} · {fmtD(t.date)}</div>
+                <div style={{fontSize:11,color:"var(--text-tertiary)",marginTop:2}}>{t.category} · {fmtD(t.date)}</div>
               </div>
               <div style={{fontWeight:700,fontSize:14,flexShrink:0,
                 color:t.type==="income"?"#e8c860":"#f8a3a3"}}>
@@ -5562,7 +5562,7 @@ function Finance({ txs, setTxs, client, ownerId, showToast, projects = [], share
                   padding:"4px 8px",borderRadius:6,border:"none",cursor:"pointer",
                   fontSize:12,fontWeight:700,flexShrink:0,transition:"all .15s",
                   background:confirmDel===t.id?"#f8a3a333":"transparent",
-                  color:confirmDel===t.id?"#f8a3a3":"#6b6b67",
+                  color:confirmDel===t.id?"#f8a3a3":"var(--text-tertiary)",
                 }}
               >{confirmDel===t.id?"✓?":"🗑️"}</button>
             </div>
@@ -5636,9 +5636,9 @@ function Analytics({ projects, txs, sharesByProject = {}, ownerId = null, paymen
           <ResponsiveContainer width="100%" height={Math.max(140,byType.length*46)}>
             <BarChart data={byType} layout="vertical" barSize={10}>
               <CartesianGrid strokeDasharray="3 3" stroke="#141414" horizontal={false}/>
-              <XAxis type="number" tick={{fill:"#6b6b67",fontSize:10}} axisLine={false} tickLine={false}
+              <XAxis type="number" tick={{fill:"var(--text-tertiary)",fontSize:10}} axisLine={false} tickLine={false}
                 tickFormatter={v=>v>=1000?`${(v/1000).toFixed(0)}к`:v}/>
-              <YAxis type="category" dataKey="name" tick={{fill:"#a8a8a3",fontSize:11}} width={165} axisLine={false} tickLine={false}/>
+              <YAxis type="category" dataKey="name" tick={{fill:"var(--text-secondary)",fontSize:11}} width={165} axisLine={false} tickLine={false}/>
               <Tooltip cursor={{ fill: "rgba(212,175,55,0.06)" }} contentStyle={tt} itemStyle={{ color: "#fafaf7" }} formatter={(v,n)=>[fmt(v),n==="contract"?"Договор":"Оплачено"]}/>
               <Bar dataKey="contract" name="contract" fill="#d4af37" radius={[0,4,4,0]}/>
               <Bar dataKey="paid"     name="paid"     fill="#6ee7a8" radius={[0,4,4,0]}/>
@@ -5653,8 +5653,8 @@ function Analytics({ projects, txs, sharesByProject = {}, ownerId = null, paymen
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={months12}>
               <CartesianGrid strokeDasharray="3 3" stroke="#141414" vertical={false}/>
-              <XAxis dataKey="label" tick={{fill:"#6b6b67",fontSize:10}} axisLine={false} tickLine={false}/>
-              <YAxis tick={{fill:"#6b6b67",fontSize:10}} axisLine={false} tickLine={false}
+              <XAxis dataKey="label" tick={{fill:"var(--text-tertiary)",fontSize:10}} axisLine={false} tickLine={false}/>
+              <YAxis tick={{fill:"var(--text-tertiary)",fontSize:10}} axisLine={false} tickLine={false}
                 tickFormatter={v=>v>=1000?`${(v/1000).toFixed(0)}к`:v<=-1000?`-${Math.abs(v/1000).toFixed(0)}к`:v}/>
               <Tooltip contentStyle={tt} itemStyle={{ color: "#fafaf7" }} formatter={v=>[fmt(v),"Баланс"]}/>
               <Line type="monotone" dataKey="balance" stroke="#d4af37" strokeWidth={2.5} dot={false}/>
@@ -5672,7 +5672,7 @@ function Analytics({ projects, txs, sharesByProject = {}, ownerId = null, paymen
             const w = count>0 ? Math.max(6,Math.round(count/maxC*100)) : 0;
             return (
               <div key={stage} style={{display:"flex",alignItems:"center",gap:12}}>
-                <div style={{width:160,textAlign:"right",fontSize:12,color:"#a8a8a3",fontWeight:500}}>{stage}</div>
+                <div style={{width:160,textAlign:"right",fontSize:12,color:"var(--text-secondary)",fontWeight:500}}>{stage}</div>
                 <div style={{flex:1,height:28,background:"#141414",borderRadius:8,overflow:"hidden"}}>
                   {w>0&&(
                     <div style={{height:"100%",borderRadius:8,display:"flex",alignItems:"center",
@@ -5700,7 +5700,7 @@ function Empty({ text }) {
       alignItems: "center",
       justifyContent: "center",
       padding: "48px 0",
-      color: "#62646b",
+      color: "var(--text-tertiary)",
     }}>
       <div style={{
         width: 48, height: 48,
@@ -5712,9 +5712,9 @@ function Empty({ text }) {
         justifyContent: "center",
         marginBottom: 12,
       }}>
-        <Inbox size={22} strokeWidth={1.6} style={{ color: "#62646b" }} />
+        <Inbox size={22} strokeWidth={1.6} style={{ color: "var(--text-tertiary)" }} />
       </div>
-      <p style={{ fontSize: 13, margin: 0, color: "#9b9ca4" }}>{text}</p>
+      <p style={{ fontSize: 13, margin: 0, color: "var(--text-secondary)" }}>{text}</p>
     </div>
   );
 }
@@ -5873,7 +5873,7 @@ function CommentsSection({ projectId, profile, client, showToast, isOwner }) {
             <span style={{ fontSize: 12, fontWeight: 600, color: "#fafaf7" }}>
               {c.authorName}
             </span>
-            <span style={{ fontSize: 10, color: "#6b6b67" }}>{fmtDT(c.createdAt)}</span>
+            <span style={{ fontSize: 10, color: "var(--text-tertiary)" }}>{fmtDT(c.createdAt)}</span>
             {c.resolved && (
               <span style={{
                 fontSize: 10, fontWeight: 600, color: "#6ee7a8",
@@ -5884,7 +5884,7 @@ function CommentsSection({ projectId, profile, client, showToast, isOwner }) {
             )}
           </div>
           <p style={{
-            margin: 0, fontSize: 13, color: "#a8a8a3",
+            margin: 0, fontSize: 13, color: "var(--text-secondary)",
             lineHeight: 1.55, whiteSpace: "pre-wrap", wordBreak: "break-word",
           }}>{c.content}</p>
           <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
@@ -5898,7 +5898,7 @@ function CommentsSection({ projectId, profile, client, showToast, isOwner }) {
             {canRes && c.resolved && (
               <button onClick={() => resolve(c.id, false)} style={{
                 background: "none", border: "none", cursor: "pointer",
-                fontSize: 11, color: "#6b6b67", padding: 0,
+                fontSize: 11, color: "var(--text-tertiary)", padding: 0,
                 textDecoration: "underline", textUnderlineOffset: 2,
               }}>↩ Переоткрыть</button>
             )}
@@ -5919,9 +5919,9 @@ function CommentsSection({ projectId, profile, client, showToast, isOwner }) {
     <div>
       {/* Список открытых комментариев */}
       {loading ? (
-        <p style={{ fontSize: 12, color: "#6b6b67", margin: "0 0 10px" }}>Загрузка…</p>
+        <p style={{ fontSize: 12, color: "var(--text-tertiary)", margin: "0 0 10px" }}>Загрузка…</p>
       ) : open.length === 0 ? (
-        <p style={{ fontSize: 12, color: "#6b6b67", margin: "0 0 10px" }}>Пока нет комментариев</p>
+        <p style={{ fontSize: 12, color: "var(--text-tertiary)", margin: "0 0 10px" }}>Пока нет комментариев</p>
       ) : (
         <div style={{ marginBottom: 4 }}>
           {open.map(c => <CommentCard key={c.id} c={c} />)}
@@ -5952,7 +5952,7 @@ function CommentsSection({ projectId, profile, client, showToast, isOwner }) {
             padding: "8px 14px", borderRadius: 8,
             background: text.trim() ? "#d4af37" : "rgba(212,175,55,0.20)",
             border: "none", cursor: text.trim() ? "pointer" : "default",
-            color: text.trim() ? "#0a0a0a" : "#6b6b67",
+            color: text.trim() ? "#0a0a0a" : "var(--text-tertiary)",
             fontSize: 12, fontWeight: 700,
             transition: "all 0.15s", whiteSpace: "nowrap",
             opacity: sending ? 0.6 : 1,
@@ -5970,7 +5970,7 @@ function CommentsSection({ projectId, profile, client, showToast, isOwner }) {
             onClick={() => setShowResolved(v => !v)}
             style={{
               background: "none", border: "none", cursor: "pointer",
-              color: "#6b6b67", fontSize: 11, padding: 0,
+              color: "var(--text-tertiary)", fontSize: 11, padding: 0,
               display: "flex", alignItems: "center", gap: 4,
             }}
           >
@@ -6002,7 +6002,7 @@ function FileTypeIcon({ mimeType }) {
     return <FileImage size={14} strokeWidth={2} style={{ color: "#93c5fd" }} />;
   if (m === "application/pdf")
     return <FileText size={14} strokeWidth={2} style={{ color: "#f8a3a3" }} />;
-  return <FileText size={14} strokeWidth={2} style={{ color: "#a8a8a3" }} />;
+  return <FileText size={14} strokeWidth={2} style={{ color: "var(--text-secondary)" }} />;
 }
 
 function ProjectFiles({ projectId, profile, client, showToast, isOwner }) {
@@ -6101,7 +6101,7 @@ function ProjectFiles({ projectId, profile, client, showToast, isOwner }) {
     <div>
       {/* Шкала использования хранилища */}
       <div style={{ marginBottom: 10 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#6b6b67", marginBottom: 4 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "var(--text-tertiary)", marginBottom: 4 }}>
           <span>Использовано: {fmtSize(usedBytes)}</span>
           <span>Лимит: 100 МБ</span>
         </div>
@@ -6116,9 +6116,9 @@ function ProjectFiles({ projectId, profile, client, showToast, isOwner }) {
 
       {/* Список файлов */}
       {loading ? (
-        <p style={{ fontSize: 12, color: "#6b6b67", margin: "0 0 8px" }}>Загрузка…</p>
+        <p style={{ fontSize: 12, color: "var(--text-tertiary)", margin: "0 0 8px" }}>Загрузка…</p>
       ) : files.length === 0 ? (
-        <p style={{ fontSize: 12, color: "#6b6b67", margin: "0 0 8px" }}>Файлов пока нет</p>
+        <p style={{ fontSize: 12, color: "var(--text-tertiary)", margin: "0 0 8px" }}>Файлов пока нет</p>
       ) : (
         <div style={{ marginBottom: 8 }}>
           {files.map(f => (
@@ -6132,7 +6132,7 @@ function ProjectFiles({ projectId, profile, client, showToast, isOwner }) {
                   fontSize: 12, fontWeight: 500, color: "#fafaf7",
                   overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                 }}>{f.filename}</div>
-                <div style={{ fontSize: 10, color: "#6b6b67", marginTop: 1 }}>
+                <div style={{ fontSize: 10, color: "var(--text-tertiary)", marginTop: 1 }}>
                   {fmtSize(f.file_size)} · {fmtDT(f.created_at)} · {f.uploader_name}
                   {f.is_public && (
                     <span style={{ marginLeft: 6, color: "#6ee7a8" }}>● публичный</span>
@@ -6146,11 +6146,11 @@ function ProjectFiles({ projectId, profile, client, showToast, isOwner }) {
                   title="Открыть / скачать"
                   style={{
                     background: "none", border: "none", cursor: "pointer",
-                    color: "#a8a8a3", padding: 4, lineHeight: 1,
+                    color: "var(--text-secondary)", padding: 4, lineHeight: 1,
                     transition: "color 0.15s",
                   }}
                   onMouseOver={e => e.currentTarget.style.color = "#d4af37"}
-                  onMouseOut={e => e.currentTarget.style.color = "#a8a8a3"}
+                  onMouseOut={e => e.currentTarget.style.color = "var(--text-secondary)"}
                 >
                   <Download size={13} strokeWidth={2.2} />
                 </button>
@@ -6161,11 +6161,11 @@ function ProjectFiles({ projectId, profile, client, showToast, isOwner }) {
                     title={f.is_public ? "Сделать приватным" : "Опубликовать"}
                     style={{
                       background: "none", border: "none", cursor: "pointer",
-                      color: f.is_public ? "#6ee7a8" : "#6b6b67", padding: 4, lineHeight: 1,
+                      color: f.is_public ? "#6ee7a8" : "var(--text-tertiary)", padding: 4, lineHeight: 1,
                       transition: "color 0.15s",
                     }}
                     onMouseOver={e => e.currentTarget.style.color = "#d4af37"}
-                    onMouseOut={e => e.currentTarget.style.color = f.is_public ? "#6ee7a8" : "#6b6b67"}
+                    onMouseOut={e => e.currentTarget.style.color = f.is_public ? "#6ee7a8" : "var(--text-tertiary)"}
                   >
                     {f.is_public
                       ? <Unlock size={13} strokeWidth={2.2} />
@@ -6180,11 +6180,11 @@ function ProjectFiles({ projectId, profile, client, showToast, isOwner }) {
                     title="Удалить файл"
                     style={{
                       background: "none", border: "none", cursor: "pointer",
-                      color: "#6b6b67", padding: 4, lineHeight: 1,
+                      color: "var(--text-tertiary)", padding: 4, lineHeight: 1,
                       transition: "color 0.15s",
                     }}
                     onMouseOver={e => e.currentTarget.style.color = "#f8a3a3"}
-                    onMouseOut={e => e.currentTarget.style.color = "#6b6b67"}
+                    onMouseOut={e => e.currentTarget.style.color = "var(--text-tertiary)"}
                   >
                     <Trash2 size={13} strokeWidth={2.2} />
                   </button>
@@ -6229,7 +6229,7 @@ function ProjectFiles({ projectId, profile, client, showToast, isOwner }) {
             onChange={e => setUploadPublic(e.target.checked)}
             style={{ accentColor: "#d4af37" }}
           />
-          <span style={{ fontSize: 11, color: "#6b6b67" }}>Публичный</span>
+          <span style={{ fontSize: 11, color: "var(--text-tertiary)" }}>Публичный</span>
         </label>
         <span style={{ fontSize: 10, color: "#404040", marginLeft: "auto" }}>макс. 20 МБ</span>
       </div>
@@ -6343,7 +6343,7 @@ function ClientSelector({ value, clientId, onSelect, onClear, client, onClientPi
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, color: "#fafaf7", fontWeight: 500 }}>{s.name}</div>
                 {(s.legal_name || s.phone || s.email) && (
-                  <div style={{ fontSize: 11, color: "#a8a8a3", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {s.legal_name && <span>{s.legal_name}</span>}
                     {s.legal_name && (s.phone || s.email) && <span style={{ margin: "0 6px", color: "#404040" }}>·</span>}
                     {s.phone && <span>{s.phone}</span>}
@@ -6440,7 +6440,7 @@ function MembersManager({ projectId, profile, client, showToast, canManage }) {
 
   if (!projectId) {
     return (
-      <div style={{ fontSize: 11, color: "#6b6b67", fontStyle: "italic", textAlign: "center", padding: "12px 0" }}>
+      <div style={{ fontSize: 11, color: "var(--text-tertiary)", fontStyle: "italic", textAlign: "center", padding: "12px 0" }}>
         Команду можно настроить после первого сохранения проекта
       </div>
     );
@@ -6449,9 +6449,9 @@ function MembersManager({ projectId, profile, client, showToast, canManage }) {
   return (
     <div>
       {loading ? (
-        <div style={{ fontSize: 11, color: "#6b6b67", textAlign: "center", padding: "10px 0" }}>Загружаем...</div>
+        <div style={{ fontSize: 11, color: "var(--text-tertiary)", textAlign: "center", padding: "10px 0" }}>Загружаем...</div>
       ) : members.length === 0 && !adding ? (
-        <div style={{ fontSize: 11, color: "#6b6b67", textAlign: "center", padding: "8px 0", fontStyle: "italic" }}>
+        <div style={{ fontSize: 11, color: "var(--text-tertiary)", textAlign: "center", padding: "8px 0", fontStyle: "italic" }}>
           В проекте пока только владелец
         </div>
       ) : (
@@ -6468,7 +6468,7 @@ function MembersManager({ projectId, profile, client, showToast, canManage }) {
                 <div style={{ fontSize: 12, color: "#fafaf7", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {m.name || m.email.split("@")[0]}
                 </div>
-                <div style={{ fontSize: 10, color: "#6b6b67", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <div style={{ fontSize: 10, color: "var(--text-tertiary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {m.email}
                 </div>
               </div>
@@ -6488,11 +6488,11 @@ function MembersManager({ projectId, profile, client, showToast, canManage }) {
                   <button
                     onClick={() => doRemove(m.user_id)}
                     style={{
-                      background: "transparent", border: "none", color: "#6b6b67",
+                      background: "transparent", border: "none", color: "var(--text-tertiary)",
                       cursor: "pointer", padding: 4, display: "flex",
                     }}
                     onMouseOver={e => e.currentTarget.style.color = "#f8a3a3"}
-                    onMouseOut={e => e.currentTarget.style.color = "#6b6b67"}
+                    onMouseOut={e => e.currentTarget.style.color = "var(--text-tertiary)"}
                     title="Удалить из команды"
                   >
                     <UserMinus size={14} strokeWidth={2.2} />
@@ -6559,7 +6559,7 @@ function MembersManager({ projectId, profile, client, showToast, canManage }) {
                       <UserAvatar name={u.name} email={u.email} size={22} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 11, color: "#fafaf7" }}>{u.name || u.email.split("@")[0]}</div>
-                        <div style={{ fontSize: 10, color: "#6b6b67" }}>{u.email}</div>
+                        <div style={{ fontSize: 10, color: "var(--text-tertiary)" }}>{u.email}</div>
                       </div>
                     </div>
                   ))}
@@ -6567,7 +6567,7 @@ function MembersManager({ projectId, profile, client, showToast, canManage }) {
               )}
               {selectedUser && (
                 <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 8 }}>
-                  <span style={{ fontSize: 10, color: "#a8a8a3" }}>Роль:</span>
+                  <span style={{ fontSize: 10, color: "var(--text-secondary)" }}>Роль:</span>
                   {["viewer", "editor"].map(r => (
                     <button
                       key={r}
@@ -6577,7 +6577,7 @@ function MembersManager({ projectId, profile, client, showToast, canManage }) {
                         padding: "3px 10px", borderRadius: 5, cursor: "pointer", fontSize: 10, fontWeight: 600,
                         background: selectedRole === r ? "rgba(212,175,55,0.20)" : "transparent",
                         border: `1px solid ${selectedRole === r ? "rgba(212,175,55,0.40)" : "rgba(255,255,255,0.10)"}`,
-                        color: selectedRole === r ? "#d4af37" : "#a8a8a3",
+                        color: selectedRole === r ? "#d4af37" : "var(--text-secondary)",
                         fontFamily: "inherit",
                       }}
                     >
@@ -6593,7 +6593,7 @@ function MembersManager({ projectId, profile, client, showToast, canManage }) {
                   style={{
                     flex: 1, padding: "5px 10px", borderRadius: 6,
                     background: "transparent", border: "1px solid rgba(255,255,255,0.10)",
-                    color: "#a8a8a3", cursor: "pointer", fontSize: 11, fontFamily: "inherit",
+                    color: "var(--text-secondary)", cursor: "pointer", fontSize: 11, fontFamily: "inherit",
                   }}
                 >Отмена</button>
                 <button
@@ -6719,11 +6719,11 @@ function ClientForm({ initial, onSave, onClose, saving, client, showToast, onLin
       }}>
         <div style={{
           display: "flex", alignItems: "center", gap: 6,
-          fontSize: 11, fontWeight: 600, color: "#a8a8a3",
+          fontSize: 11, fontWeight: 600, color: "var(--text-secondary)",
           textTransform: "uppercase", letterSpacing: "0.10em",
           marginBottom: 12,
         }}>
-          <Building2 size={12} strokeWidth={2.4} /> Реквизиты <span style={{ color: "#6b6b67", fontWeight: 400 }}>(необязательно)</span>
+          <Building2 size={12} strokeWidth={2.4} /> Реквизиты <span style={{ color: "var(--text-tertiary)", fontWeight: 400 }}>(необязательно)</span>
         </div>
         <Field label="Юридическое название">
           <StyledInput value={f.legalName} onChange={e => s("legalName", e.target.value)}
@@ -6765,7 +6765,7 @@ function ClientForm({ initial, onSave, onClose, saving, client, showToast, onLin
                   <button key={u.id} type="button" onClick={() => doLink(u)} style={{
                     display: "block", width: "100%", textAlign: "left", padding: "8px 12px",
                     background: "transparent", border: "none", color: "#fafaf7", cursor: "pointer", fontSize: 13 }}>
-                    {u.name || u.email} <span style={{ color: "#6b6b67" }}>· {u.email}</span>
+                    {u.name || u.email} <span style={{ color: "var(--text-tertiary)" }}>· {u.email}</span>
                   </button>
                 ))}
               </div>
@@ -6803,12 +6803,12 @@ function ClientOrdersPage({ orders }) {
             <span style={{ fontSize: 12, padding: "3px 10px", borderRadius: 20,
               background: "rgba(212,175,55,0.15)", color: "#d4af37" }}>{o.stage}</span>
           </div>
-          <div style={{ display: "flex", gap: 18, flexWrap: "wrap", marginTop: 10, fontSize: 13, color: "#a8a8a3" }}>
+          <div style={{ display: "flex", gap: 18, flexWrap: "wrap", marginTop: 10, fontSize: 13, color: "var(--text-secondary)" }}>
             <span>Договор: <b style={{ color: "#fafaf7" }}>{money(o.contractSum)} ₽</b></span>
             <span>Оплачено: <b style={{ color: "#6ee7a8" }}>{money(o.paidAmount)} ₽</b></span>
             <span>Остаток: <b style={{ color: "#f3d77b" }}>{money((o.contractSum || 0) - (o.paidAmount || 0))} ₽</b></span>
           </div>
-          <div style={{ display: "flex", gap: 18, flexWrap: "wrap", marginTop: 6, fontSize: 12, color: "#6b6b67" }}>
+          <div style={{ display: "flex", gap: 18, flexWrap: "wrap", marginTop: 6, fontSize: 12, color: "var(--text-tertiary)" }}>
             {o.deadline && <span>Срок: {o.deadline}</span>}
             {o.executor && <span>Исполнитель: {o.executor}</span>}
           </div>
@@ -6889,7 +6889,7 @@ function ClientsPage({ clients, setClients, projects, client, ownerId, showToast
         <div style={{ position: "relative", flex: 1, minWidth: isMobile ? 0 : 200, maxWidth: 360 }}>
           <Search size={14} strokeWidth={2.2} style={{
             position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)",
-            color: "#6b6b67", pointerEvents: "none",
+            color: "var(--text-tertiary)", pointerEvents: "none",
           }} />
           <StyledInput
             value={search}
@@ -6945,14 +6945,14 @@ function ClientsPage({ clients, setClients, projects, client, ownerId, showToast
                     <span style={{ fontSize: 10, color: "#f3d77b", fontWeight: 600 }}>· Потенциальный</span>
                   )}
                   {c.category === "archived" && (
-                    <span style={{ fontSize: 10, color: "#6b6b67", fontWeight: 600 }}>· Архив</span>
+                    <span style={{ fontSize: 10, color: "var(--text-tertiary)", fontWeight: 600 }}>· Архив</span>
                   )}
                 </div>
                 {c.legalName && (
-                  <div style={{ fontSize: 12, color: "#a8a8a3", marginBottom: 6 }}>{c.legalName}</div>
+                  <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 6 }}>{c.legalName}</div>
                 )}
                 {(c.city || c.address) && (
-                  <div style={{ fontSize: 11, color: "#6b6b67", marginBottom: 8, display: "flex", alignItems: "center", gap: 4 }}>
+                  <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginBottom: 8, display: "flex", alignItems: "center", gap: 4 }}>
                     <MapPin size={11} strokeWidth={2.2} />
                     {[c.city, c.address].filter(Boolean).join(", ")}
                   </div>
@@ -7008,7 +7008,7 @@ function ClientsPage({ clients, setClients, projects, client, ownerId, showToast
                 )}
 
                 {/* Статистика */}
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 18px", fontSize: 11, color: "#a8a8a3" }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 18px", fontSize: 11, color: "var(--text-secondary)" }}>
                   <span>Проектов: <span style={{ color: "#fafaf7", fontWeight: 600 }}>{c.projectsCount}</span></span>
                   {c.activeCount > 0 && (
                     <span>Активных: <span style={{ color: "#d4af37", fontWeight: 600 }}>{c.activeCount}</span></span>
@@ -7022,7 +7022,7 @@ function ClientsPage({ clients, setClients, projects, client, ownerId, showToast
                 </div>
 
                 {c.notes && (
-                  <div style={{ fontSize: 11, color: "#6b6b67", fontStyle: "italic", marginTop: 8 }}>{c.notes}</div>
+                  <div style={{ fontSize: 11, color: "var(--text-tertiary)", fontStyle: "italic", marginTop: 8 }}>{c.notes}</div>
                 )}
               </div>
               <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
@@ -7037,7 +7037,7 @@ function ClientsPage({ clients, setClients, projects, client, ownerId, showToast
                     padding: "4px 8px", borderRadius: 6, border: "none", cursor: "pointer",
                     fontSize: 12, fontWeight: 700, transition: "all .15s",
                     background: confirmDel === c.id ? "rgba(248,163,163,0.20)" : "transparent",
-                    color: confirmDel === c.id ? "#f8a3a3" : "#6b6b67",
+                    color: confirmDel === c.id ? "#f8a3a3" : "var(--text-tertiary)",
                   }}
                 >
                   {confirmDel === c.id ? <Check size={14} strokeWidth={2.4} /> : <Trash2 size={14} strokeWidth={2.2} />}
@@ -7083,6 +7083,12 @@ function ProfileModal({ profile, client, onClose, onProfileUpdated, showToast })
   const [name, setSaveName]      = useState(profile?.name || "");
   const [position, setPosition]  = useState(profile?.position || "");
   const [saving, setSaving]      = useState(false);
+  // Режим высокого контраста — per-device (localStorage), не в аккаунте: зависит от экрана.
+  const [hc, setHc] = useState(() => { try { return localStorage.getItem("kp-hc") === "1"; } catch { return false; } });
+  const toggleHc = () => {
+    const v = !hc; setHc(v);
+    try { document.documentElement.classList.toggle("hc", v); localStorage.setItem("kp-hc", v ? "1" : "0"); } catch {}
+  };
 
   // Notification settings — initialise from profile
   const [notifs, setNotifs] = useState({
@@ -7163,7 +7169,7 @@ function ProfileModal({ profile, client, onClose, onProfileUpdated, showToast })
       display: "flex", alignItems: "center", justifyContent: "space-between",
       padding: "7px 0", borderBottom: "1px solid rgba(255,255,255,0.04)",
     }}>
-      <span style={{ fontSize: 12, color: "#a8a8a3" }}>{label}</span>
+      <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>{label}</span>
       <button
         onClick={() => toggleNotif(notifKey)}
         disabled={savingNotifs}
@@ -7204,7 +7210,7 @@ function ProfileModal({ profile, client, onClose, onProfileUpdated, showToast })
             {name || profile?.email?.split("@")[0]}
           </div>
           {position && <div style={{ fontSize: 11.5, color: "#d4af37", marginTop: 2, fontWeight: 500 }}>{position}</div>}
-          <div style={{ fontSize: 11, color: "#a8a8a3", marginTop: 2 }}>{profile?.email}</div>
+          <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 2 }}>{profile?.email}</div>
         </div>
         {profile?.role === "admin" && (
           <span style={{
@@ -7236,8 +7242,31 @@ function ProfileModal({ profile, client, onClose, onProfileUpdated, showToast })
           onKeyDown={e => { if (e.key === "Enter") save(); }}
         />
       </Field>
-      <div style={{ fontSize: 11, color: "#6b6b67", marginBottom: 16, lineHeight: 1.5 }}>
+      <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginBottom: 16, lineHeight: 1.5 }}>
         Имя и должность видят другие участники команды. Email и роль изменить нельзя.
+      </div>
+
+      {/* ── Высокий контраст (этого устройства) ──────────────────────────── */}
+      <div style={{
+        marginBottom: 16, padding: "12px 14px", borderRadius: 10,
+        background: "var(--gold-bg-subtle)", border: "1px solid var(--border-gold-subtle)",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+          <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text-primary)" }}>Высокий контраст</span>
+          <button onClick={toggleHc} aria-pressed={hc} style={{
+            width: 36, height: 20, borderRadius: 10, border: "none", cursor: "pointer",
+            transition: "all 0.2s", padding: 0, flexShrink: 0,
+            background: hc ? "#d4af37" : "rgba(255,255,255,0.10)", position: "relative",
+          }}>
+            <span style={{
+              position: "absolute", top: 2, left: hc ? 18 : 2,
+              width: 16, height: 16, borderRadius: "50%", background: "#fafaf7", transition: "left 0.2s",
+            }} />
+          </button>
+        </div>
+        <p style={{ fontSize: 11, color: "var(--text-tertiary)", margin: "8px 0 0", lineHeight: 1.5 }}>
+          Если интерфейс выглядит тускло или блёкло (часто на Android-экранах) — включите. Настройка действует только на этом устройстве.
+        </p>
       </div>
 
       {/* ── Push-уведомления (Web Push, этого устройства) ────────────────── */}
@@ -7252,7 +7281,7 @@ function ProfileModal({ profile, client, onClose, onProfileUpdated, showToast })
           Push-уведомления
         </div>
         {!pushState.supported ? (
-          <p style={{ fontSize: 12, color: "#a8a8a3", margin: 0, lineHeight: 1.5 }}>
+          <p style={{ fontSize: 12, color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>
             {isIOSNonPWA
               ? "На iPhone push работает только из приложения, установленного через Safari (Opera, Chrome и др. не подойдут — ограничение Apple). Откройте этот сайт в Safari → нажмите «Поделиться» (квадрат со стрелкой ↑ внизу экрана) → пролистайте меню вниз до пункта «На экран Домой» → «Добавить». Затем откройте КЛИМАТ-ПРО с домашнего экрана (как отдельное приложение) и включите push здесь."
               : "Этот браузер не поддерживает push-уведомления."}
@@ -7263,7 +7292,7 @@ function ProfileModal({ profile, client, onClose, onProfileUpdated, showToast })
           </p>
         ) : (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ fontSize: 12, color: "#a8a8a3" }}>
+            <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>
               {pushState.subscribed ? "Включены на этом устройстве" : "Получать уведомления на этом устройстве"}
             </span>
             <button onClick={togglePush} disabled={pushBusy} style={{
@@ -7284,7 +7313,7 @@ function ProfileModal({ profile, client, onClose, onProfileUpdated, showToast })
       <div style={{ marginBottom: 16 }}>
         <div style={{
           fontSize: 11, fontWeight: 600, letterSpacing: "0.10em",
-          textTransform: "uppercase", marginBottom: 8, color: "#6b6b67",
+          textTransform: "uppercase", marginBottom: 8, color: "var(--text-tertiary)",
         }}>
           Какие уведомления получать
         </div>
@@ -7409,7 +7438,7 @@ function AdminPage({ profile, client, showToast }) {
             style={{
               padding: "6px 14px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 500,
               background: section === s.id ? "rgba(212,175,55,0.15)" : "rgba(255,255,255,0.04)",
-              color: section === s.id ? "#d4af37" : "#a8a8a3",
+              color: section === s.id ? "#d4af37" : "var(--text-secondary)",
               border: `1px solid ${section === s.id ? "rgba(212,175,55,0.30)" : "rgba(255,255,255,0.06)"}`,
               display: "inline-flex", alignItems: "center", gap: 6,
               fontFamily: "inherit",
@@ -7427,7 +7456,7 @@ function AdminPage({ profile, client, showToast }) {
             <div style={{ position: "relative", flex: 1, minWidth: 220, maxWidth: 360 }}>
               <Search size={14} strokeWidth={2.2} style={{
                 position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)",
-                color: "#6b6b67", pointerEvents: "none",
+                color: "var(--text-tertiary)", pointerEvents: "none",
               }} />
               <StyledInput
                 value={search}
@@ -7437,7 +7466,7 @@ function AdminPage({ profile, client, showToast }) {
               />
             </div>
             {!loading && (
-              <div style={{ display: "flex", gap: 14, fontSize: 11, color: "#a8a8a3" }}>
+              <div style={{ display: "flex", gap: 14, fontSize: 11, color: "var(--text-secondary)" }}>
                 <span>Всего: <span style={{ color: "#fafaf7", fontWeight: 600 }}>{users.length}</span></span>
                 <span>Одобрено: <span style={{ color: "#6ee7a8", fontWeight: 600 }}>{users.filter(u => u.approved).length}</span></span>
                 <span>Ждут: <span style={{ color: "#f3d77b", fontWeight: 600 }}>{users.filter(u => !u.approved).length}</span></span>
@@ -7479,8 +7508,8 @@ function AdminPage({ profile, client, showToast }) {
                         }}>ЖДЁТ</span>
                       )}
                     </div>
-                    <div style={{ fontSize: 11, color: "#6b6b67", marginTop: 1 }}>{u.email}</div>
-                    <div style={{ fontSize: 10, color: "#6b6b67", marginTop: 2 }}>
+                    <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 1 }}>{u.email}</div>
+                    <div style={{ fontSize: 10, color: "var(--text-tertiary)", marginTop: 2 }}>
                       {u.projects_count} проектов · {u.transactions_count} транзакций
                       {u.created_at && <> · с {new Date(u.created_at).toLocaleDateString("ru-RU")}</>}
                     </div>
@@ -7494,7 +7523,7 @@ function AdminPage({ profile, client, showToast }) {
                           padding: 6, borderRadius: 6, cursor: "pointer", border: "1px solid",
                           background: u.approved ? "rgba(255,255,255,0.04)" : "rgba(110,231,168,0.10)",
                           borderColor: u.approved ? "rgba(255,255,255,0.10)" : "rgba(110,231,168,0.30)",
-                          color: u.approved ? "#a8a8a3" : "#6ee7a8",
+                          color: u.approved ? "var(--text-secondary)" : "#6ee7a8",
                           display: "flex",
                         }}
                       >
@@ -7507,7 +7536,7 @@ function AdminPage({ profile, client, showToast }) {
                           padding: 6, borderRadius: 6, cursor: "pointer", border: "1px solid",
                           background: u.role === "admin" ? "rgba(212,175,55,0.10)" : "rgba(255,255,255,0.04)",
                           borderColor: u.role === "admin" ? "rgba(212,175,55,0.30)" : "rgba(255,255,255,0.10)",
-                          color: u.role === "admin" ? "#d4af37" : "#a8a8a3",
+                          color: u.role === "admin" ? "#d4af37" : "var(--text-secondary)",
                           display: "flex",
                         }}
                       >
@@ -7519,10 +7548,10 @@ function AdminPage({ profile, client, showToast }) {
                         style={{
                           padding: 6, borderRadius: 6, cursor: "pointer", border: "1px solid",
                           background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.10)",
-                          color: "#a8a8a3", display: "flex",
+                          color: "var(--text-secondary)", display: "flex",
                         }}
                         onMouseOver={e => { e.currentTarget.style.color = "#e8c860"; e.currentTarget.style.borderColor = "rgba(212,175,55,0.30)"; }}
-                        onMouseOut={e => { e.currentTarget.style.color = "#a8a8a3"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"; }}
+                        onMouseOut={e => { e.currentTarget.style.color = "var(--text-secondary)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"; }}
                       >
                         <KeyRound size={13} strokeWidth={2.2} />
                       </button>
@@ -7532,10 +7561,10 @@ function AdminPage({ profile, client, showToast }) {
                         style={{
                           padding: 6, borderRadius: 6, cursor: "pointer", border: "1px solid",
                           background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.10)",
-                          color: "#a8a8a3", display: "flex",
+                          color: "var(--text-secondary)", display: "flex",
                         }}
                         onMouseOver={e => { e.currentTarget.style.color = "#f8a3a3"; e.currentTarget.style.borderColor = "rgba(248,163,163,0.30)"; }}
-                        onMouseOut={e => { e.currentTarget.style.color = "#a8a8a3"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"; }}
+                        onMouseOut={e => { e.currentTarget.style.color = "var(--text-secondary)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"; }}
                       >
                         <Trash2 size={13} strokeWidth={2.2} />
                       </button>
@@ -7561,10 +7590,10 @@ function AdminPage({ profile, client, showToast }) {
                 { label: "Ожидают одобрения",    value: stats.users_pending,      Icon: Hourglass,    color: "#f3d77b" },
                 { label: "Проектов всего",       value: stats.projects_total,     Icon: FolderKanban, color: "#d4af37" },
                 { label: "Активных проектов",    value: stats.projects_active,    Icon: Activity,     color: "#93c5fd" },
-                { label: "В архиве",             value: stats.projects_archived,  Icon: Package,      color: "#6b6b67" },
+                { label: "В архиве",             value: stats.projects_archived,  Icon: Package,      color: "var(--text-tertiary)" },
                 { label: "Сумма портфеля",       value: stats.portfolio_total,    Icon: Briefcase,    color: "#d4af37", format: fmt },
                 { label: "Получено по портфелю", value: stats.portfolio_paid,     Icon: BadgeCheck,   color: "#6ee7a8", format: fmt },
-                { label: "Транзакций всего",     value: stats.transactions_total, Icon: Receipt,      color: "#a8a8a3" },
+                { label: "Транзакций всего",     value: stats.transactions_total, Icon: Receipt,      color: "var(--text-secondary)" },
                 { label: "Доходов суммарно",     value: stats.income_total,       Icon: TrendingUp,   color: "#6ee7a8", format: fmt },
                 { label: "Расходов суммарно",    value: stats.expense_total,      Icon: TrendingDown, color: "#f8a3a3", format: fmt },
               ].map((it, i) => (
@@ -7592,7 +7621,7 @@ function AdminPage({ profile, client, showToast }) {
             icon={<AlertTriangle size={16} />}
             maxWidth={460}
           >
-            <p style={{ fontSize: 13, color: "#a8a8a3", lineHeight: 1.55, marginTop: 0 }}>
+            <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.55, marginTop: 0 }}>
               Будут безвозвратно удалены: профиль <b style={{ color: "#fafaf7" }}>{u.email}</b>,
               все его проекты ({u.projects_count}), все транзакции ({u.transactions_count}),
               записи об участии в чужих командах. Восстановить будет невозможно.
@@ -7632,7 +7661,7 @@ function AdminPage({ profile, client, showToast }) {
           icon={<KeyRound size={16} />}
           maxWidth={420}
         >
-          <p style={{ fontSize: 13, color: "#a8a8a3", lineHeight: 1.55, marginTop: 0 }}>
+          <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.55, marginTop: 0 }}>
             Новый пароль для <b style={{ color: "#fafaf7" }}>{resetUser.email}</b>.
             Передайте его пользователю — войдя, он сможет сменить пароль сам.
           </p>
@@ -7769,7 +7798,7 @@ function BackupPanel({ projects, txs, client, ownerId, onImported, onClose, show
 
       {tab === "export" && (
         <div>
-          <p style={{fontSize:13,color:"#a8a8a3",marginBottom:12,lineHeight:1.5}}>
+          <p style={{fontSize:13,color:"var(--text-secondary)",marginBottom:12,lineHeight:1.5}}>
             Все твои проекты ({projects.length}) и транзакции ({txs.length}) в формате JSON,
             включая платежи и доли участников. Скопируй текст ниже и сохрани в файл — это твоя страховка.
             Длинный тап по полю → «Выделить всё» → «Копировать».
@@ -7802,7 +7831,7 @@ function BackupPanel({ projects, txs, client, ownerId, onImported, onClose, show
 
       {tab === "import" && (
         <div>
-          <p style={{fontSize:13,color:"#a8a8a3",marginBottom:12,lineHeight:1.5}}>
+          <p style={{fontSize:13,color:"var(--text-secondary)",marginBottom:12,lineHeight:1.5}}>
             Вставь JSON-бэкап (полученный из вкладки «Экспорт» или из старой версии артефакта).
             Все записи будут добавлены к существующим — НЕ удалят их.
           </p>
@@ -8041,14 +8070,14 @@ function ReportViewer({ projects, onClose, presetProjects = null }) {
 
   return (
     <Modal title="📄 Экспорт отчёта" onClose={onClose} maxWidth={460}>
-      <p style={{fontSize:13,color:"#a8a8a3",marginBottom:16,lineHeight:1.6}}>
+      <p style={{fontSize:13,color:"var(--text-secondary)",marginBottom:16,lineHeight:1.6}}>
         {presetProjects
           ? `Отчёт по выбранным проектам (${presetProjects.length}). Нажми «Открыть», затем «Печать / Сохранить PDF».`
           : "Отчёт откроется здесь. Нажми «Печать / Сохранить PDF» — браузер сохранит документ для отправки заказчику."}
       </p>
 
       <div style={{marginBottom:16}}>
-        <p style={{fontSize:10,fontWeight:700,color:"#6b6b67",textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:8}}>Вид отчёта</p>
+        <p style={{fontSize:10,fontWeight:700,color:"var(--text-tertiary)",textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:8}}>Вид отчёта</p>
         <div style={{display:"flex",gap:6}}>
           {[{k:"full",l:"Полный"},{k:"client",l:"Для заказчика"}].map(o=>(
             <button key={o.k} onClick={()=>setMode(o.k)} style={{
@@ -8059,20 +8088,20 @@ function ReportViewer({ projects, onClose, presetProjects = null }) {
             }}>{o.l}</button>
           ))}
         </div>
-        <p style={{fontSize:11,color:"#6b6b67",marginTop:6,lineHeight:1.4}}>
+        <p style={{fontSize:11,color:"var(--text-tertiary)",marginTop:6,lineHeight:1.4}}>
           {mode==="client" ? "Без «Оплачено» и «Остаток» — только договор, стадии и сроки." : "Все финансы: договор, оплачено, остаток, % оплаты."}
         </p>
       </div>
 
       {!presetProjects && (
         <div style={{marginBottom:16}}>
-          <p style={{fontSize:10,fontWeight:700,color:"#6b6b67",textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:8}}>Фильтр по стадии</p>
+          <p style={{fontSize:10,fontWeight:700,color:"var(--text-tertiary)",textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:8}}>Фильтр по стадии</p>
           <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
             {stages.map(s=>(
               <button key={s} onClick={()=>setStage(s)} style={{
                 padding:"5px 12px",borderRadius:20,fontSize:12,fontWeight:600,cursor:"pointer",
                 background:stage===s?"#d4af37":"#141414",
-                color:stage===s?"#1c1c1a":"#a8a8a3",
+                color:stage===s?"#1c1c1a":"var(--text-secondary)",
                 border:`1px solid ${stage===s?"#d4af37":"rgba(255,255,255,0.08)"}`,transition:"all .15s",
               }}>{labels[s]}</button>
             ))}
@@ -8084,7 +8113,7 @@ function ReportViewer({ projects, onClose, presetProjects = null }) {
         padding:"12px 16px",background:"#141414",borderRadius:12,marginBottom:16,
         display:"flex",justifyContent:"space-between",alignItems:"center",
       }}>
-        <span style={{fontSize:13,color:"#a8a8a3"}}>Проектов в отчёте</span>
+        <span style={{fontSize:13,color:"var(--text-secondary)"}}>Проектов в отчёте</span>
         <span style={{fontSize:18,fontWeight:900,color:"#e8c860"}}>{visible.length}</span>
       </div>
       <button onClick={()=>setShowPreview(true)} style={{
@@ -8350,7 +8379,7 @@ export default function App() {
         }}>
           Ошибка подключения
         </div>
-        <p style={{ fontSize: 13, color: "#9b9ca4", marginBottom: 20, lineHeight: 1.5 }}>
+        <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 20, lineHeight: 1.5 }}>
           {errorMsg}
         </p>
         <button
@@ -8447,14 +8476,14 @@ export default function App() {
           }}>
             <span className="brand-shimmer">КЛИМАТ-ПРО</span>
             <span style={{
-              color: "#62646b",
+              color: "var(--text-tertiary)",
               fontWeight: 400,
               fontSize: 13,
             }}>· Искусство климата, инженерия комфорта</span>
           </h1>
           <div style={{
             fontSize: 11,
-            color: "#62646b",
+            color: "var(--text-tertiary)",
             fontWeight: 500,
             opacity: 0.6,
             marginTop: 2,
@@ -8516,7 +8545,7 @@ export default function App() {
                 fontWeight: 500,
                 background: "rgba(255,255,255,0.04)",
                 border: "1px solid rgba(255,255,255,0.10)",
-                color: "#9b9ca4",
+                color: "var(--text-secondary)",
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
@@ -8551,9 +8580,23 @@ export default function App() {
               <LogOut size={13} strokeWidth={2.2} />
               Выход
             </button>
-            <div style={{ fontSize: 11, color: "#62646b", marginLeft: 4 }}>
+            <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginLeft: 4 }}>
               {new Date().toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })}
             </div>
+            <button
+              onClick={() => location.reload()}
+              title={"Версия сборки: " + __BUILD_ID__ + "\nНажмите, чтобы загрузить актуальную версию"}
+              style={{
+                fontSize: 9, color: "var(--text-quaternary)", marginLeft: 2, padding: "1px 6px",
+                background: "none", border: "1px solid transparent", borderRadius: 5, cursor: "pointer",
+                fontFamily: "inherit", letterSpacing: "0.02em", lineHeight: 1.2, transition: "all .18s",
+                whiteSpace: "nowrap",
+              }}
+              onMouseOver={e => { e.currentTarget.style.color = "var(--gold)"; e.currentTarget.style.borderColor = "var(--border-gold-subtle)"; }}
+              onMouseOut={e => { e.currentTarget.style.color = "var(--text-quaternary)"; e.currentTarget.style.borderColor = "transparent"; }}
+            >
+              v{__BUILD_ID__}
+            </button>
           </div>
           {/* Бейдж администратора и email */}
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -8628,7 +8671,7 @@ export default function App() {
                 padding: "12px 18px",
                 fontSize: 13,
                 fontWeight: 500,
-                color: isActive ? "#e8c860" : "#9b9ca4",
+                color: isActive ? "#e8c860" : "var(--text-secondary)",
                 background: "none",
                 border: "none",
                 cursor: "pointer",

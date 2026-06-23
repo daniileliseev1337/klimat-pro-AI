@@ -347,3 +347,30 @@ input, textarea, select, button {
   }
   .kp-hover-glow:hover { transform: none; }
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   РЕЖИМ ВЫСОКОГО КОНТРАСТА (.hc на <html>) — для тусклых матриц (часто Android).
+   Включается per-device тумблером в «Профиле», хранится в localStorage('kp-hc').
+   Переопределяет переменные палитры → весь текст/фон/рамки на var() реагируют.
+   Дефолт (без .hc) остаётся премиальным — для качественных OLED-экранов.
+   ────────────────────────────────────────────────────────────────────────── */
+.hc {
+  --bg-base: #050505;
+  --bg-elevated: #242420;
+  --bg-higher: #2e2e29;
+  --text-primary: #ffffff;
+  --text-secondary: #dcdcd6;
+  --text-tertiary: #adada5;
+  --text-quaternary: #6a6a66;
+  --border-subtle: rgba(255, 255, 255, 0.16);
+  --border-default: rgba(255, 255, 255, 0.24);
+  --border-strong: rgba(255, 255, 255, 0.34);
+  --gold: #e6c65c;
+  --gold-bright: #f1da7e;
+}
+.hc .kp-card { border-color: var(--border-default); }
+.hc .kp-card::before { opacity: .8; }
+.hc .gold-ingot::before { opacity: .85; }
+/* Оси recharts задают fill инлайн-атрибутом (CSS-переменные в SVG-атрибутах не
+   работают) — в режиме контраста подсвечиваем подписи осей через класс. */
+.hc .recharts-cartesian-axis-tick text { fill: var(--text-tertiary) !important; }
