@@ -740,9 +740,8 @@ function ActivityFeed({ items }) {
         else if (d.name) detail = d.name;
         else if (d.title) detail = d.title;
         return (
-          <div key={a.id} style={{
-            display: "flex", alignItems: "center", gap: 12, padding: "8px 14px", borderRadius: 10,
-            background: "#141414", border: "1px solid rgba(255,255,255,0.04)",
+          <div key={a.id} onMouseMove={spotlightMove} className="kp-card" style={{
+            display: "flex", alignItems: "center", gap: 12, padding: "8px 14px",
           }}>
             <span style={{
               width: 28, height: 28, borderRadius: 6, display: "inline-flex",
@@ -4775,16 +4774,16 @@ function TaskModal({ task, client, profile, projects, realtimeTick, onClose, onS
 }
 
 // Строка списка задач — те же данные, что на карточке доски, в одну плотную строку.
-function TaskRowList({ t, onOpen }) {
+function TaskRowList({ t, onOpen, idx = 0 }) {
   const today = todayStr();
   const due = dueState(t.dueDate, today);
   const sm = TASK_STATUS_META[t.status] || { color: "#62646b" };
   const pm = TASK_PRIORITY_META[t.priority] || TASK_PRIORITY_META["Обычный"];
   return (
-    <div onClick={() => onOpen(t)} style={{
+    <div onClick={() => onOpen(t)} onMouseMove={spotlightMove} className="kp-card kp-rise" style={{
       display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
-      background: "#141414", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12,
       padding: "10px 14px", marginBottom: 8, cursor: "pointer",
+      animationDelay: `${idx * 40}ms`,
     }}>
       <span style={{ fontSize: 10, fontWeight: 800, padding: "3px 9px", borderRadius: 20, background: sm.color + "1f", color: sm.color, whiteSpace: "nowrap" }}>{t.status}</span>
       <span style={{ fontSize: 10, fontWeight: 800, padding: "3px 9px", borderRadius: 20, background: pm.bg, color: pm.color, whiteSpace: "nowrap" }}>{pm.label}</span>
@@ -5069,7 +5068,7 @@ function TasksView({ client, profile, projects, showToast }) {
       {loading ? <div className="opacity-60">Загрузка…</div> :
        view === "board" ? <TasksBoard tasks={shown} onOpen={setEditing} onReload={reload} client={client} profile={profile} photosByTask={photosByTask} showToast={showToast} /> :
        <div>
-         {listShown.map(t => <TaskRowList key={t.id} t={t} onOpen={setEditing} />)}
+         {listShown.map((t, i) => <TaskRowList key={t.id} t={t} onOpen={setEditing} idx={i} />)}
          {!listShown.length && <div style={{ color: "#62646b", padding: "24px 0", textAlign: "center" }}>Задач нет</div>}
        </div>}
       {editing && <TaskModal task={editing} client={client} profile={profile} projects={projects}
@@ -8597,7 +8596,10 @@ export default function App() {
               onMouseOut={e => { e.currentTarget.style.background = "rgba(110,231,168,0.10)"; }}
             >
               <Cloud size={11} strokeWidth={2.2} />
-              {profile?.name || profile?.email}
+              <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", lineHeight: 1.15 }}>
+                <span>{profile?.name || profile?.email}</span>
+                {profile?.position && <span style={{ fontSize: 9.5, color: "#d4af37", fontWeight: 600 }}>{profile.position}</span>}
+              </span>
             </button>
           </div>
         </div>
