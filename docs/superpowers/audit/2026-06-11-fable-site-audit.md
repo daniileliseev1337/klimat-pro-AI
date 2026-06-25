@@ -1,5 +1,10 @@
 # Аудит сайта daniil-dashboard — 2026-06-11 (Fable 5, полное чтение кода)
 
+> ⚠ **СТАТУСЫ УСТАРЕЛИ — это снимок на 11.06, держать как ИСТОРИЮ, не как текущий статус.**
+> Пере-верификация против живого кода: [2026-06-25-audit-recheck.md](2026-06-25-audit-recheck.md).
+> Почти весь CRITICAL/MAJOR (C1-C5, M1-M3, m1, m8) закрыт редизайнами 19-23.06.
+> Реально открыто только минорное (m3, m4, m6, m7, m5). Перед работой по этому файлу — сверять с recheck и кодом.
+
 Прочитано: `src/App.jsx` целиком (7487 строк), `src/lib/*` (dashboardMetrics, notifications,
 push, lineDiff, supabase), `src/components/NotificationBell.jsx`, `src/sw.js`, `src/index.css`,
 edge `web-push-notify/index.ts`, миграции (project_shares, shares_fixes, project_payments,

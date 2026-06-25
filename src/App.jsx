@@ -8778,9 +8778,9 @@ export default function App() {
                 padding: "3px 9px",
                 borderRadius: 6,
                 fontWeight: 500,
-                background: "rgba(110,231,168,0.10)",
-                color: "#6ee7a8",
-                border: "1px solid rgba(110,231,168,0.20)",
+                background: "rgba(212,175,55,0.10)",
+                color: "#e8c860",
+                border: "1px solid rgba(212,175,55,0.22)",
                 display: "flex",
                 alignItems: "center",
                 gap: 5,
@@ -8788,10 +8788,10 @@ export default function App() {
                 fontFamily: "inherit",
                 transition: "all 0.18s",
               }}
-              onMouseOver={e => { e.currentTarget.style.background = "rgba(110,231,168,0.18)"; }}
-              onMouseOut={e => { e.currentTarget.style.background = "rgba(110,231,168,0.10)"; }}
+              onMouseOver={e => { e.currentTarget.style.background = "rgba(212,175,55,0.18)"; }}
+              onMouseOut={e => { e.currentTarget.style.background = "rgba(212,175,55,0.10)"; }}
             >
-              <span style={{ width: 19, height: 19, borderRadius: "50%", background: "rgba(110,231,168,0.18)", border: "1px solid rgba(110,231,168,0.35)", fontSize: 9.5, fontWeight: 800, letterSpacing: "0.02em", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: "#6ee7a8" }}>
+              <span style={{ width: 19, height: 19, borderRadius: "50%", background: "rgba(212,175,55,0.18)", border: "1px solid rgba(212,175,55,0.35)", fontSize: 9.5, fontWeight: 800, letterSpacing: "0.02em", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: "#e8c860" }}>
                 {((profile?.name || profile?.email || "?").trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("") || "?").toUpperCase()}
               </span>
               <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", lineHeight: 1.15 }}>
