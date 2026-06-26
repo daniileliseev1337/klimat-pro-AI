@@ -642,10 +642,17 @@ async function adminSetUserRoles(client, userId, roles) {
   const { error } = await client.rpc("set_user_roles", { p_user_id: userId, p_roles: roles });
   if (error) throw error;
 }
-// Ф3: посетитель отправляет заявку на полный доступ (флаг access_requested; админ увидит в инкременте 2).
-async function requestFullAccess(client) {
-  const { error } = await client.rpc("request_full_access");
+// Ф3: посетитель отправляет заявку на полный доступ с выбором роли (employee/client).
+// RPC ставит access_requested + requested_role и шлёт in-app уведомление всем админам.
+async function requestFullAccess(client, role) {
+  const { error } = await client.rpc("request_full_access", { p_role: role });
   if (error) throw error;
+}
+// Ф3: список активных заявок на доступ (для админки; user_id -> requested_role).
+async function adminListAccessRequests(client) {
+  const { data, error } = await client.rpc("admin_list_access_requests");
+  if (error) return [];
+  return data || [];
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -7625,6 +7632,7 @@ function AdminPage({ profile, client, showToast }) {
   const [users, setUsers] = useState([]);
   const [stats, setStats] = useState(null);
   const [rolesByUser, setRolesByUser] = useState({}); // Система ролей Ф1: user_id -> [roles]
+  const [accessReqByUser, setAccessReqByUser] = useState({}); // Ф3: user_id -> requested_role (активные заявки)
   const [activity, setActivity] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -7645,6 +7653,12 @@ function AdminPage({ profile, client, showToast }) {
           (rr || []).forEach(x => { (map[x.user_id] = map[x.user_id] || []).push(x.role); });
           setRolesByUser(map);
         } catch { setRolesByUser({}); }
+        try {
+          const reqs = await adminListAccessRequests(client);
+          const rmap = {};
+          (reqs || []).forEach(x => { rmap[x.user_id] = x.requested_role; });
+          setAccessReqByUser(rmap);
+        } catch { setAccessReqByUser({}); }
       } else if (section === "stats") {
         setStats(await adminSystemStats(client));
       } else if (section === "activity") {
@@ -7795,6 +7809,13 @@ function AdminPage({ profile, client, showToast }) {
                           background: "rgba(243,215,123,0.10)", color: "#f3d77b",
                           border: "1px solid rgba(243,215,123,0.25)",
                         }}>ЖДЁТ</span>
+                      )}
+                      {accessReqByUser[u.id] && (
+                        <span style={{
+                          fontSize: 9, padding: "1px 6px", borderRadius: 4, fontWeight: 600, letterSpacing: "0.06em",
+                          background: "rgba(232,200,96,0.14)", color: "#e8c860",
+                          border: "1px solid rgba(232,200,96,0.30)",
+                        }}>ЗАЯВКА: {accessReqByUser[u.id] === "employee" ? "СОТРУДНИК" : "ЗАКАЗЧИК"}</span>
                       )}
                     </div>
                     <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 1 }}>{displayLogin(u.email)}</div>
@@ -8497,6 +8518,7 @@ export default function App() {
   const [viewMode, setViewMode]     = useState(() => { try { return localStorage.getItem("km_view_mode") || "work"; } catch { return "work"; } }); // 'work' | 'client'
   const [cmdOpen, setCmdOpen] = useState(false); // Cmd+K командная палитра
   const [accessRequested, setAccessRequested] = useState(false); // Ф3: посетитель отправил заявку на полный доступ
+  const [accessModalOpen, setAccessModalOpen] = useState(false); // Ф3: модалка выбора роли для заявки
   useEffect(() => {
     const onKey = (e) => {
       if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K" || e.key === "л" || e.key === "Л")) {
@@ -8857,11 +8879,7 @@ export default function App() {
                   Демо-режим
                 </span>
                 <button
-                  onClick={async () => {
-                    if (accessRequested) return;
-                    try { await requestFullAccess(supabase); setAccessRequested(true); showToast("Заявка на полный доступ отправлена администратору"); }
-                    catch { showToast("Не удалось отправить заявку", "error"); }
-                  }}
+                  onClick={() => { if (!accessRequested) setAccessModalOpen(true); }}
                   disabled={accessRequested}
                   title="Отправить администратору заявку на полный доступ"
                   style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 8, cursor: accessRequested ? "default" : "pointer", fontSize: 12, fontWeight: 600, fontFamily: "inherit", background: accessRequested ? "rgba(110,231,168,0.10)" : "rgba(212,175,55,0.10)", border: accessRequested ? "1px solid rgba(110,231,168,0.30)" : "1px solid rgba(212,175,55,0.30)", color: accessRequested ? "#6ee7a8" : "#d4af37" }}
@@ -9144,6 +9162,26 @@ export default function App() {
 
       <Toast visible={toast.visible} text={toast.text} type={toast.type}/>
 
+      {accessModalOpen && (
+        <div onClick={() => setAccessModalOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} className="glass-card" style={{ width: "100%", maxWidth: 360, borderRadius: 16, padding: 24 }}>
+            <div style={{ fontSize: 17, fontWeight: 700, color: "#f7f8f8", marginBottom: 8, letterSpacing: "-0.02em" }}>Запросить полный доступ</div>
+            <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 18, lineHeight: 1.5 }}>Кем вы хотите работать в системе? Администратор получит заявку и подтвердит доступ.</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {[["employee","Сотрудник","Ведение проектов, задач, финансов"],["client","Заказчик","Просмотр своих заказов"]].map(([r, t, d]) => (
+                <button key={r} onClick={async () => {
+                  try { await requestFullAccess(supabase, r); setAccessRequested(true); setAccessModalOpen(false); showToast("Заявка отправлена администратору"); }
+                  catch { showToast("Не удалось отправить заявку", "error"); }
+                }} style={{ textAlign: "left", padding: "12px 14px", borderRadius: 10, cursor: "pointer", fontFamily: "inherit", background: "rgba(212,175,55,0.08)", border: "1px solid rgba(212,175,55,0.25)", color: "#f7f8f8" }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "#e8c860" }}>{t}</div>
+                  <div style={{ fontSize: 11.5, color: "var(--text-secondary)", marginTop: 2 }}>{d}</div>
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setAccessModalOpen(false)} style={{ marginTop: 14, width: "100%", padding: "9px", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", fontSize: 13, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.10)", color: "var(--text-secondary)" }}>Отмена</button>
+          </div>
+        </div>
+      )}
       {reportModal && <ReportViewer projects={projects} presetProjects={reportProjects} onClose={()=>{ setReportModal(false); setReportProjects(null); }}/>}
       {backupModal && <BackupPanel
         projects={projects}
