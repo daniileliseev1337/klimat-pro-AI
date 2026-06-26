@@ -12,7 +12,7 @@ const SECTIONS = [
   { id: "myorders",  label: "Мои заказы" },
 ];
 
-export default function CommandPalette({ open, onClose, projects = [], tasks = [], orders = [], hasClientRole = false, onNavigate }) {
+export default function CommandPalette({ open, onClose, projects = [], tasks = [], orders = [], hasClientRole = false, allowedTabs = null, restricted = false, onNavigate }) {
   const [q, setQ] = useState("");
   const [sel, setSel] = useState(0);
   const inputRef = useRef(null);
@@ -25,19 +25,22 @@ export default function CommandPalette({ open, onClose, projects = [], tasks = [
     const ql = q.trim().toLowerCase();
     const out = [];
     SECTIONS
+      .filter(s => !allowedTabs || allowedTabs.includes(s.id))
       .filter(s => s.id !== "myorders" || hasClientRole)
       .filter(s => !ql || s.label.toLowerCase().includes(ql))
       .forEach(s => out.push({ kind: "section", id: s.id, label: s.label, hint: "Раздел" }));
     if (ql) {
-      projects.filter(p => (p.name || "").toLowerCase().includes(ql)).slice(0, 6)
-        .forEach(p => out.push({ kind: "project", id: p.id, label: p.name, hint: "Проект" }));
-      tasks.filter(t => (t.title || "").toLowerCase().includes(ql)).slice(0, 6)
-        .forEach(t => out.push({ kind: "task", id: t.id, label: t.title, hint: "Задача" }));
+      if (!restricted) {
+        projects.filter(p => (p.name || "").toLowerCase().includes(ql)).slice(0, 6)
+          .forEach(p => out.push({ kind: "project", id: p.id, label: p.name, hint: "Проект" }));
+        tasks.filter(t => (t.title || "").toLowerCase().includes(ql)).slice(0, 6)
+          .forEach(t => out.push({ kind: "task", id: t.id, label: t.title, hint: "Задача" }));
+      }
       orders.filter(o => (o.name || "").toLowerCase().includes(ql)).slice(0, 6)
         .forEach(o => out.push({ kind: "order", id: o.id, label: o.name, hint: "Заказ" }));
     }
     return out;
-  }, [q, projects, tasks, orders, hasClientRole]);
+  }, [q, projects, tasks, orders, hasClientRole, allowedTabs, restricted]);
 
   useEffect(() => { if (sel >= items.length && items.length) setSel(0); }, [items.length, sel]);
 

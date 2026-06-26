@@ -8127,7 +8127,7 @@ function BackupPanel({ projects, txs, client, ownerId, onImported, onClose, show
         ))}
       </div>
 
-      {tab === "export" && (
+      {effectiveTab === "export" && (
         <div>
           <p style={{fontSize:13,color:"var(--text-secondary)",marginBottom:12,lineHeight:1.5}}>
             Все твои проекты ({projects.length}) и транзакции ({txs.length}) в формате JSON,
@@ -8160,7 +8160,7 @@ function BackupPanel({ projects, txs, client, ownerId, onImported, onClose, show
         </div>
       )}
 
-      {tab === "import" && (
+      {effectiveTab === "import" && (
         <div>
           <p style={{fontSize:13,color:"var(--text-secondary)",marginBottom:12,lineHeight:1.5}}>
             Вставь JSON-бэкап (полученный из вкладки «Экспорт» или из старой версии артефакта).
@@ -8800,6 +8800,8 @@ export default function App() {
     { id: "analytics", label: "Аналитика", Icon: BarChart3 },
     ...(profile?.role === "admin" ? [{ id: "admin", label: "Admin", Icon: ShieldCheck }] : []),
   ];
+  // Ф3-фикс: рендерим только разрешённую вкладку — защита от перехода (палитра/прямой setTab) вне текущего вида.
+  const effectiveTab = TABS.some(t => t.id === tab) ? tab : (TABS[0]?.id || "dashboard");
 
   return (
     <div style={{
@@ -8812,6 +8814,7 @@ export default function App() {
 
       <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)}
         projects={projects} tasks={tasks} orders={clientProjects} hasClientRole={hasClientRole}
+        allowedTabs={TABS.map(t => t.id)} restricted={isVisitor || isClientOnly}
         onNavigate={(it) => {
           if (it.kind === "section") setTab(it.id);
           else if (it.kind === "project") { setPendingProjectId(it.id); setTab("projects"); }
@@ -9092,7 +9095,7 @@ export default function App() {
         backdropFilter: "blur(8px)",
       }}>
         {TABS.map(t => {
-          const isActive = tab === t.id;
+          const isActive = effectiveTab === t.id;
           const TabIcon = t.Icon;
           return (
             <button
@@ -9143,21 +9146,21 @@ export default function App() {
       <div style={{ padding: 'clamp(12px, 4vw, 24px)', maxWidth: 1080, margin: "0 auto" }}>
         <AnimatePresence mode="wait">
           <motion.div
-            key={tab}
+            key={effectiveTab}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
           >
-            {isVisitor ? <VisitorEmptyTab tab={tab} /> : <>
-            {tab === "dashboard" && <Dashboard projects={projects} txs={txs} tasks={tasks} onDrillStage={(stage) => { setPendingStageFilter(stage); setTab("projects"); }} sharesByProject={sharesByProject} myShares={myShares} ownerId={profile.id} paymentsByProject={paymentsByProject} />}
-            {tab === "projects" && <Projects projects={projects} setProjects={setProjects} clients={clients} client={supabase} profile={profile} ownerId={profile.id} showToast={showToast} initialStageFilter={pendingStageFilter} sharesByProject={sharesByProject} setSharesByProject={setSharesByProject} pendingProjectId={pendingProjectId} onProjectOpened={() => setPendingProjectId(null)} setPaymentsByProject={setPaymentsByProject} onMakeReport={(sel)=>{ setReportProjects(sel); setReportModal(true); }} />}
-            {tab === "tasks" && <TasksView client={supabase} profile={profile} projects={projects} showToast={showToast} />}
-            {tab === "clients" && <ClientsPage clients={clients} setClients={setClients} projects={projects} client={supabase} ownerId={profile.id} showToast={showToast} />}
-            {tab === "myorders" && <ClientOrdersPage orders={clientProjects} />}
-            {tab === "finance" && <Finance txs={txs} setTxs={setTxs} client={supabase} ownerId={profile.id} showToast={showToast} projects={projects} sharesByProject={sharesByProject} myShares={myShares} paymentsByProject={paymentsByProject} />}
-            {tab === "analytics" && <Analytics projects={projects} txs={txs} sharesByProject={sharesByProject} ownerId={profile.id} paymentsByProject={paymentsByProject} />}
-            {tab === "admin" && profile?.role === "admin" && <AdminPage profile={profile} client={supabase} showToast={showToast} />}
+            {isVisitor ? <VisitorEmptyTab tab={effectiveTab} /> : <>
+            {effectiveTab === "dashboard" && <Dashboard projects={projects} txs={txs} tasks={tasks} onDrillStage={(stage) => { setPendingStageFilter(stage); setTab("projects"); }} sharesByProject={sharesByProject} myShares={myShares} ownerId={profile.id} paymentsByProject={paymentsByProject} />}
+            {effectiveTab === "projects" && <Projects projects={projects} setProjects={setProjects} clients={clients} client={supabase} profile={profile} ownerId={profile.id} showToast={showToast} initialStageFilter={pendingStageFilter} sharesByProject={sharesByProject} setSharesByProject={setSharesByProject} pendingProjectId={pendingProjectId} onProjectOpened={() => setPendingProjectId(null)} setPaymentsByProject={setPaymentsByProject} onMakeReport={(sel)=>{ setReportProjects(sel); setReportModal(true); }} />}
+            {effectiveTab === "tasks" && <TasksView client={supabase} profile={profile} projects={projects} showToast={showToast} />}
+            {effectiveTab === "clients" && <ClientsPage clients={clients} setClients={setClients} projects={projects} client={supabase} ownerId={profile.id} showToast={showToast} />}
+            {effectiveTab === "myorders" && <ClientOrdersPage orders={clientProjects} />}
+            {effectiveTab === "finance" && <Finance txs={txs} setTxs={setTxs} client={supabase} ownerId={profile.id} showToast={showToast} projects={projects} sharesByProject={sharesByProject} myShares={myShares} paymentsByProject={paymentsByProject} />}
+            {effectiveTab === "analytics" && <Analytics projects={projects} txs={txs} sharesByProject={sharesByProject} ownerId={profile.id} paymentsByProject={paymentsByProject} />}
+            {effectiveTab === "admin" && profile?.role === "admin" && <AdminPage profile={profile} client={supabase} showToast={showToast} />}
             </>}
           </motion.div>
         </AnimatePresence>
