@@ -649,8 +649,8 @@ async function requestFullAccess(client, role) {
   if (error) throw error;
 }
 // Ф3: список активных заявок на доступ (для админки; user_id -> requested_role).
-async function adminListAccessRequests(client) {
-  const { data, error } = await client.rpc("admin_list_access_requests");
+async function adminListRoleRequests(client) {
+  const { data, error } = await client.rpc("admin_list_role_requests");
   if (error) return [];
   return data || [];
 }
@@ -7654,9 +7654,9 @@ function AdminPage({ profile, client, showToast }) {
           setRolesByUser(map);
         } catch { setRolesByUser({}); }
         try {
-          const reqs = await adminListAccessRequests(client);
+          const reqs = await adminListRoleRequests(client);
           const rmap = {};
-          (reqs || []).forEach(x => { rmap[x.user_id] = x.requested_role; });
+          (reqs || []).forEach(x => { rmap[x.user_id] = { role: x.requested_role, req: x.is_access_request }; });
           setAccessReqByUser(rmap);
         } catch { setAccessReqByUser({}); }
       } else if (section === "stats") {
@@ -7815,7 +7815,7 @@ function AdminPage({ profile, client, showToast }) {
                           fontSize: 9, padding: "1px 6px", borderRadius: 4, fontWeight: 600, letterSpacing: "0.06em",
                           background: "rgba(232,200,96,0.14)", color: "#e8c860",
                           border: "1px solid rgba(232,200,96,0.30)",
-                        }}>ЗАЯВКА: {accessReqByUser[u.id] === "employee" ? "СОТРУДНИК" : "ЗАКАЗЧИК"}</span>
+                        }}>{accessReqByUser[u.id].req ? "ЗАЯВКА" : "ХОЧЕТ"}: {accessReqByUser[u.id].role === "employee" ? "СОТРУДНИК" : "ЗАКАЗЧИК"}</span>
                       )}
                     </div>
                     <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 1 }}>{displayLogin(u.email)}</div>
