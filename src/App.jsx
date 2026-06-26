@@ -7825,7 +7825,7 @@ function AdminPage({ profile, client, showToast }) {
                     </div>
                     {u.id !== profile.id && (
                       <div style={{ display: "flex", gap: 10, marginTop: 5, flexWrap: "wrap" }}>
-                        {[["employee","Сотрудник"],["client","Заказчик"],["visitor","Посетитель"]].map(([r, label]) => {
+                        {[["employee","Сотрудник"],["visitor","Посетитель"]].map(([r, label]) => {
                           const has = (rolesByUser[u.id] || []).includes(r);
                           return (
                             <label key={r} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 500, color: has ? "#d4af37" : "var(--text-tertiary)", cursor: "pointer" }}>
@@ -7839,6 +7839,9 @@ function AdminPage({ profile, client, showToast }) {
                             </label>
                           );
                         })}
+                        {(rolesByUser[u.id] || []).includes("client") && (
+                          <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 500, color: "#6ee7a8" }} title="Роль заказчика — от привязки к записи в «Заказчиках»">Заказчик ✓</span>
+                        )}
                       </div>
                     )}
                   </div>
