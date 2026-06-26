@@ -642,6 +642,11 @@ async function adminSetUserRoles(client, userId, roles) {
   const { error } = await client.rpc("set_user_roles", { p_user_id: userId, p_roles: roles });
   if (error) throw error;
 }
+// Ф3: посетитель отправляет заявку на полный доступ (флаг access_requested; админ увидит в инкременте 2).
+async function requestFullAccess(client) {
+  const { error } = await client.rpc("request_full_access");
+  if (error) throw error;
+}
 
 // ════════════════════════════════════════════════════════════════════════════
 // ADMIN (v1.5) — административные операции
@@ -8491,6 +8496,7 @@ export default function App() {
   const [myRoles, setMyRoles]       = useState([]); // Система ролей Ф1: роли текущего пользователя
   const [viewMode, setViewMode]     = useState(() => { try { return localStorage.getItem("km_view_mode") || "work"; } catch { return "work"; } }); // 'work' | 'client'
   const [cmdOpen, setCmdOpen] = useState(false); // Cmd+K командная палитра
+  const [accessRequested, setAccessRequested] = useState(false); // Ф3: посетитель отправил заявку на полный доступ
   useEffect(() => {
     const onKey = (e) => {
       if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K" || e.key === "л" || e.key === "Л")) {
@@ -8743,7 +8749,9 @@ export default function App() {
   // phase === "ready"
   // Система ролей Ф1: переключатель вида доступен, если есть и рабочая роль (employee/admin), и client.
   const canSwitchView = myRoles.includes("client") && (myRoles.includes("employee") || profile?.role === "admin");
-  const clientView = canSwitchView && viewMode === "client";
+  // Ф3-фикс: чистый заказчик (роль client без employee/admin) — всегда портал заказчика, без вкладок сотрудника.
+  const isClientOnly = myRoles.includes("client") && !myRoles.includes("employee") && profile?.role !== "admin";
+  const clientView = isClientOnly || (canSwitchView && viewMode === "client");
   // Ф3: чистый посетитель — демо-режим (обзорный набор вкладок, без admin и «Мои заказы»).
   const isVisitor = myRoles.includes("visitor") && !myRoles.includes("employee") && !myRoles.includes("client");
   const TABS = isVisitor
@@ -8849,11 +8857,23 @@ export default function App() {
                   Демо-режим
                 </span>
                 <button
+                  onClick={async () => {
+                    if (accessRequested) return;
+                    try { await requestFullAccess(supabase); setAccessRequested(true); showToast("Заявка на полный доступ отправлена администратору"); }
+                    catch { showToast("Не удалось отправить заявку", "error"); }
+                  }}
+                  disabled={accessRequested}
+                  title="Отправить администратору заявку на полный доступ"
+                  style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 8, cursor: accessRequested ? "default" : "pointer", fontSize: 12, fontWeight: 600, fontFamily: "inherit", background: accessRequested ? "rgba(110,231,168,0.10)" : "rgba(212,175,55,0.10)", border: accessRequested ? "1px solid rgba(110,231,168,0.30)" : "1px solid rgba(212,175,55,0.30)", color: accessRequested ? "#6ee7a8" : "#d4af37" }}
+                >
+                  {accessRequested ? "Заявка отправлена" : "Запросить полный доступ"}
+                </button>
+                <button
                   onClick={handleSignOut}
-                  title="Выйти и запросить полный доступ"
+                  title="Выйти из демо-режима"
                   style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "inherit", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.10)", color: "var(--text-secondary)" }}
                 >
-                  Запросить полный доступ
+                  Выйти
                 </button>
               </>
             )}
