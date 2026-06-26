@@ -1045,6 +1045,48 @@ function translateAuthError(err, ctx) {
   return err?.message || "Произошла ошибка";
 }
 
+// ── Ф3: демо-режим посетителя ──────────────────────────────────────────────
+// Статичная вкладка-заглушка: реальные компоненты вкладок (TasksView/Finance/…) НЕ рендерятся,
+// поэтому их внутренние RPC не зовутся (ноль утечки данных). Минимальный «помощник» —
+// поясняющий текст по разделу; в инкременте 2 поверх ляжет интерактивный пошаговый тур.
+const VISITOR_TAB_INFO = {
+  dashboard: { t: "Дашборд",   d: "Сводка по проектам, задачам и финансам. В полной версии — живые графики и метрики вашей работы." },
+  projects:  { t: "Проекты",   d: "Ведение объектов ОВиК: стадии, сроки, исполнители, оплаты. Здесь рождается весь рабочий процесс." },
+  tasks:     { t: "Задачи",    d: "Постановка и контроль задач по проектам — с техзаданиями, комментариями и фотофиксацией." },
+  clients:   { t: "Заказчики", d: "База заказчиков и их объектов, история заказов и контактов." },
+  finance:   { t: "Финансы",   d: "Учёт поступлений и расходов по проектам, доли участников и платежи." },
+  analytics: { t: "Аналитика", d: "Наглядные отчёты: выручка, динамика, распределение по стадиям." },
+};
+function VisitorEmptyTab({ tab }) {
+  const info = VISITOR_TAB_INFO[tab] || VISITOR_TAB_INFO.dashboard;
+  return (
+    <motion.div
+      key={tab}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      style={{ maxWidth: 560, margin: "60px auto", textAlign: "center", padding: "0 16px" }}
+    >
+      <div style={{
+        display: "inline-flex", alignItems: "center", gap: 8, padding: "5px 12px", borderRadius: 999,
+        background: "rgba(212,175,55,0.12)", border: "1px solid rgba(212,175,55,0.35)",
+        color: "#e8c860", fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 18,
+      }}>
+        Демо · посетитель
+      </div>
+      <h2 style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-0.02em", margin: "0 0 12px", color: "#f7f8f8" }}>
+        {info.t}
+      </h2>
+      <p style={{ fontSize: 14, lineHeight: 1.6, color: "var(--text-secondary)", margin: 0 }}>
+        {info.d}
+      </p>
+      <p style={{ fontSize: 12.5, lineHeight: 1.55, color: "var(--text-tertiary)", marginTop: 18 }}>
+        Это демонстрационный обзор — реальные данные доступны после регистрации сотрудником или заказчиком.
+      </p>
+    </motion.div>
+  );
+}
+
 // ── Ф2: вход по username. Синтетический email <username>@klimat.local под капотом GoTrue. ──
 const SYNTH_EMAIL_DOMAIN = "@klimat.local";
 function isSynthEmail(email) {
@@ -1587,6 +1629,7 @@ function AuthScreen({ onAuthenticated, onError }) {
   const [loginId, setLoginId] = useState("");        // вход: логин или email (вариант А)
   const [username, setUsername] = useState("");      // регистрация: логин
   const [name, setName] = useState("");              // регистрация: отображаемое имя
+  const [role, setRole] = useState("employee");      // Ф3: выбор роли при регистрации (employee/client/visitor)
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -1623,7 +1666,15 @@ function AuthScreen({ onAuthenticated, onError }) {
       setLoading(true);
       try {
         const email = `${uname}${SYNTH_EMAIL_DOMAIN}`;
-        await signUpWithPassword(client, email, password, { username: uname, name: name.trim() });
+        await signUpWithPassword(client, email, password, { username: uname, name: name.trim(), role });
+        // Ф3: посетитель заходит сразу — триггер handle_new_user_meta уже выставил approved + роль visitor.
+        // Входим в демо-режим, минуя экран «Заявка отправлена».
+        if (role === "visitor") {
+          const { user } = await signInWithPassword(client, email, password);
+          const prof = await fetchProfile(client, user.id);
+          onAuthenticated(user, prof);
+          return;
+        }
         setMode("check_email");
       } catch (e) {
         setError(translateAuthError(e, "signup"));
@@ -1779,6 +1830,41 @@ function AuthScreen({ onAuthenticated, onError }) {
                       onChange={e => setUsername(e.target.value)}
                       placeholder="латиница, без пробелов"
                     />
+                  </Field>
+                  <Field label="Кто вы">
+                    <div style={{ display: "flex", gap: 6 }}>
+                      {[
+                        { v: "employee", t: "Сотрудник" },
+                        { v: "client",   t: "Заказчик" },
+                        { v: "visitor",  t: "Посетитель" },
+                      ].map(o => (
+                        <button
+                          key={o.v}
+                          type="button"
+                          onClick={() => setRole(o.v)}
+                          style={{
+                            flex: 1,
+                            padding: "8px 4px",
+                            borderRadius: 8,
+                            cursor: "pointer",
+                            fontSize: 12,
+                            fontWeight: 600,
+                            fontFamily: "inherit",
+                            transition: "all 0.15s",
+                            background: role === o.v ? "rgba(212,175,55,0.14)" : "rgba(255,255,255,0.03)",
+                            border: role === o.v ? "1px solid rgba(212,175,55,0.45)" : "1px solid rgba(255,255,255,0.08)",
+                            color: role === o.v ? "#e8c860" : "var(--text-secondary)",
+                          }}
+                        >
+                          {o.t}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 6, lineHeight: 1.4 }}>
+                      {role === "visitor"
+                        ? "Демо-обзор системы — вход сразу, без одобрения."
+                        : "Доступ выдаёт администратор после одобрения заявки."}
+                    </div>
                   </Field>
                 </>
               )}
@@ -8452,7 +8538,12 @@ export default function App() {
             }
             setUser(session.user);
             setProfile(prof);
-            const [p, t, cl, tk, sh, ms, pb, cp, icr, rl] = await Promise.all([
+            // Ф3: роли определяем ДО загрузки — у чистого посетителя реальные RPC не зовём (ноль утечки данных).
+            const rl = await fetchMyRoles(supabase).catch(() => []);
+            setMyRoles(rl);
+            const visitor = rl.includes("visitor") && !rl.includes("employee") && !rl.includes("client");
+            if (visitor) { setPhase("ready"); return; }
+            const [p, t, cl, tk, sh, ms, pb, cp, icr] = await Promise.all([
               fetchProjects(supabase).catch(() => []),
               fetchTransactions(supabase).catch(() => []),
               fetchClients(supabase).catch(() => []),
@@ -8462,7 +8553,6 @@ export default function App() {
               fetchMyPayments(supabase).catch(() => ({})),
               fetchMyClientProjects(supabase).catch(() => []),
               amIClient(supabase).catch(() => false),
-              fetchMyRoles(supabase).catch(() => []),
             ]);
             setProjects(p);
             setTxs(t);
@@ -8473,7 +8563,6 @@ export default function App() {
             setPaymentsByProject(pb);
             setClientProjects(cp);
             setHasClientRole(icr);
-            setMyRoles(rl);
             setPhase("ready");
           } catch (e) {
             console.warn("Сессия есть, но профиль не загружается:", e);
@@ -8519,7 +8608,12 @@ export default function App() {
     setUser(u);
     setProfile(prof);
     try {
-      const [p, t, cl, tk, sh, ms, pb, cp, icr, rl] = await Promise.all([
+      // Ф3: роли определяем ДО загрузки — у чистого посетителя реальные RPC не зовём (ноль утечки данных).
+      const rl = await fetchMyRoles(supabase).catch(() => []);
+      setMyRoles(rl);
+      const visitor = rl.includes("visitor") && !rl.includes("employee") && !rl.includes("client");
+      if (visitor) { setPhase("ready"); showToast("Демо-режим посетителя"); return; }
+      const [p, t, cl, tk, sh, ms, pb, cp, icr] = await Promise.all([
         fetchProjects(supabase),
         fetchTransactions(supabase),
         fetchClients(supabase).catch(() => []),
@@ -8529,7 +8623,6 @@ export default function App() {
         fetchMyPayments(supabase).catch(() => ({})),
         fetchMyClientProjects(supabase).catch(() => []),
         amIClient(supabase).catch(() => false),
-        fetchMyRoles(supabase).catch(() => []),
       ]);
       setProjects(p);
       setTxs(t);
@@ -8540,7 +8633,6 @@ export default function App() {
       setPaymentsByProject(pb);
       setClientProjects(cp);
       setHasClientRole(icr);
-      setMyRoles(rl);
       setPhase("ready");
       showToast(`Добро пожаловать, ${prof.name || prof.email.split("@")[0]}!`);
     } catch (e) {
@@ -8652,7 +8744,18 @@ export default function App() {
   // Система ролей Ф1: переключатель вида доступен, если есть и рабочая роль (employee/admin), и client.
   const canSwitchView = myRoles.includes("client") && (myRoles.includes("employee") || profile?.role === "admin");
   const clientView = canSwitchView && viewMode === "client";
-  const TABS = clientView
+  // Ф3: чистый посетитель — демо-режим (обзорный набор вкладок, без admin и «Мои заказы»).
+  const isVisitor = myRoles.includes("visitor") && !myRoles.includes("employee") && !myRoles.includes("client");
+  const TABS = isVisitor
+    ? [
+        { id: "dashboard", label: "Дашборд",   Icon: LayoutDashboard },
+        { id: "projects",  label: "Проекты",   Icon: FolderKanban },
+        { id: "tasks",     label: "Задачи",    Icon: ListTodo },
+        { id: "clients",   label: "Заказчики", Icon: BookUser },
+        { id: "finance",   label: "Финансы",   Icon: Receipt },
+        { id: "analytics", label: "Аналитика", Icon: BarChart3 },
+      ]
+    : clientView
     ? [{ id: "myorders", label: "Мои заказы", Icon: Package }]
     : [
     { id: "dashboard", label: "Дашборд",   Icon: LayoutDashboard },
@@ -8739,6 +8842,21 @@ export default function App() {
         {/* Правая часть: кнопки действий и информация о пользователе */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: isMobile ? "flex-start" : "flex-end", gap: 8 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", justifyContent: isMobile ? "flex-start" : "flex-end" }}>
+            {/* Ф3: индикатор демо-режима посетителя + выход на полный доступ */}
+            {isVisitor && (
+              <>
+                <span style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 8, fontSize: 12, fontWeight: 600, background: "rgba(212,175,55,0.12)", border: "1px solid rgba(212,175,55,0.35)", color: "#e8c860" }}>
+                  Демо-режим
+                </span>
+                <button
+                  onClick={handleSignOut}
+                  title="Выйти и запросить полный доступ"
+                  style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "inherit", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.10)", color: "var(--text-secondary)" }}
+                >
+                  Запросить полный доступ
+                </button>
+              </>
+            )}
             {/* Система ролей Ф1: переключатель вида (если есть рабочая роль и роль заказчика) */}
             {canSwitchView && (
               <button onClick={() => { const m = viewMode === "client" ? "work" : "client"; setViewMode(m); try { localStorage.setItem("km_view_mode", m); } catch {} ; setTab(m === "client" ? "myorders" : "dashboard"); }}
@@ -8990,6 +9108,7 @@ export default function App() {
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
           >
+            {isVisitor ? <VisitorEmptyTab tab={tab} /> : <>
             {tab === "dashboard" && <Dashboard projects={projects} txs={txs} tasks={tasks} onDrillStage={(stage) => { setPendingStageFilter(stage); setTab("projects"); }} sharesByProject={sharesByProject} myShares={myShares} ownerId={profile.id} paymentsByProject={paymentsByProject} />}
             {tab === "projects" && <Projects projects={projects} setProjects={setProjects} clients={clients} client={supabase} profile={profile} ownerId={profile.id} showToast={showToast} initialStageFilter={pendingStageFilter} sharesByProject={sharesByProject} setSharesByProject={setSharesByProject} pendingProjectId={pendingProjectId} onProjectOpened={() => setPendingProjectId(null)} setPaymentsByProject={setPaymentsByProject} onMakeReport={(sel)=>{ setReportProjects(sel); setReportModal(true); }} />}
             {tab === "tasks" && <TasksView client={supabase} profile={profile} projects={projects} showToast={showToast} />}
@@ -8998,6 +9117,7 @@ export default function App() {
             {tab === "finance" && <Finance txs={txs} setTxs={setTxs} client={supabase} ownerId={profile.id} showToast={showToast} projects={projects} sharesByProject={sharesByProject} myShares={myShares} paymentsByProject={paymentsByProject} />}
             {tab === "analytics" && <Analytics projects={projects} txs={txs} sharesByProject={sharesByProject} ownerId={profile.id} paymentsByProject={paymentsByProject} />}
             {tab === "admin" && profile?.role === "admin" && <AdminPage profile={profile} client={supabase} showToast={showToast} />}
+            </>}
           </motion.div>
         </AnimatePresence>
       </div>
