@@ -7095,6 +7095,67 @@ function ClientForm({ initial, onSave, onClose, saving, client, showToast, onLin
 // ════════════════════════════════════════════════════════════════════════════
 // CLIENT ORDERS — раздел "Мои заказы" (D роль заказчика, фаза 1, read-only проекция)
 // ════════════════════════════════════════════════════════════════════════════
+// ── Заказчик 2.0: входящие заявки на проекты (для сотрудника/админа) ─────────
+function EmployeeRequestsPage({ client, showToast }) {
+  const [requests, setRequests] = useState(null);
+  const [busyId, setBusyId] = useState(null);
+
+  const reload = async () => {
+    try { setRequests(await fetchProjectRequests(client)); }
+    catch (e) { showToast("Ошибка заявок: " + (e.message || ""), "error"); setRequests([]); }
+  };
+  useEffect(() => { reload(); /* eslint-disable-next-line */ }, []);
+
+  const fresh = (requests || []).filter(r => r.status === "Новая");
+
+  async function accept(r) {
+    setBusyId(r.id);
+    try { await acceptProjectRequest(client, r.id); showToast("✓ Проект создан"); await reload(); }
+    catch (e) { showToast("Ошибка: " + (e.message || ""), "error"); }
+    finally { setBusyId(null); }
+  }
+  async function reject(r) {
+    setBusyId(r.id);
+    try { await rejectProjectRequest(client, r.id); showToast("Заявка отклонена"); await reload(); }
+    catch (e) { showToast("Ошибка: " + (e.message || ""), "error"); }
+    finally { setBusyId(null); }
+  }
+
+  if (requests === null) return <div style={{ color: "var(--text-secondary)", fontSize: 14 }}>Загрузка…</div>;
+  if (!fresh.length) return <Empty text="Новых заявок нет" />;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {fresh.map(r => (
+        <div key={r.id} style={{ padding: "14px 16px", borderRadius: 12, background: "#141414",
+          border: "1px solid rgba(255,255,255,0.05)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 15, fontWeight: 600, color: "#fafaf7" }}>{r.name}</span>
+            <span style={{ fontSize: 12, padding: "3px 10px", borderRadius: 20,
+              background: r.assignmentMode === "assignee" ? "rgba(124,197,255,0.15)" : "rgba(147,197,253,0.12)",
+              color: r.assignmentMode === "assignee" ? "#7cc5ff" : "#93c5fd" }}>
+              {r.assignmentMode === "assignee" ? "👤 На исполнителя" : "🔍 Маркетплейс"}
+            </span>
+          </div>
+          {r.description && (
+            <div style={{ marginTop: 8, fontSize: 13, color: "var(--text-secondary)" }}>{r.description}</div>
+          )}
+          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 8, fontSize: 12, color: "var(--text-tertiary)" }}>
+            <span>Режим: {r.mode === "detailed" ? "подробный" : "быстрый"}</span>
+            {r.desiredDeadline && <span>Желаемый срок: {r.desiredDeadline}</span>}
+            {r.createdAt && <span>{new Date(r.createdAt).toLocaleDateString("ru-RU")}</span>}
+          </div>
+          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+            <button className={BTN.primary} disabled={busyId === r.id}
+                    onClick={() => accept(r)} style={{ opacity: busyId === r.id ? 0.6 : 1 }}>Принять</button>
+            <button className={BTN.ghost} disabled={busyId === r.id}
+                    onClick={() => reject(r)} style={{ opacity: busyId === r.id ? 0.6 : 1 }}>Отклонить</button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 // ── Заказчик 2.0: модалка создания заявки на проект ──────────────────────────
 function CreateRequestModal({ client, showToast, onClose, onCreated }) {
   const [mode, setMode] = useState("quick");
@@ -9019,6 +9080,7 @@ export default function App() {
     { id: "projects",  label: "Проекты",   Icon: FolderKanban },
     { id: "tasks",     label: "Задачи",    Icon: ListTodo },
     { id: "clients",   label: "Заказчики", Icon: BookUser },
+    { id: "requests",  label: "Заявки",    Icon: Inbox },
     ...(hasClientRole ? [{ id: "myorders", label: "Мои заказы", Icon: Package }] : []),
     { id: "finance",   label: "Финансы",   Icon: Receipt },
     { id: "analytics", label: "Аналитика", Icon: BarChart3 },
@@ -9381,6 +9443,7 @@ export default function App() {
             {effectiveTab === "projects" && <Projects projects={projects} setProjects={setProjects} clients={clients} client={supabase} profile={profile} ownerId={profile.id} showToast={showToast} initialStageFilter={pendingStageFilter} sharesByProject={sharesByProject} setSharesByProject={setSharesByProject} pendingProjectId={pendingProjectId} onProjectOpened={() => setPendingProjectId(null)} setPaymentsByProject={setPaymentsByProject} onMakeReport={(sel)=>{ setReportProjects(sel); setReportModal(true); }} />}
             {effectiveTab === "tasks" && <TasksView client={supabase} profile={profile} projects={projects} showToast={showToast} />}
             {effectiveTab === "clients" && <ClientsPage clients={clients} setClients={setClients} projects={projects} client={supabase} ownerId={profile.id} showToast={showToast} />}
+            {effectiveTab === "requests" && <EmployeeRequestsPage client={supabase} showToast={showToast} />}
             {effectiveTab === "myorders" && <ClientOrdersPage orders={clientProjects} client={supabase} showToast={showToast} onChanged={async () => { try { setClientProjects(await fetchMyClientProjects(supabase)); } catch (e) {} }} />}
             {effectiveTab === "finance" && <Finance txs={txs} setTxs={setTxs} client={supabase} ownerId={profile.id} showToast={showToast} projects={projects} sharesByProject={sharesByProject} myShares={myShares} paymentsByProject={paymentsByProject} />}
             {effectiveTab === "analytics" && <Analytics projects={projects} txs={txs} sharesByProject={sharesByProject} ownerId={profile.id} paymentsByProject={paymentsByProject} />}
