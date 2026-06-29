@@ -7095,30 +7095,209 @@ function ClientForm({ initial, onSave, onClose, saving, client, showToast, onLin
 // ════════════════════════════════════════════════════════════════════════════
 // CLIENT ORDERS — раздел "Мои заказы" (D роль заказчика, фаза 1, read-only проекция)
 // ════════════════════════════════════════════════════════════════════════════
-function ClientOrdersPage({ orders }) {
-  if (!orders?.length) return <Empty text="Заказов пока нет" />;
-  const money = n => (Number(n) || 0).toLocaleString("ru-RU");
+// ── Заказчик 2.0: модалка создания заявки на проект ──────────────────────────
+function CreateRequestModal({ client, showToast, onClose, onCreated }) {
+  const [mode, setMode] = useState("quick");
+  const [assignmentMode, setAssignmentMode] = useState("marketplace");
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [deadline, setDeadline] = useState("");
+  const [executors, setExecutors] = useState([]);
+  const [desiredExecutorId, setDesiredExecutorId] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (assignmentMode === "assignee" && executors.length === 0) {
+      listAvailableExecutors(client).then(setExecutors).catch(() => setExecutors([]));
+    }
+  }, [assignmentMode]); // eslint-disable-line
+
+  const inputStyle = {
+    width: "100%", background: "#0f0f0f", border: "1px solid rgba(255,255,255,0.10)",
+    borderRadius: 8, color: "#fafaf7", padding: "8px 10px", fontSize: 14, boxSizing: "border-box",
+  };
+  const seg = (val, cur, set, label) => (
+    <button type="button" onClick={() => set(val)} style={{
+      flex: 1, padding: "8px 10px", borderRadius: 8, fontSize: 13, cursor: "pointer",
+      border: "1px solid " + (cur === val ? "#d4af37" : "rgba(255,255,255,0.10)"),
+      background: cur === val ? "rgba(212,175,55,0.12)" : "transparent",
+      color: cur === val ? "#d4af37" : "var(--text-secondary)",
+    }}>{label}</button>
+  );
+
+  async function submit() {
+    if (!name.trim()) { showToast("Укажите название проекта", "error"); return; }
+    if (assignmentMode === "assignee" && !desiredExecutorId) { showToast("Выберите исполнителя", "error"); return; }
+    setBusy(true);
+    try {
+      await createProjectRequest(client, {
+        name: name.trim(),
+        description: mode === "detailed" ? (description.trim() || null) : null,
+        deadline: mode === "detailed" && deadline ? deadline : null,
+        mode, assignmentMode,
+        desiredExecutorId: assignmentMode === "assignee" ? desiredExecutorId : null,
+      });
+      showToast("✓ Заявка отправлена");
+      onCreated?.();
+      onClose();
+    } catch (e) {
+      showToast("Ошибка: " + (e.message || ""), "error");
+    } finally { setBusy(false); }
+  }
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {orders.map(o => (
-        <div key={o.id} style={{ padding: "14px 16px", borderRadius: 12, background: "#141414",
-          border: "1px solid rgba(255,255,255,0.05)" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 15, fontWeight: 600, color: "#fafaf7" }}>{o.name}</span>
-            <span style={{ fontSize: 12, padding: "3px 10px", borderRadius: 20,
-              background: "rgba(212,175,55,0.15)", color: "#d4af37" }}>{o.stage}</span>
-          </div>
-          <div style={{ display: "flex", gap: 18, flexWrap: "wrap", marginTop: 10, fontSize: 13, color: "var(--text-secondary)" }}>
-            <span>Договор: <b style={{ color: "#fafaf7" }}>{money(o.contractSum)} ₽</b></span>
-            <span>Оплачено: <b style={{ color: "#6ee7a8" }}>{money(o.paidAmount)} ₽</b></span>
-            <span>Остаток: <b style={{ color: "#f3d77b" }}>{money((o.contractSum || 0) - (o.paidAmount || 0))} ₽</b></span>
-          </div>
-          <div style={{ display: "flex", gap: 18, flexWrap: "wrap", marginTop: 6, fontSize: 12, color: "var(--text-tertiary)" }}>
-            {o.deadline && <span>Срок: {o.deadline}</span>}
-            {o.executor && <span>Исполнитель: {o.executor}</span>}
+    <Modal title="Новый проект" onClose={onClose} maxWidth={520}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div>
+          <Label>Название</Label>
+          <input style={inputStyle} value={name} onChange={e => setName(e.target.value)}
+                 placeholder="Например: проект отопления коттеджа" autoFocus />
+        </div>
+        <div>
+          <Label>Режим заявки</Label>
+          <div style={{ display: "flex", gap: 8 }}>
+            {seg("quick", mode, setMode, "Быстрый")}
+            {seg("detailed", mode, setMode, "Подробный")}
           </div>
         </div>
-      ))}
+        {mode === "detailed" && <>
+          <div>
+            <Label>Описание</Label>
+            <textarea style={{ ...inputStyle, minHeight: 72, resize: "vertical" }} value={description}
+                      onChange={e => setDescription(e.target.value)} placeholder="Что нужно сделать" />
+          </div>
+          <div>
+            <Label>Желаемый срок</Label>
+            <input type="date" style={inputStyle} value={deadline} onChange={e => setDeadline(e.target.value)} />
+          </div>
+        </>}
+        <div>
+          <Label>Подбор исполнителя</Label>
+          <div style={{ display: "flex", gap: 8 }}>
+            {seg("marketplace", assignmentMode, setAssignmentMode, "🔍 Маркетплейс")}
+            {seg("assignee", assignmentMode, setAssignmentMode, "👤 Назначить")}
+          </div>
+        </div>
+        {assignmentMode === "assignee" && (
+          <div>
+            <Label>Исполнитель</Label>
+            <select style={inputStyle} value={desiredExecutorId} onChange={e => setDesiredExecutorId(e.target.value)}>
+              <option value="">— выберите —</option>
+              {executors.map(ex => (
+                <option key={ex.id} value={ex.id}>{ex.name}{ex.position ? ` · ${ex.position}` : ""}</option>
+              ))}
+            </select>
+          </div>
+        )}
+        <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+          <button className={BTN.ghost} onClick={onClose} style={{ flex: 1 }}>Отмена</button>
+          <button className={BTN.primary} onClick={submit} disabled={busy} style={{ flex: 2, opacity: busy ? 0.6 : 1 }}>
+            {busy ? "Отправка…" : "Отправить"}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+// ── Заказчик 2.0: задачи проекта заказчика + приёмка ─────────────────────────
+function ClientProjectTasksModal({ order, client, showToast, onClose, onChanged }) {
+  const [tasks, setTasks] = useState(null);
+  const [busyId, setBusyId] = useState(null);
+
+  const reload = async () => {
+    try { setTasks(await fetchTasks(client, { projectId: order.id })); }
+    catch (e) { showToast("Ошибка задач: " + (e.message || ""), "error"); setTasks([]); }
+  };
+  useEffect(() => { reload(); /* eslint-disable-next-line */ }, [order.id]);
+
+  async function setStatus(taskId, status) {
+    setBusyId(taskId);
+    try {
+      await clientSetTaskStatus(client, taskId, status);
+      showToast(status === "Готово" ? "✓ Задача принята" : "Задача возвращена в работу");
+      await reload();
+      onChanged?.();
+    } catch (e) {
+      showToast("Ошибка: " + (e.message || ""), "error");
+    } finally { setBusyId(null); }
+  }
+
+  const statusColor = s =>
+    s === "Готово" ? "#6ee7a8" : s === "На проверке" ? "#f3d77b" : s === "В работе" ? "#7cc5ff" : "var(--text-tertiary)";
+
+  return (
+    <Modal title={order.name} onClose={onClose} maxWidth={560}>
+      {tasks === null
+        ? <div style={{ color: "var(--text-secondary)", fontSize: 14 }}>Загрузка…</div>
+        : tasks.length === 0
+          ? <Empty text="Задач по проекту пока нет" />
+          : <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {tasks.map(t => (
+                <div key={t.id} style={{ padding: "10px 12px", borderRadius: 10, background: "#141414",
+                  border: "1px solid rgba(255,255,255,0.05)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 14, color: "#fafaf7" }}>{t.title}</span>
+                    <span style={{ fontSize: 12, color: statusColor(t.status) }}>{t.status}</span>
+                  </div>
+                  {t.status === "На проверке" && (
+                    <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                      <button className={BTN.primary} disabled={busyId === t.id}
+                              onClick={() => setStatus(t.id, "Готово")} style={{ opacity: busyId === t.id ? 0.6 : 1 }}>Принять</button>
+                      <button className={BTN.ghost} disabled={busyId === t.id}
+                              onClick={() => setStatus(t.id, "В работе")} style={{ opacity: busyId === t.id ? 0.6 : 1 }}>Вернуть</button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>}
+    </Modal>
+  );
+}
+
+function ClientOrdersPage({ orders, client, showToast, onChanged }) {
+  const [creating, setCreating] = useState(false);
+  const [openOrder, setOpenOrder] = useState(null);
+  const money = n => (Number(n) || 0).toLocaleString("ru-RU");
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 13, color: "var(--text-tertiary)" }}>Мои заказы</span>
+        <button className={BTN.primary} onClick={() => setCreating(true)}>+ Создать проект</button>
+      </div>
+      {!orders?.length
+        ? <Empty text="Заказов пока нет — создайте первый проект" />
+        : <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {orders.map(o => (
+              <div key={o.id} onClick={() => setOpenOrder(o)} style={{ padding: "14px 16px", borderRadius: 12, background: "#141414",
+                border: "1px solid rgba(255,255,255,0.05)", cursor: "pointer" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 15, fontWeight: 600, color: "#fafaf7" }}>{o.name}</span>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    {o.openTaskCount > 0 && (
+                      <span title="Задачи требуют внимания" style={{ fontSize: 12, padding: "3px 9px", borderRadius: 20,
+                        background: "rgba(243,215,123,0.15)", color: "#f3d77b", fontWeight: 600 }}>● {o.openTaskCount}</span>
+                    )}
+                    <span style={{ fontSize: 12, padding: "3px 10px", borderRadius: 20,
+                      background: "rgba(212,175,55,0.15)", color: "#d4af37" }}>{o.stage}</span>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 18, flexWrap: "wrap", marginTop: 10, fontSize: 13, color: "var(--text-secondary)" }}>
+                  <span>Договор: <b style={{ color: "#fafaf7" }}>{money(o.contractSum)} ₽</b></span>
+                  <span>Оплачено: <b style={{ color: "#6ee7a8" }}>{money(o.paidAmount)} ₽</b></span>
+                  <span>Остаток: <b style={{ color: "#f3d77b" }}>{money((o.contractSum || 0) - (o.paidAmount || 0))} ₽</b></span>
+                </div>
+                <div style={{ display: "flex", gap: 18, flexWrap: "wrap", marginTop: 6, fontSize: 12, color: "var(--text-tertiary)" }}>
+                  {o.deadline && <span>Срок: {o.deadline}</span>}
+                  {o.executor && <span>Исполнитель: {o.executor}</span>}
+                </div>
+              </div>
+            ))}
+          </div>}
+      {creating && <CreateRequestModal client={client} showToast={showToast}
+        onClose={() => setCreating(false)} onCreated={onChanged} />}
+      {openOrder && <ClientProjectTasksModal order={openOrder} client={client} showToast={showToast}
+        onClose={() => setOpenOrder(null)} onChanged={onChanged} />}
     </div>
   );
 }
@@ -9202,7 +9381,7 @@ export default function App() {
             {effectiveTab === "projects" && <Projects projects={projects} setProjects={setProjects} clients={clients} client={supabase} profile={profile} ownerId={profile.id} showToast={showToast} initialStageFilter={pendingStageFilter} sharesByProject={sharesByProject} setSharesByProject={setSharesByProject} pendingProjectId={pendingProjectId} onProjectOpened={() => setPendingProjectId(null)} setPaymentsByProject={setPaymentsByProject} onMakeReport={(sel)=>{ setReportProjects(sel); setReportModal(true); }} />}
             {effectiveTab === "tasks" && <TasksView client={supabase} profile={profile} projects={projects} showToast={showToast} />}
             {effectiveTab === "clients" && <ClientsPage clients={clients} setClients={setClients} projects={projects} client={supabase} ownerId={profile.id} showToast={showToast} />}
-            {effectiveTab === "myorders" && <ClientOrdersPage orders={clientProjects} />}
+            {effectiveTab === "myorders" && <ClientOrdersPage orders={clientProjects} client={supabase} showToast={showToast} onChanged={async () => { try { setClientProjects(await fetchMyClientProjects(supabase)); } catch (e) {} }} />}
             {effectiveTab === "finance" && <Finance txs={txs} setTxs={setTxs} client={supabase} ownerId={profile.id} showToast={showToast} projects={projects} sharesByProject={sharesByProject} myShares={myShares} paymentsByProject={paymentsByProject} />}
             {effectiveTab === "analytics" && <Analytics projects={projects} txs={txs} sharesByProject={sharesByProject} ownerId={profile.id} paymentsByProject={paymentsByProject} />}
             {effectiveTab === "admin" && profile?.role === "admin" && <AdminPage profile={profile} client={supabase} showToast={showToast} />}
