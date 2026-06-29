@@ -612,15 +612,60 @@ async function searchApprovedUsers(client, query) {
   return data || [];
 }
 
-// D роль заказчика (фаза 1): проекты-заказы текущего пользователя (безопасная проекция).
+// D роль заказчика (фаза 2): проекты-заказы текущего пользователя (безопасная проекция + индикатор задач).
 async function fetchMyClientProjects(client) {
   const { data, error } = await client.rpc("get_my_client_projects");
   if (error) throw error;
   return (data || []).map(r => ({
-    id: r.id, name: r.name, stage: r.stage,
-    startDate: r.start_date, deadline: r.deadline,
-    contractSum: r.contract_sum, paidAmount: r.paid_amount, executor: r.executor,
+    id: r.id, name: r.name, stage: r.stage, startDate: r.start_date, deadline: r.deadline,
+    contractSum: Number(r.contract_sum) || 0, paidAmount: Number(r.paid_amount) || 0,
+    executor: r.executor || "", visibility: r.visibility, openTaskCount: Number(r.open_task_count) || 0,
   }));
+}
+
+// Заказчик 2.0: проекты-заявки и приёмка
+async function listAvailableExecutors(client) {
+  const { data, error } = await client.rpc("list_available_executors");
+  if (error) throw error;
+  return (data || []).map(r => ({ id: r.id, name: r.name || "", position: r.position || "" }));
+}
+
+async function createProjectRequest(client, { name, description = null, deadline = null,
+    mode = "quick", assignmentMode = "marketplace", desiredExecutorId = null }) {
+  const { data, error } = await client.rpc("create_project_request", {
+    p_name: name, p_description: description, p_deadline: deadline, p_mode: mode,
+    p_assignment_mode: assignmentMode, p_desired_executor_id: desiredExecutorId, p_client_id: null,
+  });
+  if (error) throw error;
+  return data; // uuid заявки
+}
+
+async function acceptProjectRequest(client, requestId) {
+  const { data, error } = await client.rpc("accept_project_request", { p_request_id: requestId });
+  if (error) throw error;
+  return data; // uuid проекта
+}
+
+async function rejectProjectRequest(client, requestId, reason = null) {
+  const { error } = await client.rpc("reject_project_request", { p_request_id: requestId, p_reason: reason });
+  if (error) throw error;
+}
+
+async function fetchProjectRequests(client) {
+  const { data, error } = await client
+    .from("project_requests").select("*").order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data || []).map(r => ({
+    id: r.id, clientId: r.client_id, createdBy: r.created_by, name: r.name,
+    description: r.description, desiredDeadline: r.desired_deadline, mode: r.mode,
+    assignmentMode: r.assignment_mode, desiredExecutorId: r.desired_executor_id,
+    status: r.status, acceptedProjectId: r.accepted_project_id, createdAt: r.created_at,
+  }));
+}
+
+async function clientSetTaskStatus(client, taskId, status) {
+  const { error } = await client.rpc("client_set_task_status", { p_task_id: taskId, p_status: status });
+  if (error) throw error;
 }
 async function amIClient(client) {
   const { data, error } = await client.rpc("am_i_client");
