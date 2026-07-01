@@ -623,6 +623,13 @@ async function fetchMyClientProjects(client) {
   }));
 }
 
+// D роль заказчика: история платежей по проектам (безопасная проекция, Task 3).
+async function fetchMyProjectPayments(supabase) {
+  const { data, error } = await supabase.rpc('get_my_project_payments');
+  if (error) throw error;
+  return data ?? [];
+}
+
 // Заказчик 2.0: проекты-заявки и приёмка
 async function listAvailableExecutors(client) {
   const { data, error } = await client.rpc("list_available_executors");
@@ -8844,6 +8851,7 @@ export default function App() {
   const [paymentsByProject, setPaymentsByProject] = useState({});
   const [clients, setClients]       = useState([]); // v1.5
   const [clientProjects, setClientProjects] = useState([]); // D роль заказчика: мои заказы
+  const [clientPayments, setClientPayments] = useState([]); // D роль заказчика: история платежей (Task 3)
   const [hasClientRole, setHasClientRole]   = useState(false);
   const [myRoles, setMyRoles]       = useState([]); // Система ролей Ф1: роли текущего пользователя
   const [viewMode, setViewMode]     = useState(() => { try { return localStorage.getItem("km_view_mode") || "work"; } catch { return "work"; } }); // 'work' | 'client'
@@ -8905,16 +8913,18 @@ export default function App() {
             // §7: клиент-only не зовёт общие employee-данные (projects/txs/clients/tasks) — только свою проекцию.
             const clientOnly = rl.includes("client") && !rl.includes("employee") && prof.role !== "admin";
             if (clientOnly) {
-              const [cp, icr] = await Promise.all([
+              const [cp, pp, icr] = await Promise.all([
                 fetchMyClientProjects(supabase).catch(() => []),
+                fetchMyProjectPayments(supabase).catch(() => []),
                 amIClient(supabase).catch(() => false),
               ]);
               setClientProjects(cp);
+              setClientPayments(pp);
               setHasClientRole(icr);
               setPhase("ready");
               return;
             }
-            const [p, t, cl, tk, sh, ms, pb, cp, icr] = await Promise.all([
+            const [p, t, cl, tk, sh, ms, pb, cp, pp, icr] = await Promise.all([
               fetchProjects(supabase).catch(() => []),
               fetchTransactions(supabase).catch(() => []),
               fetchClients(supabase).catch(() => []),
@@ -8923,6 +8933,7 @@ export default function App() {
               getMyShares(supabase).catch(() => []),
               fetchMyPayments(supabase).catch(() => ({})),
               fetchMyClientProjects(supabase).catch(() => []),
+              fetchMyProjectPayments(supabase).catch(() => []),
               amIClient(supabase).catch(() => false),
             ]);
             setProjects(p);
@@ -8933,6 +8944,7 @@ export default function App() {
             setMyShares(ms);
             setPaymentsByProject(pb);
             setClientProjects(cp);
+            setClientPayments(pp);
             setHasClientRole(icr);
             setPhase("ready");
           } catch (e) {
@@ -8987,17 +8999,19 @@ export default function App() {
       // §7: клиент-only — только своя проекция, без общих employee-запросов.
       const clientOnly = rl.includes("client") && !rl.includes("employee") && prof.role !== "admin";
       if (clientOnly) {
-        const [cp, icr] = await Promise.all([
+        const [cp, pp, icr] = await Promise.all([
           fetchMyClientProjects(supabase).catch(() => []),
+          fetchMyProjectPayments(supabase).catch(() => []),
           amIClient(supabase).catch(() => false),
         ]);
         setClientProjects(cp);
+        setClientPayments(pp);
         setHasClientRole(icr);
         setPhase("ready");
         showToast(`Добро пожаловать, ${prof.name || prof.email.split("@")[0]}!`);
         return;
       }
-      const [p, t, cl, tk, sh, ms, pb, cp, icr] = await Promise.all([
+      const [p, t, cl, tk, sh, ms, pb, cp, pp, icr] = await Promise.all([
         fetchProjects(supabase),
         fetchTransactions(supabase),
         fetchClients(supabase).catch(() => []),
@@ -9006,6 +9020,7 @@ export default function App() {
         getMyShares(supabase).catch(() => []),
         fetchMyPayments(supabase).catch(() => ({})),
         fetchMyClientProjects(supabase).catch(() => []),
+        fetchMyProjectPayments(supabase).catch(() => []),
         amIClient(supabase).catch(() => false),
       ]);
       setProjects(p);
@@ -9016,6 +9031,7 @@ export default function App() {
       setMyShares(ms);
       setPaymentsByProject(pb);
       setClientProjects(cp);
+      setClientPayments(pp);
       setHasClientRole(icr);
       setPhase("ready");
       showToast(`Добро пожаловать, ${prof.name || prof.email.split("@")[0]}!`);
