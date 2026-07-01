@@ -30,7 +30,7 @@ JA="$(sign "$A")"; JB="$(sign "$B")"
 
 echo "== A создаёт клиента (linked к user A) =="
 CID=$(docker exec -i supabase-db psql -U postgres -d postgres -At -c \
-  "INSERT INTO public.clients(name, user_id) VALUES ('Selftest Client', '$A') RETURNING id;" \
+  "INSERT INTO public.clients(name, owner_id, user_id) VALUES ('Selftest Client', '$A', '$A') RETURNING id;" \
   | grep -Eom1 '[0-9a-f-]{36}')
 echo "client id=$CID"; [ -n "$CID" ] || { echo "INSERT CLIENT FAILED"; exit 1; }
 
