@@ -6,6 +6,7 @@ import { isPushSupported, getPushState, enablePush, disablePush } from "./lib/pu
 import { periodRange, prevPeriodRange, granularityFor, periodBalance, trendDir, financeSeries, expenseByCategory, receivables, myTasks, ownerReceived, mySharesTotals, myProjectIncomeForMonth, selectionTotals, projectIncomeTxs, viewerShareOnProject, portfolioMineTotal } from "./lib/dashboardMetrics";
 import { dueState, dueSuffix, DUE_COLORS, PRIORITY_ORDER, tasksAttention } from "./lib/taskUi.js";
 import { projectRemaining, paymentsByProject as groupPaymentsByProject, clientTotals, attentionTasks } from "./lib/clientMetrics.js";
+import { validateNewUser } from "./lib/userCreateValidation.js";
 import NotificationBell from "./components/NotificationBell";
 import MagneticButton from "./components/MagneticButton";
 import CommandPalette from "./components/CommandPalette";
@@ -748,6 +749,16 @@ async function adminResetPassword(client, userId, newPassword) {
   if (error) throw error;
 }
 
+// Админ создаёт пользователя через Edge Function (GoTrue admin API + финализация).
+async function adminCreateUser(client, { email, password, name, role }) {
+  const { data, error } = await client.functions.invoke("admin-create-user", {
+    body: { email, password, name, role },
+  });
+  if (error) throw error;
+  if (!data?.ok) throw new Error(data?.message || "Не удалось создать пользователя");
+  return data; // { ok, user_id, email }
+}
+
 async function adminFetchActivityLog(client, limit = 50) {
   const { data, error } = await client
     .from("activity_log")
@@ -774,6 +785,7 @@ const ACTIVITY_LABELS = {
   user_deleted:             { label: "Пользователь удалён",   color: "#f8a3a3", Icon: Trash2 },
   role_changed:             { label: "Изменена роль",         color: "#d4af37", Icon: ShieldCheck },
   password_reset_by_admin:  { label: "Сброс пароля админом",  color: "#f3d77b", Icon: KeyRound },
+  user_created_by_admin:    { label: "Пользователь создан админом", color: "#6ee7a8", Icon: UserPlus },
   // проект
   project_created:          { label: "Проект создан",         color: "#6ee7a8", Icon: FolderKanban },
   project_renamed:          { label: "Проект переименован",   color: "var(--text-secondary)", Icon: Pencil },
@@ -8183,6 +8195,22 @@ function AdminPage({ profile, client, showToast }) {
   const [resetPwd, setResetPwd] = useState("");
   const [resetPwd2, setResetPwd2] = useState("");
 
+  // admin: создать пользователя
+  const [nu, setNu] = useState({ email: "", name: "", password: "", role: "client" });
+  const [nuBusy, setNuBusy] = useState(false);
+  const submitNewUser = async () => {
+    const errs = validateNewUser(nu);
+    if (errs.length) { showToast("Проверь: " + errs.join(", "), "error"); return; }
+    setNuBusy(true);
+    try {
+      const r = await adminCreateUser(client, nu);
+      showToast(`Пользователь создан — выдай логин: ${r.email}`);
+      setNu({ email: "", name: "", password: "", role: "client" });
+    } catch (e) {
+      showToast("Ошибка: " + (e.message || ""), "error");
+    } finally { setNuBusy(false); }
+  };
+
   const reload = async () => {
     setLoading(true);
     try {
@@ -8446,6 +8474,23 @@ function AdminPage({ profile, client, showToast }) {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Форма «Создать пользователя» — видна только в разделе users */}
+      {section === "users" && (
+        <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 8, padding: 14, borderRadius: 12,
+          background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+          <span style={{ fontSize: 13, color: "var(--text-tertiary)" }}>Создать пользователя</span>
+          <input placeholder="email" value={nu.email} onChange={e => setNu({ ...nu, email: e.target.value })} />
+          <input placeholder="имя" value={nu.name} onChange={e => setNu({ ...nu, name: e.target.value })} />
+          <input placeholder="пароль (≥8)" type="text" value={nu.password} onChange={e => setNu({ ...nu, password: e.target.value })} />
+          <select value={nu.role} onChange={e => setNu({ ...nu, role: e.target.value })}>
+            <option value="client">Заказчик</option>
+            <option value="employee">Сотрудник</option>
+          </select>
+          <button className={BTN.primary} disabled={nuBusy} onClick={submitNewUser}
+            style={{ opacity: nuBusy ? 0.6 : 1 }}>{nuBusy ? "Создаю…" : "Создать"}</button>
         </div>
       )}
 
