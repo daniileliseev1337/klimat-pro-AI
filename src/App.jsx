@@ -7323,6 +7323,15 @@ function ClientProjectTasksModal({ order, client, showToast, onClose, onChanged 
   );
 }
 
+// TODO Task 8 — заглушка: заменить на реальный ClientDashboard
+const ClientDashboard = () => <div style={{ padding: 24, color: "#cfcfca" }}>Дашборд заказчика — заглушка (Task 8)</div>;
+// TODO Task 5 — заглушка: заменить на реальный ClientProjects
+const ClientProjects = () => <div style={{ padding: 24, color: "#cfcfca" }}>Проекты заказчика — заглушка (Task 5)</div>;
+// TODO Task 6 — заглушка: заменить на реальный ClientTasks
+const ClientTasks = () => <div style={{ padding: 24, color: "#cfcfca" }}>Задачи заказчика — заглушка (Task 6)</div>;
+// TODO Task 7 — заглушка: заменить на реальный ClientFinance
+const ClientFinance = () => <div style={{ padding: 24, color: "#cfcfca" }}>Финансы заказчика — заглушка (Task 7)</div>;
+
 function ClientOrdersPage({ orders, client, profile, showToast, onChanged }) {
   const [creating, setCreating] = useState(false);
   const [openOrder, setOpenOrder] = useState(null);
@@ -9158,7 +9167,12 @@ export default function App() {
         { id: "analytics", label: "Аналитика", Icon: BarChart3 },
       ]
     : clientView
-    ? [{ id: "myorders", label: "Мои заказы", Icon: Package }]
+    ? [
+        { id: "dashboard", label: "Дашборд", Icon: LayoutDashboard },
+        { id: "projects",  label: "Проекты",  Icon: FolderKanban },
+        { id: "tasks",     label: "Задачи",   Icon: ListTodo },
+        { id: "finance",   label: "Финансы",  Icon: Receipt },
+      ]
     : [
     { id: "dashboard", label: "Дашборд",   Icon: LayoutDashboard },
     { id: "projects",  label: "Проекты",   Icon: FolderKanban },
@@ -9273,7 +9287,7 @@ export default function App() {
             )}
             {/* Система ролей Ф1: переключатель вида (если есть рабочая роль и роль заказчика) */}
             {canSwitchView && (
-              <button onClick={() => { const m = viewMode === "client" ? "work" : "client"; setViewMode(m); try { localStorage.setItem("km_view_mode", m); } catch {} ; setTab(m === "client" ? "myorders" : "dashboard"); }}
+              <button onClick={() => { const m = viewMode === "client" ? "work" : "client"; setViewMode(m); try { localStorage.setItem("km_view_mode", m); } catch {} ; setTab(m === "client" ? "dashboard" : "dashboard"); }}
                 title="Переключить вид: кабинет сотрудника / портал заказчика"
                 style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600, background: "rgba(212,175,55,0.10)", border: "1px solid rgba(212,175,55,0.30)", color: "#d4af37" }}>
                 {viewMode === "client" ? "Портал заказчика" : "Кабинет сотрудника"}
@@ -9522,7 +9536,17 @@ export default function App() {
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
           >
-            {isVisitor ? <VisitorEmptyTab tab={effectiveTab} /> : <>
+            {isVisitor ? <VisitorEmptyTab tab={effectiveTab} /> : clientView ? (
+              /* Изолированная зона заказчика — сотрудничьи компоненты не монтируются */
+              <>
+                {effectiveTab === "dashboard" && <ClientDashboard />}
+                {effectiveTab === "projects"  && <ClientProjects />}
+                {effectiveTab === "tasks"     && <ClientTasks />}
+                {effectiveTab === "finance"   && <ClientFinance />}
+                {/* myorders-ветка сохранена (не удалять до Task 5) */}
+                {effectiveTab === "myorders"  && <ClientOrdersPage orders={clientProjects} client={supabase} profile={profile} showToast={showToast} onChanged={async () => { try { setClientProjects(await fetchMyClientProjects(supabase)); } catch (e) {} }} />}
+              </>
+            ) : <>
             {effectiveTab === "dashboard" && <Dashboard projects={projects} txs={txs} tasks={tasks} onDrillStage={(stage) => { setPendingStageFilter(stage); setTab("projects"); }} sharesByProject={sharesByProject} myShares={myShares} ownerId={profile.id} paymentsByProject={paymentsByProject} />}
             {effectiveTab === "projects" && <Projects projects={projects} setProjects={setProjects} clients={clients} client={supabase} profile={profile} ownerId={profile.id} showToast={showToast} initialStageFilter={pendingStageFilter} sharesByProject={sharesByProject} setSharesByProject={setSharesByProject} pendingProjectId={pendingProjectId} onProjectOpened={() => setPendingProjectId(null)} setPaymentsByProject={setPaymentsByProject} onMakeReport={(sel)=>{ setReportProjects(sel); setReportModal(true); }} />}
             {effectiveTab === "tasks" && <TasksView client={supabase} profile={profile} projects={projects} showToast={showToast} />}
