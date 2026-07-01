@@ -5,6 +5,7 @@ import { diffLines } from "./lib/lineDiff";
 import { isPushSupported, getPushState, enablePush, disablePush } from "./lib/push";
 import { periodRange, prevPeriodRange, granularityFor, periodBalance, trendDir, financeSeries, expenseByCategory, receivables, myTasks, ownerReceived, mySharesTotals, myProjectIncomeForMonth, selectionTotals, projectIncomeTxs, viewerShareOnProject, portfolioMineTotal } from "./lib/dashboardMetrics";
 import { dueState, dueSuffix, DUE_COLORS, PRIORITY_ORDER, tasksAttention } from "./lib/taskUi.js";
+import { projectRemaining } from "./lib/clientMetrics.js";
 import NotificationBell from "./components/NotificationBell";
 import MagneticButton from "./components/MagneticButton";
 import CommandPalette from "./components/CommandPalette";
@@ -7325,8 +7326,94 @@ function ClientProjectTasksModal({ order, client, showToast, onClose, onChanged 
 
 // TODO Task 8 — заглушка: заменить на реальный ClientDashboard
 const ClientDashboard = () => <div style={{ padding: 24, color: "#cfcfca" }}>Дашборд заказчика — заглушка (Task 8)</div>;
-// TODO Task 5 — заглушка: заменить на реальный ClientProjects
-const ClientProjects = () => <div style={{ padding: 24, color: "#cfcfca" }}>Проекты заказчика — заглушка (Task 5)</div>;
+// Task 5 — вкладка «Проекты» заказчика (на базе ClientOrdersPage)
+function ClientProjects({ orders, client, profile, showToast, onChanged }) {
+  const [creating, setCreating] = useState(false);
+  const [openOrder, setOpenOrder] = useState(null);
+  const [pending, setPending] = useState([]);
+  const money = n => (Number(n) || 0).toLocaleString("ru-RU");
+
+  const reloadPending = () => {
+    fetchProjectRequests(client)
+      .then(rs => setPending(rs.filter(r =>
+        (!profile || r.createdBy === profile.id) && (r.status === "Новая" || r.status === "Отклонена"))))
+      .catch(() => setPending([]));
+  };
+  useEffect(() => { reloadPending(); /* eslint-disable-next-line */ }, []);
+  const afterCreate = () => { onChanged?.(); reloadPending(); };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 13, color: "var(--text-tertiary)" }}>Мои проекты</span>
+        <button className={BTN.primary} onClick={() => setCreating(true)}>+ Создать проект</button>
+      </div>
+
+      {pending.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {pending.map(r => {
+            const rejected = r.status === "Отклонена";
+            return (
+              <div key={r.id} style={{ padding: "12px 14px", borderRadius: 12,
+                background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.12)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: "#d8d8d6" }}>{r.name}</span>
+                  <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 20,
+                    background: rejected ? "rgba(248,163,163,0.12)" : "rgba(168,168,168,0.12)",
+                    color: rejected ? "#f8a3a3" : "var(--text-secondary)" }}>
+                    {rejected ? "✗ Отклонена" : "⏳ На рассмотрении"}
+                  </span>
+                </div>
+                <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginTop: 6, fontSize: 12, color: "var(--text-tertiary)" }}>
+                  <span>{r.assignmentMode === "assignee" ? "👤 Выбран исполнитель" : "🔍 Маркетплейс"}</span>
+                  <span>Режим: {r.mode === "detailed" ? "подробный" : "быстрый"}</span>
+                  {r.desiredDeadline && <span>Срок: {r.desiredDeadline}</span>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {!orders?.length && !pending.length && <Empty text="Проектов пока нет — создайте первый" />}
+
+      {orders?.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {orders.map(o => (
+            <div key={o.id} onClick={() => setOpenOrder(o)} style={{ padding: "14px 16px", borderRadius: 12, background: "#141414",
+              border: "1px solid rgba(255,255,255,0.05)", cursor: "pointer" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 15, fontWeight: 600, color: "#fafaf7" }}>{o.name}</span>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  {o.openTaskCount > 0 && (
+                    <span title="Задачи требуют внимания" style={{ fontSize: 12, padding: "3px 9px", borderRadius: 20,
+                      background: "rgba(243,215,123,0.15)", color: "#f3d77b", fontWeight: 600 }}>● {o.openTaskCount}</span>
+                  )}
+                  <span style={{ fontSize: 12, padding: "3px 10px", borderRadius: 20,
+                    background: "rgba(212,175,55,0.15)", color: "#d4af37" }}>{o.stage}</span>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 18, flexWrap: "wrap", marginTop: 10, fontSize: 13, color: "var(--text-secondary)" }}>
+                <span>Договор: <b style={{ color: "#fafaf7" }}>{money(o.contractSum)} ₽</b></span>
+                <span>Оплачено: <b style={{ color: "#6ee7a8" }}>{money(o.paidAmount)} ₽</b></span>
+                <span>Остаток: <b style={{ color: "#f3d77b" }}>{money(projectRemaining(o))} ₽</b></span>
+              </div>
+              <div style={{ display: "flex", gap: 18, flexWrap: "wrap", marginTop: 6, fontSize: 12, color: "var(--text-tertiary)" }}>
+                {o.deadline && <span>Срок: {o.deadline}</span>}
+                {o.executor && <span>Исполнитель: {o.executor}</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {creating && <CreateRequestModal client={client} showToast={showToast}
+        onClose={() => setCreating(false)} onCreated={afterCreate} />}
+      {openOrder && <ClientProjectTasksModal order={openOrder} client={client} showToast={showToast}
+        onClose={() => setOpenOrder(null)} onChanged={onChanged} />}
+    </div>
+  );
+}
 // TODO Task 6 — заглушка: заменить на реальный ClientTasks
 const ClientTasks = () => <div style={{ padding: 24, color: "#cfcfca" }}>Задачи заказчика — заглушка (Task 6)</div>;
 // TODO Task 7 — заглушка: заменить на реальный ClientFinance
@@ -9540,7 +9627,7 @@ export default function App() {
               /* Изолированная зона заказчика — сотрудничьи компоненты не монтируются */
               <>
                 {effectiveTab === "dashboard" && <ClientDashboard />}
-                {effectiveTab === "projects"  && <ClientProjects />}
+                {effectiveTab === "projects"  && <ClientProjects orders={clientProjects} client={supabase} profile={profile} showToast={showToast} onChanged={async () => { try { setClientProjects(await fetchMyClientProjects(supabase)); } catch (e) {} }} />}
                 {effectiveTab === "tasks"     && <ClientTasks />}
                 {effectiveTab === "finance"   && <ClientFinance />}
                 {/* myorders-ветка сохранена (не удалять до Task 5) */}
