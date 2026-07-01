@@ -7418,96 +7418,8 @@ function ClientProjects({ orders, client, profile, showToast, onChanged }) {
 const ClientTasks = () => <div style={{ padding: 24, color: "#cfcfca" }}>Задачи заказчика — заглушка (Task 6)</div>;
 // TODO Task 7 — заглушка: заменить на реальный ClientFinance
 const ClientFinance = () => <div style={{ padding: 24, color: "#cfcfca" }}>Финансы заказчика — заглушка (Task 7)</div>;
-
-function ClientOrdersPage({ orders, client, profile, showToast, onChanged }) {
-  const [creating, setCreating] = useState(false);
-  const [openOrder, setOpenOrder] = useState(null);
-  const [pending, setPending] = useState([]);
-  const money = n => (Number(n) || 0).toLocaleString("ru-RU");
-
-  // Заявки заказчика, ещё не материализованные в проект (на рассмотрении / отклонённые).
-  // Принятые уже приходят как реальные проекты в orders — здесь не дублируем.
-  const reloadPending = () => {
-    fetchProjectRequests(client)
-      .then(rs => setPending(rs.filter(r =>
-        (!profile || r.createdBy === profile.id) && (r.status === "Новая" || r.status === "Отклонена"))))
-      .catch(() => setPending([]));
-  };
-  useEffect(() => { reloadPending(); /* eslint-disable-next-line */ }, []);
-  const afterCreate = () => { onChanged?.(); reloadPending(); };
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 13, color: "var(--text-tertiary)" }}>Мои заказы</span>
-        <button className={BTN.primary} onClick={() => setCreating(true)}>+ Создать проект</button>
-      </div>
-
-      {pending.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {pending.map(r => {
-            const rejected = r.status === "Отклонена";
-            return (
-              <div key={r.id} style={{ padding: "12px 14px", borderRadius: 12,
-                background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.12)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 14, fontWeight: 600, color: "#d8d8d6" }}>{r.name}</span>
-                  <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 20,
-                    background: rejected ? "rgba(248,163,163,0.12)" : "rgba(168,168,168,0.12)",
-                    color: rejected ? "#f8a3a3" : "var(--text-secondary)" }}>
-                    {rejected ? "✗ Отклонена" : "⏳ На рассмотрении"}
-                  </span>
-                </div>
-                <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginTop: 6, fontSize: 12, color: "var(--text-tertiary)" }}>
-                  <span>{r.assignmentMode === "assignee" ? "👤 Выбран исполнитель" : "🔍 Маркетплейс"}</span>
-                  <span>Режим: {r.mode === "detailed" ? "подробный" : "быстрый"}</span>
-                  {r.desiredDeadline && <span>Срок: {r.desiredDeadline}</span>}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {!orders?.length && !pending.length && <Empty text="Заказов пока нет — создайте первый проект" />}
-
-      {orders?.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {orders.map(o => (
-            <div key={o.id} onClick={() => setOpenOrder(o)} style={{ padding: "14px 16px", borderRadius: 12, background: "#141414",
-              border: "1px solid rgba(255,255,255,0.05)", cursor: "pointer" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                <span style={{ fontSize: 15, fontWeight: 600, color: "#fafaf7" }}>{o.name}</span>
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  {o.openTaskCount > 0 && (
-                    <span title="Задачи требуют внимания" style={{ fontSize: 12, padding: "3px 9px", borderRadius: 20,
-                      background: "rgba(243,215,123,0.15)", color: "#f3d77b", fontWeight: 600 }}>● {o.openTaskCount}</span>
-                  )}
-                  <span style={{ fontSize: 12, padding: "3px 10px", borderRadius: 20,
-                    background: "rgba(212,175,55,0.15)", color: "#d4af37" }}>{o.stage}</span>
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: 18, flexWrap: "wrap", marginTop: 10, fontSize: 13, color: "var(--text-secondary)" }}>
-                <span>Договор: <b style={{ color: "#fafaf7" }}>{money(o.contractSum)} ₽</b></span>
-                <span>Оплачено: <b style={{ color: "#6ee7a8" }}>{money(o.paidAmount)} ₽</b></span>
-                <span>Остаток: <b style={{ color: "#f3d77b" }}>{money((o.contractSum || 0) - (o.paidAmount || 0))} ₽</b></span>
-              </div>
-              <div style={{ display: "flex", gap: 18, flexWrap: "wrap", marginTop: 6, fontSize: 12, color: "var(--text-tertiary)" }}>
-                {o.deadline && <span>Срок: {o.deadline}</span>}
-                {o.executor && <span>Исполнитель: {o.executor}</span>}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {creating && <CreateRequestModal client={client} showToast={showToast}
-        onClose={() => setCreating(false)} onCreated={afterCreate} />}
-      {openOrder && <ClientProjectTasksModal order={openOrder} client={client} showToast={showToast}
-        onClose={() => setOpenOrder(null)} onChanged={onChanged} />}
-    </div>
-  );
-}
+// Алиас: оба сценария (вкладка «Проекты» заказчика + myorders) используют один компонент
+const ClientOrdersPage = ClientProjects;
 
 // ════════════════════════════════════════════════════════════════════════════
 // CLIENTS PAGE — вкладка "Заказчики" (v1.5)
@@ -9630,7 +9542,7 @@ export default function App() {
                 {effectiveTab === "projects"  && <ClientProjects orders={clientProjects} client={supabase} profile={profile} showToast={showToast} onChanged={async () => { try { setClientProjects(await fetchMyClientProjects(supabase)); } catch (e) {} }} />}
                 {effectiveTab === "tasks"     && <ClientTasks />}
                 {effectiveTab === "finance"   && <ClientFinance />}
-                {/* myorders-ветка сохранена (не удалять до Task 5) */}
+                {/* myorders — два активных использования (заказчик + сотрудник-гибрид) */}
                 {effectiveTab === "myorders"  && <ClientOrdersPage orders={clientProjects} client={supabase} profile={profile} showToast={showToast} onChanged={async () => { try { setClientProjects(await fetchMyClientProjects(supabase)); } catch (e) {} }} />}
               </>
             ) : <>
