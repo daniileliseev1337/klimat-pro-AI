@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { clientTotals, attentionTasks, paymentsByProject, projectRemaining } from './clientMetrics.js';
 
 const projects = [
-  { id:'a', name:'A', stage:'В работе', contract_sum:100, paid_amount:40, open_task_count:2 },
-  { id:'b', name:'B', stage:'Оплачен',  contract_sum:50,  paid_amount:50, open_task_count:0 },
+  { id:'a', name:'A', stage:'В работе', contractSum:100, paidAmount:40, openTaskCount:2 },
+  { id:'b', name:'B', stage:'Оплачен',  contractSum:50,  paidAmount:50, openTaskCount:0 },
 ];
 const tasks = [
   { id:'t1', title:'x', status:'В работе',   project_id:'a' },
@@ -21,8 +21,8 @@ describe('clientMetrics', () => {
     });
   });
   it('projectRemaining: договор минус оплачено, не ниже нуля', () => {
-    expect(projectRemaining({ contract_sum:100, paid_amount:40 })).toBe(60);
-    expect(projectRemaining({ contract_sum:30,  paid_amount:50 })).toBe(0);
+    expect(projectRemaining({ contractSum:100, paidAmount:40 })).toBe(60);
+    expect(projectRemaining({ contractSum:30,  paidAmount:50 })).toBe(0);
   });
   it('attentionTasks: только На проверке', () => {
     expect(attentionTasks(tasks).map(t => t.id)).toEqual(['t2']);

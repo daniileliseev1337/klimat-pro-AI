@@ -3,16 +3,16 @@
 const CLOSED_STAGES = ['Оплачен', 'Архив'];
 
 export function projectRemaining(p) {
-  return Math.max(0, (+p.contract_sum || 0) - (+p.paid_amount || 0));
+  return Math.max(0, (+p.contractSum || 0) - (+p.paidAmount || 0));
 }
 
 export function clientTotals(projects = []) {
   return projects.reduce((acc, p) => {
     const closed = CLOSED_STAGES.includes(p.stage);
-    acc.totalContract += (+p.contract_sum || 0);
-    acc.totalPaid     += (+p.paid_amount  || 0);
+    acc.totalContract += (+p.contractSum || 0);
+    acc.totalPaid     += (+p.paidAmount  || 0);
     acc.totalRemaining += projectRemaining(p);
-    acc.openTasks     += (+p.open_task_count || 0);
+    acc.openTasks     += (+p.openTaskCount || 0);
     if (!closed) acc.activeCount += 1;
     return acc;
   }, { activeCount:0, totalContract:0, totalPaid:0, totalRemaining:0, openTasks:0 });
