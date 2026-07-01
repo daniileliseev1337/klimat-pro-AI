@@ -8902,6 +8902,18 @@ export default function App() {
             setMyRoles(rl);
             const visitor = rl.includes("visitor") && !rl.includes("employee") && !rl.includes("client");
             if (visitor) { setPhase("ready"); return; }
+            // §7: клиент-only не зовёт общие employee-данные (projects/txs/clients/tasks) — только свою проекцию.
+            const clientOnly = rl.includes("client") && !rl.includes("employee") && prof.role !== "admin";
+            if (clientOnly) {
+              const [cp, icr] = await Promise.all([
+                fetchMyClientProjects(supabase).catch(() => []),
+                amIClient(supabase).catch(() => false),
+              ]);
+              setClientProjects(cp);
+              setHasClientRole(icr);
+              setPhase("ready");
+              return;
+            }
             const [p, t, cl, tk, sh, ms, pb, cp, icr] = await Promise.all([
               fetchProjects(supabase).catch(() => []),
               fetchTransactions(supabase).catch(() => []),
@@ -8972,6 +8984,19 @@ export default function App() {
       setMyRoles(rl);
       const visitor = rl.includes("visitor") && !rl.includes("employee") && !rl.includes("client");
       if (visitor) { setPhase("ready"); showToast("Демо-режим посетителя"); return; }
+      // §7: клиент-only — только своя проекция, без общих employee-запросов.
+      const clientOnly = rl.includes("client") && !rl.includes("employee") && prof.role !== "admin";
+      if (clientOnly) {
+        const [cp, icr] = await Promise.all([
+          fetchMyClientProjects(supabase).catch(() => []),
+          amIClient(supabase).catch(() => false),
+        ]);
+        setClientProjects(cp);
+        setHasClientRole(icr);
+        setPhase("ready");
+        showToast(`Добро пожаловать, ${prof.name || prof.email.split("@")[0]}!`);
+        return;
+      }
       const [p, t, cl, tk, sh, ms, pb, cp, icr] = await Promise.all([
         fetchProjects(supabase),
         fetchTransactions(supabase),
