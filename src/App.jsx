@@ -9467,6 +9467,7 @@ export default function App() {
           else if (it.kind === "project") { setPendingProjectId(it.id); setTab("projects"); }
           else if (it.kind === "task") setTab("tasks");
           else if (it.kind === "order") setTab("myorders");
+          else if (it.kind === "help") setHelpOpen(true);
         }} />
 
       {/* Вся верхняя зона (шапка + вкладки) прилипает как единый блок — top вкладок

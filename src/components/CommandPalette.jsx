@@ -29,6 +29,9 @@ export default function CommandPalette({ open, onClose, projects = [], tasks = [
       .filter(s => s.id !== "myorders" || hasClientRole)
       .filter(s => !ql || s.label.toLowerCase().includes(ql))
       .forEach(s => out.push({ kind: "section", id: s.id, label: s.label, hint: "Раздел" }));
+    if (!ql || "помощь возможности справка help".includes(ql)) {
+      out.push({ kind: "help", id: "help", label: "Помощь и возможности", hint: "Справка" });
+    }
     if (ql) {
       if (!restricted) {
         projects.filter(p => (p.name || "").toLowerCase().includes(ql)).slice(0, 6)
