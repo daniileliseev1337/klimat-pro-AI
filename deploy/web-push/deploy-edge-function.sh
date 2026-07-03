@@ -2,7 +2,7 @@
 # Деплой edge-функции web-push-notify в self-hosted Supabase.
 # config.json (VAPID private) кладётся отдельно (НЕ в git) — см. config.example.json.
 set -euo pipefail
-SRC="/mnt/f/Сайт/redesign-v2-fresh/deploy/web-push/functions/web-push-notify"
+SRC="$(cd "$(dirname "$0")/functions/web-push-notify" && pwd)"
 DST="/srv/supabase-src/docker/volumes/functions/web-push-notify"
 mkdir -p "$DST"
 cp "$SRC/index.ts" "$DST/index.ts"
