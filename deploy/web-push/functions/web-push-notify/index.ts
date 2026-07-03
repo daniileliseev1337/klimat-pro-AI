@@ -25,6 +25,23 @@ function rest(path: string, init?: RequestInit): Promise<Response> {
   });
 }
 
+// Гейт (m6): функция торчит в интернет через kong без key-auth — пускаем только:
+// (а) pg_cron с заголовком X-Push-Secret == pushSecret из config.json (тот же секрет в vault);
+// (б) живой user-JWT (фронт: supabase-js шлёт Authorization сам) — валидация через GoTrue.
+async function authorized(req: Request): Promise<boolean> {
+  const secret = (cfg as { pushSecret?: string }).pushSecret;
+  const got = req.headers.get("x-push-secret");
+  if (secret && got === secret) return true;
+  const auth = req.headers.get("authorization") ?? "";
+  if (!/^Bearer .+/.test(auth)) return false;
+  const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    headers: { apikey: SERVICE_KEY, Authorization: auth },
+  });
+  if (!r.ok) return false;
+  const u = await r.json().catch(() => null);
+  return typeof u?.id === "string"; // именно user-токен: у anon/service нет пользователя
+}
+
 // VAPID application server (один раз на холодный старт isolate)
 const vapidKeys = await webpush.importVapidKeys(cfg.vapidKeys);
 const appServer = await webpush.ApplicationServer.new({
@@ -141,6 +158,7 @@ async function loadTask(taskId: string) {
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+  if (!(await authorized(req))) return j({ error: "unauthorized" }, 401);
   const b = await req.json().catch(() => ({} as Record<string, unknown>));
   const type = b.type as string | undefined;
   const initiator = b.initiatorId as string | undefined;

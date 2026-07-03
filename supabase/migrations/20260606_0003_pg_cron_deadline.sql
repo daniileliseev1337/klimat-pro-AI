@@ -7,6 +7,7 @@ create extension if not exists pg_net;
 -- (грабля self-hosted supabase#44907: только внутренний kong, НЕ cloud/localhost).
 -- Edge-функция web-push-notify не требует JWT (FUNCTIONS_VERIFY_JWT off) и вызывается
 -- по внутренней docker-сети — Authorization не нужен.
+-- УСТАРЕЛО с 20260703_0002: джоб пересоздан там же с обязательным заголовком X-Push-Secret.
 select cron.unschedule('web-push-deadline')
   where exists (select 1 from cron.job where jobname = 'web-push-deadline');
 

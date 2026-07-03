@@ -11,6 +11,9 @@ build/
 .env.*.local
 .env.production
 
+# Секреты edge-функций (VAPID private, pushSecret) — в репо только config.example.json
+deploy/*/functions/**/config.json
+
 # Lock-файл — по решению команды (если коммитим — убрать)
 # package-lock.json
 

@@ -1,4 +1,5 @@
 {
   "subject": "mailto:CHANGE_ME@example.com",
-  "vapidKeys": { "publicKey": "", "privateKey": "" }
+  "vapidKeys": { "publicKey": "", "privateKey": "" },
+  "pushSecret": "hex из `openssl rand -hex 32`; тот же секрет — в vault под именем web_push_secret"
 }
