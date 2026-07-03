@@ -3,7 +3,7 @@ import { HelpCircle, X } from "lucide-react";
 
 // Раздел «Помощь / Возможности»: список доступных пользователю разделов с описанием и «как открыть».
 // Фильтрацию секций по роли делает App (передаёт готовый sections) — здесь только отрисовка.
-export default function HelpModal({ sections = [], onClose }) {
+export default function HelpModal({ sections = [], onClose, onStartTour }) {
   return createPortal(
     <div onClick={onClose} style={{
       position: "fixed", inset: 0, zIndex: 200, background: "rgba(8,9,15,0.80)",
@@ -20,6 +20,13 @@ export default function HelpModal({ sections = [], onClose }) {
           borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
           <HelpCircle size={20} color="var(--gold, #d4af37)" />
           <span style={{ fontSize: 16, fontWeight: 600, color: "#fafaf7", flex: 1 }}>Возможности и помощь</span>
+          {onStartTour && (
+            <button onClick={onStartTour}
+              style={{ padding: "5px 12px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600,
+                background: "rgba(212,175,55,0.12)", border: "1px solid rgba(212,175,55,0.30)", color: "#d4af37" }}>
+              Пройти тур
+            </button>
+          )}
           <button onClick={onClose} aria-label="Закрыть"
             style={{ background: "none", border: "none", cursor: "pointer", color: "#9a9a95", padding: 4 }}>
             <X size={18} />

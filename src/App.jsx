@@ -11,7 +11,8 @@ import NotificationBell from "./components/NotificationBell";
 import MagneticButton from "./components/MagneticButton";
 import CommandPalette from "./components/CommandPalette";
 import HelpModal from "./components/HelpModal";
-import { helpSectionsFor } from "./lib/helpContent";
+import TourModal from "./components/TourModal";
+import { helpSectionsFor, shouldAutoStartTour } from "./lib/helpContent";
 import BackgroundCanvas from "./components/BackgroundCanvas";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -9144,6 +9145,12 @@ export default function App() {
   const [backupModal, setBackupModal] = useState(false);
   const [profileModal, setProfileModal] = useState(false); // v1.5
   const [helpOpen, setHelpOpen] = useState(false); // онбординг: раздел «Помощь»
+  const [tourOpen, setTourOpen] = useState(false); // онбординг-тур (Этап 2)
+
+  const closeTour = () => {
+    try { localStorage.setItem("kp-tour-seen", "1"); } catch {}
+    setTourOpen(false);
+  };
 
   const [toast, setToast] = useState({ visible: false, text: "", type: "success" });
   const toastTimer = useRef(null);
@@ -9257,6 +9264,14 @@ export default function App() {
     });
     return () => subscription?.unsubscribe?.();
   }, []);
+
+  // ── Авто-старт тура при первом входе ───────────────────────────────────
+  useEffect(() => {
+    if (phase !== "ready") return;
+    let seen = "1";
+    try { seen = localStorage.getItem("kp-tour-seen"); } catch {}
+    if (shouldAutoStartTour(seen)) setTourOpen(true);
+  }, [phase]);
 
   // ── Обработчик успешной авторизации ────────────────────────────────────
   const handleAuthenticated = async (u, prof) => {
@@ -9873,7 +9888,11 @@ export default function App() {
         onProfileUpdated={(p) => setProfile(p)}
         showToast={showToast}
       />}
-      {helpOpen && <HelpModal sections={helpSectionsFor(TABS.map((t) => t.id))} onClose={() => setHelpOpen(false)} />}
+      {helpOpen && <HelpModal
+        sections={helpSectionsFor(TABS.map((t) => t.id))}
+        onClose={() => setHelpOpen(false)}
+        onStartTour={() => { setHelpOpen(false); setTourOpen(true); }} />}
+      {tourOpen && <TourModal sections={helpSectionsFor(TABS.map((t) => t.id))} onClose={closeTour} />}
     </div>
   );
 }
