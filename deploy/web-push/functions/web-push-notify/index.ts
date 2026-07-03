@@ -356,6 +356,8 @@ Deno.serve(async (req: Request) => {
     }
 
     // --- смена стадии проекта → заказчику ---
+    // notif_deadline переиспользуем осознанно: отдельный notif_client не заводим (YAGNI),
+    // заказчик регулирует уведомления общими флагами как обычный пользователь.
     if (type === "client_stage_changed") {
       const pid = b.projectId as string | undefined;
       if (!pid || !UUID.test(pid)) return j({ error: "valid projectId (uuid) required" }, 400);

@@ -1062,6 +1062,7 @@ async function setFileClientVisible(client, fileId, visible) {
   // при показе файла заказчику — уведомить его (best-effort)
   if (visible) {
     try {
+      // если файл не найден под RLS — push пропускаем (best-effort, не блокирует пометку)
       const { data: prj } = await client.from("project_files").select("project_id").eq("id", fileId).single();
       if (prj?.project_id) await client.functions.invoke("web-push-notify", {
         body: { type: "client_new_file", projectId: prj.project_id, initiatorId: (await client.auth.getUser()).data.user?.id },
@@ -7376,7 +7377,7 @@ function ClientChat({ projectId, client, showToast }) {
     try { setMsgs(await fetchClientMessages(client, projectId)); }
     catch (e) { showToast("Ошибка переписки: " + (e.message || ""), "error"); setMsgs([]); }
   };
-  useEffect(() => { reload(); /* eslint-disable-next-line */ }, [projectId]);
+  useEffect(() => { setText(""); setBusy(false); reload(); /* eslint-disable-next-line */ }, [projectId]);
   const send = async () => {
     const body = text.trim();
     if (!body) return;

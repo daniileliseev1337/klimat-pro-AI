@@ -59,10 +59,10 @@ returns uuid
 language plpgsql security definer set search_path = public, pg_temp as $$
 declare v_id uuid; v_body text := btrim(p_body);
 begin
+  if not public.is_approved() then raise exception 'not approved'; end if;
   if not (public.is_project_client(p_project_id) or public.can_access_project_comments(p_project_id)) then
     raise exception 'access denied';
   end if;
-  if not public.is_approved() then raise exception 'not approved'; end if;
   if length(v_body) not between 1 and 4000 then raise exception 'body length 1..4000'; end if;
   insert into public.client_messages(project_id, author_id, body)
     values (p_project_id, auth.uid(), v_body) returning id into v_id;
