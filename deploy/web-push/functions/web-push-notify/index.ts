@@ -85,6 +85,18 @@ async function projectOwner(projectId: string | null): Promise<string | null> {
   return Array.isArray(rows) && rows[0] ? rows[0].owner_id : null;
 }
 
+// user_id привязанного заказчика проекта (projects.client_id → clients.user_id)
+async function projectClientUser(projectId: string | null): Promise<string | null> {
+  if (!projectId) return null;
+  const r = await rest(`projects?id=eq.${projectId}&select=client_id`);
+  const pr = await r.json();
+  const cid = Array.isArray(pr) && pr[0] ? pr[0].client_id : null;
+  if (!cid) return null;
+  const cr = await rest(`clients?id=eq.${cid}&select=user_id`);
+  const cc = await cr.json();
+  return Array.isArray(cc) && cc[0] ? cc[0].user_id : null;
+}
+
 // имя проекта по id — для информативного body и ссылки в уведомлении
 async function projectName(projectId: string | null | undefined): Promise<string | null> {
   if (!projectId) return null;
@@ -301,6 +313,62 @@ Deno.serve(async (req: Request) => {
       const url = pid ? `/projects/${pid}` : "/";
       await insertInbox(base, { type: "project_published", title: "КЛИМАТ-ПРО", body, url });
       const ids = await recipients(base, undefined, "notif_new_project");
+      const sent = await sendToUsers(ids, { title: "КЛИМАТ-ПРО", body, url });
+      return j({ ok: true, sent, inbox: base.length });
+    }
+
+    // --- переписка с заказчиком (двусторонняя) ---
+    if (type === "client_message") {
+      const pid = b.projectId as string | undefined;
+      if (!pid || !UUID.test(pid)) return j({ error: "valid projectId (uuid) required" }, 400);
+      const clientUser = await projectClientUser(pid);
+      const fromClient = clientUser && clientUser === initiator; // писал заказчик?
+      let base: string[];
+      if (fromClient) { // → команде: owner + участники
+        const owner = await projectOwner(pid);
+        const members = await projectMembers(pid);
+        base = baseIds([owner, ...members], initiator);
+      } else {          // → заказчику
+        base = baseIds([clientUser], initiator);
+      }
+      const name = (await projectName(pid)) || "проект";
+      const body = `💬 Новое сообщение по проекту «${name}»`;
+      const url = `/projects/${pid}`;
+      await insertInbox(base, { type: "client_message", title: "КЛИМАТ-ПРО", body, url });
+      const ids = await recipients(base, undefined, "notif_comment");
+      const sent = await sendToUsers(ids, { title: "КЛИМАТ-ПРО", body, url });
+      return j({ ok: true, sent, inbox: base.length });
+    }
+
+    // --- новый файл, помеченный «для заказчика» → заказчику ---
+    if (type === "client_new_file") {
+      const pid = b.projectId as string | undefined;
+      if (!pid || !UUID.test(pid)) return j({ error: "valid projectId (uuid) required" }, 400);
+      const clientUser = await projectClientUser(pid);
+      const base = baseIds([clientUser], initiator);
+      const name = (await projectName(pid)) || "проект";
+      const body = `📎 Новый файл по проекту «${name}»`;
+      const url = `/projects/${pid}`;
+      await insertInbox(base, { type: "client_new_file", title: "КЛИМАТ-ПРО", body, url });
+      const ids = await recipients(base, undefined, "notif_comment");
+      const sent = await sendToUsers(ids, { title: "КЛИМАТ-ПРО", body, url });
+      return j({ ok: true, sent, inbox: base.length });
+    }
+
+    // --- смена стадии проекта → заказчику ---
+    // notif_deadline переиспользуем осознанно: отдельный notif_client не заводим (YAGNI),
+    // заказчик регулирует уведомления общими флагами как обычный пользователь.
+    if (type === "client_stage_changed") {
+      const pid = b.projectId as string | undefined;
+      if (!pid || !UUID.test(pid)) return j({ error: "valid projectId (uuid) required" }, 400);
+      const clientUser = await projectClientUser(pid);
+      const base = baseIds([clientUser], initiator);
+      const name = (await projectName(pid)) || "проект";
+      const stage = (b.stage as string) || "";
+      const body = `📈 Проект «${name}»: стадия ${stage}`;
+      const url = `/projects/${pid}`;
+      await insertInbox(base, { type: "client_stage_changed", title: "КЛИМАТ-ПРО", body, url });
+      const ids = await recipients(base, undefined, "notif_deadline");
       const sent = await sendToUsers(ids, { title: "КЛИМАТ-ПРО", body, url });
       return j({ ok: true, sent, inbox: base.length });
     }
