@@ -10,6 +10,8 @@ import { validateNewUser } from "./lib/userCreateValidation.js";
 import NotificationBell from "./components/NotificationBell";
 import MagneticButton from "./components/MagneticButton";
 import CommandPalette from "./components/CommandPalette";
+import HelpModal from "./components/HelpModal";
+import { helpSectionsFor } from "./lib/helpContent";
 import BackgroundCanvas from "./components/BackgroundCanvas";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -31,6 +33,8 @@ import {
   Paperclip, Download, HardDrive, FileImage, Lock, Unlock,
   // ── v6.4a: вкладка Задачи ──
   ListTodo,
+  // ── онбординг: кнопка «Помощь» в шапке ──
+  HelpCircle,
 } from "lucide-react";
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis,
@@ -9139,6 +9143,7 @@ export default function App() {
   const [reportProjects, setReportProjects] = useState(null); // null = все/фильтр по стадии; массив = отчёт по выбранным
   const [backupModal, setBackupModal] = useState(false);
   const [profileModal, setProfileModal] = useState(false); // v1.5
+  const [helpOpen, setHelpOpen] = useState(false); // онбординг: раздел «Помощь»
 
   const [toast, setToast] = useState({ visible: false, text: "", type: "success" });
   const toastTimer = useRef(null);
@@ -9462,6 +9467,7 @@ export default function App() {
           else if (it.kind === "project") { setPendingProjectId(it.id); setTab("projects"); }
           else if (it.kind === "task") setTab("tasks");
           else if (it.kind === "order") setTab("myorders");
+          else if (it.kind === "help") setHelpOpen(true);
         }} />
 
       {/* Вся верхняя зона (шапка + вкладки) прилипает как единый блок — top вкладок
@@ -9556,6 +9562,13 @@ export default function App() {
               {!isMobile && <span>Поиск</span>}
               <kbd>⌘K</kbd>
             </div>
+            {/* Кнопка «?» — онбординг: раздел «Помощь» */}
+            <button onClick={() => setHelpOpen(true)} title="Возможности и помощь"
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 34, height: 34,
+                borderRadius: 8, cursor: "pointer", background: "rgba(212,175,55,0.10)",
+                border: "1px solid rgba(212,175,55,0.30)", color: "#d4af37" }}>
+              <HelpCircle size={18} />
+            </button>
             {/* Колокольчик Центра уведомлений */}
             <NotificationBell
               client={supabase}
@@ -9860,6 +9873,7 @@ export default function App() {
         onProfileUpdated={(p) => setProfile(p)}
         showToast={showToast}
       />}
+      {helpOpen && <HelpModal sections={helpSectionsFor(TABS.map((t) => t.id))} onClose={() => setHelpOpen(false)} />}
     </div>
   );
 }
