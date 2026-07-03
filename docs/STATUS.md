@@ -7,9 +7,11 @@
 
 ## Прод
 - Живой: https://193-124-130-236.sslip.io — HTTP 200 снаружи (проверено exa) и на nginx :8080.
-- Версия: **6c28b4c** (merge онбординг-тура Этап 2, asset `index-CLg-ZLpJ.js`, задеплоен 03.07, HTTP 200 снаружи). GitHub origin/main = локальный main.
+- Версия: **992b8ae** (merge портала заказчика Фаз 2-3, asset `index-C9YMdGSS.js`, задеплоен 03.07,
+  сверено dist=nginx:8080=снаружи, HTTP 200; маркеры `get_client_messages`/`get_client_project_files` в бандле). GitHub origin/main = локальный main.
 - Тесты: 111/111 зелёные. Build зелёный (чанк 1.24 MB).
-- Edge `web-push-notify` — под dual-гейтом (verify `PUSH_GATE_OK` 03.07); `telegram-notify` удалена.
+- Edge `web-push-notify` — dual-гейт (verify `PUSH_GATE_OK`) + типы Фазы 3 (`client_message`/`client_new_file`/`client_stage_changed`); `telegram-notify` удалена.
+- БД: миграция `20260703_0003` применена (client_messages + client_visible + RPC), verify `MESSAGES_OK`+`FILES_OK`.
 - ⚠ Условие живости: VPN Happ должен держать Direct-правило `193.124.130.236/32` (см. CLAUDE.md, грабли).
 
 ## Готово (крупное, хронология свежего)
