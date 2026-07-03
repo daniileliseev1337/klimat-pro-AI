@@ -33,11 +33,12 @@
     взять из vault/настройки при применении). Деплой функции — ТОЛЬКО `cp` (кириллица, см. CLAUDE.md).
   - **telegram-notify: НЕ секретить, а УДАЛИТЬ** (m7): вызовов нет нигде (проверено грепом src+миграции),
     мёртвый код. Снести volume на edge-хосте + убрать deploy/tasks из репо. Гейт: живой edge-хост.
-- 🔧 **Онбординг-навигатор Этап 1**: ПЛАН ГОТОВ (4 задачи, TDD) —
-  docs/superpowers/plans/2026-07-03-onboarding-stage1-help-navigator.md. Спек: .../specs/2026-07-03-onboarding-navigator-design.md.
-  Следующий шаг: ИСПОЛНИТЬ план (helpContent.js → HelpModal.jsx → шапка → CommandPalette). Архитектура: фильтр справки
-  через allowedTabs (§1 бесплатно). Отклонение от спека: пункт «Помощь» в ProfileModal вынесен в follow-up.
-  Этап 2 (тур-coachmarks) — отдельная фича, позже.
+- 🟢 **Онбординг-навигатор Этап 1: CODE-COMPLETE в ветке `claude/great-perlman-cdce3c`** (не в main!).
+  4 задачи через subagent-driven-development, все task-review + финальный whole-branch review (opus) чистые.
+  Коммиты: e875b7d (helpContent.js+тест) · 4389765 (HelpModal.jsx) · 0e67f63 (шапка App.jsx) · 50a5215 (CommandPalette).
+  Тесты 109 passed, build green. §1 подтверждён сквозняком (ключи tab = id вкладок TABS, нулевой дрейф).
+  **ОСТАЛОСЬ по «го» владельца: merge ветки → main + деплой на прод.** Этап 2 (тур-coachmarks) и пункт «Помощь»
+  в ProfileModal — follow-up. План: docs/superpowers/plans/2026-07-03-onboarding-stage1-help-navigator.md.
 
 ## Дальше (бэклог приоритетный — порядок за владельцем)
 - 6.7 MCP-слой для Claude (последний этап ТЗ v3.0) — СВЯЗАН с «ИИ-модуль» (brainstorm ИИ-модуля до старта 6.7).
