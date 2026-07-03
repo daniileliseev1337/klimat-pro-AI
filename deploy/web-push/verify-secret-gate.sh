@@ -28,11 +28,13 @@ NUID=$(curl -s -X POST "$BASE/auth/v1/admin/users" -H "apikey: $SERVICE" -H "Aut
   -H "Content-Type: application/json" -d "{\"email\":\"$EMAIL\",\"password\":\"$PASS\",\"email_confirm\":true}" \
   | python3 -c 'import sys,json;print(json.load(sys.stdin).get("id",""))')
 [ -n "$NUID" ] || { echo "TEMP_USER_CREATE_FAIL"; exit 1; }
+# temp-юзер удаляется на ЛЮБОМ выходе (в т.ч. прерывание) — не оставляем orphan в auth.users
+cleanup() { $PSQL -c "delete from auth.users where id='$NUID';" >/dev/null 2>&1 || true; }
+trap cleanup EXIT
 TOKEN=$(curl -s -X POST "$BASE/auth/v1/token?grant_type=password" -H "apikey: $ANON" -H "Content-Type: application/json" \
   -d "{\"email\":\"$EMAIL\",\"password\":\"$PASS\"}" | python3 -c 'import sys,json;print(json.load(sys.stdin).get("access_token",""))')
 C=$(code -X POST "$URL" -H "apikey: $ANON" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"type":"__gate_check"}')
 echo "user-jwt: $C (ожидаем 200)"; [ "$C" = 200 ] || FAIL=1
-$PSQL -c "delete from auth.users where id='$NUID';" >/dev/null
 
 HAS=$($PSQL -c "select count(*) from cron.job where jobname='web-push-deadline' and command like '%X-Push-Secret%';")
 echo "cron header: $HAS (ожидаем 1)"; [ "$HAS" = 1 ] || FAIL=1
