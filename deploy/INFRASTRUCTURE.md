@@ -111,9 +111,11 @@ journalctl -u frpc -n 50
 - Фронт (`src/App.jsx`): вкладка «Задачи» (список+фильтры, доска с нативным drag-drop),
   модалка задачи, секция «Задачи проекта» в карточке проекта, флаг `notif_task` в настройках.
   Мутации — `.from('project_tasks')` под RLS; список — `get_tasks`; обновление refetch.
-- Telegram: Edge Function `telegram-notify` (типы `task_assigned/task_status/task_created`,
-  резолв адресатов под service_role, фильтр `notif_task`). **Требует `TELEGRAM_BOT_TOKEN`
-  в окружении edge-runtime — пока не задан, доставка не идёт** (см. долги).
+- Уведомления: Edge Function `telegram-notify` **удалена 03.07.2026 как мёртвый код** (вызовов
+  не было, `TELEGRAM_BOT_TOKEN` так и не задан). Актуальный канал — Web Push: `web-push-notify`
+  (`deploy/web-push/`), dual-гейт — валидный user-JWT ИЛИ заголовок `X-Push-Secret` (секрет
+  в vault `web_push_secret` и в config.json функции; cron-джоб шлёт заголовок, миграция
+  `20260703_0002`).
 - Применение/проверки: `deploy/tasks/apply-migrations.sh`, `deploy/tasks/verify-rls.sh`.
 
 ## Дальше (этап 6.4b)
