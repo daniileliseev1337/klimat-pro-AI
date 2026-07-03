@@ -144,3 +144,40 @@
 
 ### Новый «СЕЙЧАС» — за владельцем (приоритизация):
 Кандидаты: **6.7 MCP-слой** (закрыть ТЗ v3.0) · **ИИ-модуль + дизайн для компании** (нужен brainstorm) · **фазы 2-3 заказчика**. Порядок расставляет владелец.
+
+---
+
+## Обновление 2026-07-03 — детальный аудит сайта (Fable 5: 4 субагента + личная верификация)
+
+> Метод: 4 параллельных Explore-агента (карта фронта / supabase-слой / тесты+verify / деплой+сверка долгов),
+> каждая нетривиальная находка перепроверена по живому коду и рантайму (git, WSL, docker, journalctl). Датам
+> не верил — сверял с кодом и состоянием стека.
+
+### ЗАКРЫТО с прошлой сверки (было 🟡/🟢 — теперь ✅ в main b2536f5):
+- ✅ **Модель доступа заказчика 3.0** (была 🟡 «В РАБОТЕ» в разделе 01.07) — 4 вкладки заказчика в проде, RLS-E2E зелёный.
+- ✅ **admin создаёт пользователя** (новая, brainstorm был после 01.07) — форма в AdminPage (section="users") + Edge Function `admin-create-user` (GoTrue admin API под JWT админа) + RPC `admin_finalize_new_user`. 5 security-гейтов держатся, forged-JWT закрыт подписью PostgREST. В проде.
+- ✅ **origin/main ЗАПУШЕН** (в ledger значилось «origin/main НЕ пушен») — факт `ls-remote`: origin/main = b2536f5 = local main. Обе фичи на GitHub.
+- Тесты **104/104 зелёные** (vitest: dashboardMetrics 76 / taskUi 20 / clientMetrics 4 / userCreateValidation 4). Build зелёный.
+
+### ⚠ ОПЕРАЦИОННЫЕ находки (не план — но требуют внимания владельца):
+- 🔴 **Прод НЕДОСТУПЕН снаружи прямо сейчас (~502).** frp-туннель ПК→VPS поднялся 07:44, **оборвался 08:04** и не переподключается (journalctl frpc: `connection write timeout` серией ~2 часа). TCP до VPS:7000 и :443 ОТКРЫТ, но frp-хендшейк не проходит → похоже на проблему frps на VPS (или сеть ПК↔VPS), не idle-shutdown WSL. **Внутренний стек ЗДОРОВ**: все 20 контейнеров Up, nginx :8080 отдаёт корректный `index-CMQAetpc.js`. Лечение (по README — рестарт) тут не подходит: WSL/frpc живы, чинить надо связь с VPS. Гейт владельца — не трогал.
+- 🟠 **Диск F: активно fsync-сбоит** (не «периодически» — сейчас): 5 подряд отказов `EUNKNOWN fsync` на запись через file-tool; правки в IDEAS пришлось лить обходом через WSL/drvfs. Тот же сбой ранее подвесил субагента на `npm run build`. `chkdsk F:` из техдолга — поднять в приоритете, мешает разработке/деплою.
+
+### Техдолг — уточнено с точными перечнями (пополняет секции E/F):
+- 🟢 **Воспроизводимость БД — КРУПНЕЙШИЙ долг.** ~19 функций + 7 таблиц существуют ТОЛЬКО в живой БД, в репо-миграциях их НЕТ (нельзя поднять БД с нуля). Функции: `is_admin`, `is_approved`, `handle_new_user`, `is_project_owner`, `is_project_editor`, `admin_list_users`, `admin_update_user`, `admin_delete_user`, `admin_system_stats`, `release_project`, `revoke_project`, `get_project_comments`, `resolve_project_comment`, `delete_project_comment`, `search_clients`, `get_project_members`, `search_approved_users`, `top_clients`, `get_project_files`. Таблицы (baseline, без CREATE/ENABLE RLS в репо): `profiles`, `projects`, `clients`, `project_members`, `project_files`, `transactions`, `project_comments`. → задача «забрать live-only в миграции» из секции F теперь конкретна.
+- 🟢 **Edge-функции без гейта авторизации на входящий POST:** `web-push-notify` и `telegram-notify` не проверяют JWT/секрет (глобально `VERIFY_JWT=false`, функции сами не гейтят). Кто знает URL — может дёрнуть рассылку. Не утечка данных (только спам-уведомления), но защита-в-глубину нужна (shared-secret/HMAC). URL не публичен → не срочно.
+- 🟢 **search_path-хардненинг (минор, не дыра):** 7 SECURITY DEFINER функций без `SET search_path`: `update_notification_settings`, `get_task_versions`, `approve_tz_version`, `reject_tz_version`, `get_task_comments`, `resolve_question`, `set_task_status`. (Ранние миграции до I-2 policy 11.06.)
+- 🟢 **Minor after-merge из ledger — 2 ещё живы** (не блокеры): (4) `ClientProjectTasksModal` useEffect без unmount-cleanup (общий паттерн, React18=warning); (8) `admin_finalize_new_user` — отдельный `SELECT email` вместо `RETURNING` (косметика; null-guard через `IF NOT FOUND` есть). Остальные 6 закрыты в b2536f5.
+- 🟢 **Уборка:** m6 `apartment-tracker/` (несвязанный Python-проект) всё ещё в корне репо; m7 dead-код `telegram-notify` в deploy/. На origin висит ветка `fix/apartment-tracker-windows-setup` (не в main).
+- 🟢 **Монолит `App.jsx` = 9865 строк** (~70 инлайн-компонентов, все fetch/маппинг/CSV-парсеры банков). Один JS-чанк 1.22 MB, code-splitting нет. Не баг, но потолок сопровождаемости — кандидат на постепенную декомпозицию. Проект на plain JS (без TypeScript), 20 `eslint-disable` на обрезанных deps useEffect.
+- 🟢 **Грабли деплоя живут только в docs/головах, не в скриптах:** правила «edge с кириллицей — только cp», «git на F: — fsyncMethod=writeout-only», «push в обход прокси» НЕ зафиксированы в deploy/-скриптах и INFRASTRUCTURE.md. Риск потери знания → вынести в deploy/README.
+
+### Ветки-хвосты (git):
+- origin/`feature/client-access-model` (0a12ffd, состояние ДО merge) — кандидат на удаление (хвост B из статуса).
+- Много старых remote+local feature-веток (6.4b, activity-log, client-role, ui-redesign, web-push, payment-*, tasksview, notification-center) — смёржены в main историей, можно почистить. Плюс легаси trading-ветки (feat/pnl-summary, sprint-6-web-admin) от удалённого модуля.
+
+### Кандидаты «СЕЙЧАС» (стратегия не изменилась — порядок за владельцем):
+- **6.7 MCP-слой для Claude** — последний невыполненный этап ТЗ v3.0 (6.1-6.6 ✅).
+- **ИИ-модуль + дизайн для компании** — не описан, нужен brainstorm с нуля (владелец: прошлая трактовка «вообще не так»).
+- **Фазы 2-3 заказчика** — `client_messages` (переписка) + `client_visible` (файлы), в коде = 0 совпадений.
+- Прочее без изменений: оплата заказчиком, коммуникации (мессенджер/объявления), онбординг-навигатор, темизация, дизайн-паркинг.
