@@ -1043,6 +1043,12 @@ async function fetchClientMessages(client, projectId) {
 async function postClientMessage(client, projectId, body) {
   const { data, error } = await client.rpc("post_client_message", { p_project_id: projectId, p_body: body });
   if (error) throw error;
+  // уведомление другой стороне (best-effort, не блокирует отправку)
+  try {
+    await client.functions.invoke("web-push-notify", {
+      body: { type: "client_message", projectId, initiatorId: (await client.auth.getUser()).data.user?.id },
+    });
+  } catch (e) { console.warn("client_message notify failed:", e); }
   return data; // uuid нового сообщения
 }
 async function fetchClientVisibleFiles(client, projectId) {
@@ -1053,6 +1059,15 @@ async function fetchClientVisibleFiles(client, projectId) {
 async function setFileClientVisible(client, fileId, visible) {
   const { error } = await client.rpc("set_file_client_visible", { p_file_id: fileId, p_visible: visible });
   if (error) throw error;
+  // при показе файла заказчику — уведомить его (best-effort)
+  if (visible) {
+    try {
+      const { data: prj } = await client.from("project_files").select("project_id").eq("id", fileId).single();
+      if (prj?.project_id) await client.functions.invoke("web-push-notify", {
+        body: { type: "client_new_file", projectId: prj.project_id, initiatorId: (await client.auth.getUser()).data.user?.id },
+      });
+    } catch (e) { console.warn("client_new_file notify failed:", e); }
+  }
 }
 
 // ── Заход №2: фото-отчёты задач (хранение в Nextcloud, метаданные task_photos) ──
@@ -3366,6 +3381,15 @@ function QEStage({ project, client, onClose, onApplied, showToast }) {
     onClose();
     const { error } = await client.from("projects").update({ stage: st }).eq("id", project.id);
     if (error) { onApplied({ stage: project.stage }); showToast("Не удалось сменить стадию", "error"); }
+    else {
+      // уведомить заказчика о смене стадии (best-effort)
+      try {
+        await client.functions.invoke("web-push-notify", {
+          body: { type: "client_stage_changed", projectId: project.id, stage: st,
+                  initiatorId: (await client.auth.getUser()).data.user?.id },
+        });
+      } catch (e) { console.warn("client_stage_changed notify failed:", e); }
+    }
   };
   return (
     <div>
