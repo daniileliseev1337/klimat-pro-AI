@@ -7308,9 +7308,97 @@ function CreateRequestModal({ client, showToast, onClose, onCreated }) {
 }
 
 // ── Заказчик 2.0: задачи проекта заказчика + приёмка ─────────────────────────
+// Переписка заказчик↔команда по проекту. Один компонент для обеих сторон (RPC гейтит доступ).
+function ClientChat({ projectId, client, showToast }) {
+  const [msgs, setMsgs] = useState(null);
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const reload = async () => {
+    try { setMsgs(await fetchClientMessages(client, projectId)); }
+    catch (e) { showToast("Ошибка переписки: " + (e.message || ""), "error"); setMsgs([]); }
+  };
+  useEffect(() => { reload(); /* eslint-disable-next-line */ }, [projectId]);
+  const send = async () => {
+    const body = text.trim();
+    if (!body) return;
+    setBusy(true);
+    try { await postClientMessage(client, projectId, body); setText(""); await reload(); }
+    catch (e) { showToast("Не отправлено: " + (e.message || ""), "error"); }
+    finally { setBusy(false); }
+  };
+  if (msgs === null) return <div style={{ color: "var(--text-secondary)", fontSize: 14, padding: 12 }}>Загрузка…</div>;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 340, overflowY: "auto" }}>
+        {msgs.length === 0 && <Empty text="Сообщений пока нет" />}
+        {msgs.map(m => (
+          <div key={m.id} style={{ alignSelf: m.is_mine ? "flex-end" : "flex-start", maxWidth: "80%",
+            padding: "8px 12px", borderRadius: 12,
+            background: m.is_mine ? "rgba(212,175,55,0.15)" : "rgba(255,255,255,0.04)",
+            border: "1px solid " + (m.is_mine ? "rgba(212,175,55,0.28)" : "rgba(255,255,255,0.07)") }}>
+            <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginBottom: 3 }}>
+              {m.author_name} · {new Date(m.created_at).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+            </div>
+            <div style={{ fontSize: 14, color: "#fafaf7", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{m.body}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <StyledTextarea rows={2} value={text} onChange={e => setText(e.target.value)}
+          placeholder="Написать сообщение…" style={{ flex: 1 }} />
+        <button className={BTN.primary} disabled={busy || !text.trim()} onClick={send}
+          style={{ opacity: busy || !text.trim() ? 0.6 : 1, alignSelf: "flex-end" }}>Отправить</button>
+      </div>
+    </div>
+  );
+}
+
+// Список client_visible файлов проекта для заказчика — только просмотр/скачивание.
+function ClientFilesList({ projectId, client, showToast }) {
+  const [files, setFiles] = useState(null);
+  const [busyId, setBusyId] = useState(null);
+  useEffect(() => {
+    let off = false;
+    fetchClientVisibleFiles(client, projectId)
+      .then(l => { if (!off) setFiles(l); })
+      .catch(e => { if (!off) { showToast("Ошибка файлов: " + (e.message || ""), "error"); setFiles([]); } });
+    return () => { off = true; };
+    /* eslint-disable-next-line */
+  }, [projectId]);
+  const download = async (f) => {
+    setBusyId(f.id);
+    try {
+      const blob = await downloadProjectFile(client, f.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = f.filename; a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) { showToast("Не скачалось: " + (e.message || ""), "error"); }
+    finally { setBusyId(null); }
+  };
+  if (files === null) return <div style={{ color: "var(--text-secondary)", fontSize: 14, padding: 12 }}>Загрузка…</div>;
+  if (!files.length) return <Empty text="Файлов для вас пока нет" />;
+  const kb = n => (Number(n) || 0) < 1048576 ? Math.round((n||0)/1024) + " КБ" : ((n||0)/1048576).toFixed(1) + " МБ";
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {files.map(f => (
+        <div key={f.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10,
+          padding: "10px 12px", borderRadius: 10, background: "#141414", border: "1px solid rgba(255,255,255,0.05)" }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 14, color: "#fafaf7", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.filename}</div>
+            <div style={{ fontSize: 12, color: "var(--text-tertiary)" }}>{kb(f.file_size)} · {f.uploader_name}</div>
+          </div>
+          <button className={BTN.ghost} disabled={busyId === f.id} onClick={() => download(f)}
+            style={{ opacity: busyId === f.id ? 0.6 : 1 }}>Скачать</button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ClientProjectTasksModal({ order, client, showToast, onClose, onChanged }) {
   const [tasks, setTasks] = useState(null);
   const [busyId, setBusyId] = useState(null);
+  const [tab, setTab] = useState("tasks"); // tasks | messages | files
 
   const reload = async () => {
     try { setTasks(await fetchTasks(client, { projectId: order.id })); }
@@ -7335,7 +7423,18 @@ function ClientProjectTasksModal({ order, client, showToast, onClose, onChanged 
 
   return (
     <Modal title={order.name} onClose={onClose} maxWidth={560}>
-      {tasks === null
+      <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+        {[["tasks","Задачи"],["messages","Сообщения"],["files","Файлы"]].map(([k, label]) => (
+          <button key={k} onClick={() => setTab(k)}
+            style={{ padding: "6px 12px", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600,
+              background: tab === k ? "rgba(212,175,55,0.15)" : "transparent",
+              border: "1px solid " + (tab === k ? "rgba(212,175,55,0.30)" : "rgba(255,255,255,0.10)"),
+              color: tab === k ? "#d4af37" : "var(--text-secondary)" }}>{label}</button>
+        ))}
+      </div>
+      {tab === "messages" && <ClientChat projectId={order.id} client={client} showToast={showToast} />}
+      {tab === "files" && <ClientFilesList projectId={order.id} client={client} showToast={showToast} />}
+      {tab === "tasks" && (tasks === null
         ? <div style={{ color: "var(--text-secondary)", fontSize: 14 }}>Загрузка…</div>
         : tasks.length === 0
           ? <Empty text="Задач по проекту пока нет" />
@@ -7357,7 +7456,7 @@ function ClientProjectTasksModal({ order, client, showToast, onClose, onChanged 
                   )}
                 </div>
               ))}
-            </div>}
+            </div>)}
     </Modal>
   );
 }
