@@ -1034,6 +1034,27 @@ async function deleteProjectFile(client, fileId) {
   return ncAction(client, "delete", { id: fileId });
 }
 
+// ── Портал заказчика Фаза 2: переписка + client_visible файлы ──
+async function fetchClientMessages(client, projectId) {
+  const { data, error } = await client.rpc("get_client_messages", { p_project_id: projectId });
+  if (error) throw error;
+  return data || [];
+}
+async function postClientMessage(client, projectId, body) {
+  const { data, error } = await client.rpc("post_client_message", { p_project_id: projectId, p_body: body });
+  if (error) throw error;
+  return data; // uuid нового сообщения
+}
+async function fetchClientVisibleFiles(client, projectId) {
+  const { data, error } = await client.rpc("get_client_project_files", { p_project_id: projectId });
+  if (error) throw error;
+  return data || [];
+}
+async function setFileClientVisible(client, fileId, visible) {
+  const { error } = await client.rpc("set_file_client_visible", { p_file_id: fileId, p_visible: visible });
+  if (error) throw error;
+}
+
 // ── Заход №2: фото-отчёты задач (хранение в Nextcloud, метаданные task_photos) ──
 export const TASK_PHOTO_MIME = ["image/jpeg", "image/png", "image/heic", "image/webp"];
 export const TASK_PHOTO_MAX = 10 * 1024 * 1024; // 10 МБ
