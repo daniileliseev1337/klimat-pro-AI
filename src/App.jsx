@@ -2888,6 +2888,19 @@ function ProjectForm({ initial, onSave, onClose, saving, client, profile, showTo
         </div>
       )}
 
+      {/* ═══ СЕКЦИЯ: Переписка с заказчиком (виден заказчику) ═══ */}
+      {initial && initial.id && client && (
+        <div style={{ marginBottom: 14, padding: "12px 14px",
+          background: "rgba(212,175,55,0.04)", border: "1px solid rgba(212,175,55,0.18)", borderRadius: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 600,
+            color: "#d4af37", textTransform: "uppercase", letterSpacing: "0.10em", marginBottom: 12 }}>
+            <MessageSquare size={12} strokeWidth={2.4} />
+            Переписка с заказчиком · видно заказчику
+          </div>
+          <ClientChat projectId={initial.id} client={client} showToast={showToast} />
+        </div>
+      )}
+
       {/* ═══ СЕКЦИЯ: Файлы на Yandex Disk (v2.0) ═══ */}
       {initial && initial.id && client && (
         <div style={{
@@ -6488,6 +6501,9 @@ function ProjectFiles({ projectId, profile, client, showToast, isOwner }) {
                   {f.is_public && (
                     <span style={{ marginLeft: 6, color: "#6ee7a8" }}>● публичный</span>
                   )}
+                  {f.client_visible && (
+                    <span style={{ marginLeft: 6, color: "#d4af37" }}>● заказчику</span>
+                  )}
                 </div>
               </div>
               <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
@@ -6522,6 +6538,25 @@ function ProjectFiles({ projectId, profile, client, showToast, isOwner }) {
                       ? <Unlock size={13} strokeWidth={2.2} />
                       : <Lock size={13} strokeWidth={2.2} />
                     }
+                  </button>
+                )}
+                {/* Показать заказчику (только загрузивший / владелец / админ) */}
+                {(f.owner_id === profile?.id || isOwner || profile?.role === "admin") && (
+                  <button
+                    onClick={async () => {
+                      try { await setFileClientVisible(client, f.id, !f.client_visible); await reload(); }
+                      catch (err) { showToast("Не удалось: " + (err.message || ""), "error"); }
+                    }}
+                    title={f.client_visible ? "Скрыть от заказчика" : "Показать заказчику"}
+                    style={{
+                      background: "none", border: "none", cursor: "pointer",
+                      color: f.client_visible ? "#d4af37" : "var(--text-tertiary)", padding: 4, lineHeight: 1,
+                      transition: "color 0.15s",
+                    }}
+                    onMouseOver={e => e.currentTarget.style.color = "#d4af37"}
+                    onMouseOut={e => e.currentTarget.style.color = f.client_visible ? "#d4af37" : "var(--text-tertiary)"}
+                  >
+                    <Eye size={13} strokeWidth={2.2} />
                   </button>
                 )}
                 {/* Удалить */}
