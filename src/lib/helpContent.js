@@ -45,3 +45,8 @@ export function helpSectionsFor(allowedTabIds) {
   const allow = new Set(allowedTabIds || []);
   return HELP_SECTIONS.filter((s) => s.tab === null || allow.has(s.tab));
 }
+
+// Онбординг-тур: показывать ли авто при входе. "1" = уже видели (localStorage kp-tour-seen).
+export function shouldAutoStartTour(seenFlag) {
+  return seenFlag !== "1";
+}

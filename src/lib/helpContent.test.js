@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { HELP_SECTIONS, helpSectionsFor } from './helpContent.js';
+import { HELP_SECTIONS, helpSectionsFor, shouldAutoStartTour } from './helpContent.js';
 
 describe('helpContent', () => {
   it('общие секции (tab=null) видны при любом наборе вкладок', () => {
@@ -30,5 +30,16 @@ describe('helpContent', () => {
       expect(keys.has(s.key), `dup ${s.key}`).toBe(false);
       keys.add(s.key);
     }
+  });
+});
+
+describe('shouldAutoStartTour', () => {
+  it('true когда флаг не "1" (тур не видели)', () => {
+    expect(shouldAutoStartTour(null)).toBe(true);
+    expect(shouldAutoStartTour(undefined)).toBe(true);
+    expect(shouldAutoStartTour('')).toBe(true);
+  });
+  it('false когда тур уже видели (флаг "1")', () => {
+    expect(shouldAutoStartTour('1')).toBe(false);
   });
 });
