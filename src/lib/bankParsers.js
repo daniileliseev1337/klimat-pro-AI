@@ -120,7 +120,7 @@ const CAT_RULES = [
 // обычные словарные ключи — по границам слов (чинит substring-слабость).
 function keyMatches(desc, key) {
   if (key.includes("*")) return desc.includes(key);
-  const esc = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const esc = key.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(`(^|[^a-zа-яё0-9])${esc}([^a-zа-яё0-9]|$)`, "i").test(desc);
 }
 

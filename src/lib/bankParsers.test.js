@@ -43,6 +43,11 @@ describe("categorizeByDict", () => {
   it("возвращает null для незнакомого", () => {
     expect(categorizeByDict("SOME UNKNOWN SHOP")).toBeNull();
   });
+  it("узнаёт ветклинику (ключ с хвостовым пробелом не ломает матч)", () => {
+    expect(categorizeByDict("VET CLINIC")).toBe("Питомцы");
+    // false-positive: 'vet' внутри другого слова не должен давать Питомцы
+    expect(categorizeByDict("SOVIET UNION SHOP")).not.toBe("Питомцы");
+  });
 });
 
 describe("categorize (цепочка)", () => {
