@@ -7,6 +7,7 @@ import { periodRange, prevPeriodRange, granularityFor, periodBalance, trendDir, 
 import { dueState, dueSuffix, DUE_COLORS, PRIORITY_ORDER, tasksAttention } from "./lib/taskUi.js";
 import { projectRemaining, paymentsByProject as groupPaymentsByProject, clientTotals, attentionTasks } from "./lib/clientMetrics.js";
 import { validateNewUser } from "./lib/userCreateValidation.js";
+import { parseYandexRows } from "./lib/bankParsers.js";
 import NotificationBell from "./components/NotificationBell";
 import MagneticButton from "./components/MagneticButton";
 import CommandPalette from "./components/CommandPalette";
@@ -4394,7 +4395,9 @@ async function loadPdfJs() {
   });
 }
 
-async function parsePdfYandex(file) {
+// extractYandexPdfRows — pdf.js-обёртка: читает файл, группирует текст по Y,
+// возвращает строки текста string[] для передачи в parseYandexRows (lib).
+async function extractYandexPdfRows(file) {
   const pdfjsLib = await loadPdfJs();
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
@@ -4417,77 +4420,37 @@ async function parsePdfYandex(file) {
 
   allItems.sort((a, b) => a.y !== b.y ? a.y - b.y : a.x - b.x);
 
-  const rows = [];
+  const rowGroups = [];
   let curRow = [], lastY = null;
   for (const item of allItems) {
     if (lastY === null || Math.abs(item.y - lastY) <= 8) {
       curRow.push(item);
       lastY = item.y;
     } else {
-      if (curRow.length) rows.push([...curRow]);
+      if (curRow.length) rowGroups.push([...curRow]);
       curRow = [item];
       lastY = item.y;
     }
   }
-  if (curRow.length) rows.push(curRow);
+  if (curRow.length) rowGroups.push(curRow);
 
-  const SKIP_RE = /входящий остаток|исходящий остаток|итого списаний|итого зачислений|всего расходных|всего приходных|страница \d|продолжение|выписка по договору|номер счёта|описание операции|сумма в валюте|дата.*мск|с уважением|начальник|ао «яндекс банк»|ао «яндекс/i;
-  const DATE_RE = /(\d{2}\.\d{2}\.\d{4})/;
-  const AMT_RE_ALL = /([+–\-]\s*[\d\s]+,\d{2})\s*₽/g;
+  // Объединяем items каждой строки в единую строку текста
+  return rowGroups.map(row => row.map(i => i.text).join(" "));
+}
 
-  const analyzed = rows.map(row => {
-    const fullText = row.map(i => i.text).join(" ");
-    const dateM     = fullText.match(DATE_RE);
-    const amtAll    = [...fullText.matchAll(AMT_RE_ALL)];
-    const lastAmt   = amtAll.length > 0 ? amtAll[amtAll.length - 1] : null;
-    const minX      = Math.min(...row.map(i => i.x));
-    return { fullText, dateM, lastAmt, minX, skip: SKIP_RE.test(fullText) };
-  });
-
-  const transactions = [];
-  let i = 0;
-  while (i < analyzed.length) {
-    const ar = analyzed[i];
-    if (ar.skip) { i++; continue; }
-
-    if (ar.dateM && ar.lastAmt) {
-      const dp = ar.dateM[1].split(".");
-      const date = `${dp[2]}-${dp[1].padStart(2,"0")}-${dp[0].padStart(2,"0")}`;
-
-      const amtStr = ar.lastAmt[1]
-        .replace(/\s/g,"").replace(",",".").replace("–","-").replace("−","-");
-      const amount = parseFloat(amtStr);
-      if (isNaN(amount) || amount === 0) { i++; continue; }
-
-      let desc = ar.fullText
-        .replace(/\d{2}\.\d{2}\.\d{4}/g, "")
-        .replace(/[+–\-]\s*[\d\s]+,\d{2}\s*₽/g, "")
-        .replace(/в\s+\d{2}:\d{2}/g, "")
-        .replace(/\*\d{4}/g, "")
-        .replace(/\s{2,}/g, " ")
-        .trim();
-
-      let j = i + 1;
-      while (j < analyzed.length && j < i + 5) {
-        const next = analyzed[j];
-        if (next.skip || next.dateM || next.lastAmt) break;
-        if (next.minX < 250) {
-          desc = (desc + " " + next.fullText).replace(/\s{2,}/g," ").trim();
-        }
-        j++;
-      }
-
-      transactions.push({
-        date,
-        type:        amount < 0 ? "expense" : "income",
-        amount:      Math.abs(amount),
-        description: desc,
-        bankCategory: "",
-      });
-    }
-    i++;
-  }
-  return transactions;
+// parsePdfYandex — тонкая обёртка: извлекает строки через pdf.js,
+// разбирает чистой функцией parseYandexRows (src/lib/bankParsers.js),
+// приводит к формату {date, type, amount, description, bankCategory} для UI.
+async function parsePdfYandex(file) {
+  const rows = await extractYandexPdfRows(file);
+  const parsed = parseYandexRows(rows);
+  return parsed.map(op => ({
+    date:         op.date,
+    type:         op.sign < 0 ? "expense" : "income",
+    amount:       op.amount,
+    description:  op.rawDesc,
+    bankCategory: "",
+  }));
 }
 
 // ════════════════════════════════════════════════════════════════════════════
