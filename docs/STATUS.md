@@ -29,7 +29,7 @@
     в `web-push-notify` (резолв заказчика по `clients.user_id`); точки вызова из `postClientMessage`/`setFileClientVisible`.
     Смоук: 3 типа → 200 `{ok:true}`, bad-uuid → 400. Гейт цел (**PUSH_GATE_OK** после редеплоя).
   - Дизайн: `specs/2026-07-03-client-phase23-design.md`, план: `plans/2026-07-03-client-phase23.md`. Ревью PASSED.
-  - Остаток (в «Дальше»): точка вызова `client_stage_changed` — резолв есть, вызвать при смене `projects.stage` во фронте.
+  - ✅ `client_stage_changed` закрыт: **QEStage** (ручная смена стадии в карточке) уже шлёт — коммит `af638e9`, **в проде** (STATUS ранее ошибочно писал «точка не найдена» — сверка с кодом опровергла); **форма редактирования проекта** (`updateProject`) — push добавлен ЭТОЙ сессией с гвардом `form.stage !== modal.stage` (в коде worktree, **ждёт merge+deploy**). Marketplace-точки (take/release/revoke) не трогали — edge отфильтрует по пустому `client_id`, у них свои push.
 - ✅ **Edge-гейт web-push-notify + снос telegram-notify — ВНЕДРЕНО 03.07 глубокой ночью** (остаток SQL-пакета):
   dual-гейт в функции — валидный user-JWT (через GoTrue `/auth/v1/user`) ИЛИ заголовок `X-Push-Secret`
   из config.json; секрет в vault `web_push_secret`, cron-джоб пересоздан с заголовком (миграция
@@ -65,8 +65,6 @@
   реальных сэмплах; категоризация многоуровневая (bankCategory→маппинг → точный мерчант по границам слов →
   эвристика → прочее); запоминание ручных переназначений. Требует: примеры реальных выписок каждого банка.
 - 6.7 MCP-слой для Claude (последний этап ТЗ v3.0) — СВЯЗАН с «ИИ-модуль» (brainstorm ИИ-модуля до старта 6.7).
-- Follow-up Фазы 3: вызвать `web-push-notify` тип `client_stage_changed` при смене `projects.stage` во фронте
-  (edge-резолв готов, точка вызова не найдена — не выдумана; когда появится единая точка смены стадии — подключить).
 - Владелец сам: `chkdsk F:` (диск сбоит!), смена паролей VPS-root/БД, выбор из 7 логотипов в Claude Design.
 - Мелочь: «Supabase (Frankfurt)» на экране входа — ложь (self-hosted), поправить при случае.
 - Полный список — docs/IDEAS.md.

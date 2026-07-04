@@ -3618,6 +3618,14 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
         saved = await updateProject(client, modal.id, form);
         setProjects(prev => prev.map(p => p.id === saved.id ? saved : p));
         showToast("✓ Проект обновлён");
+        // follow-up Фазы 3: смена стадии через форму → уведомить заказчика (best-effort).
+        // Гвард по modal.stage (прежняя) vs form.stage (новая) — иначе push при любом сохранении.
+        // QEStage (быстрая смена стадии) шлёт этот же тип своим путём; UI-пути не пересекаются.
+        if (form.stage && modal?.stage && form.stage !== modal.stage) {
+          sendPush(client, "client_stage_changed", null, {
+            projectId: saved.id, stage: form.stage, initiatorId: profile?.id,
+          });
+        }
       }
       // v2.2: уведомление новым исполнителям-пользователям системы
       {
