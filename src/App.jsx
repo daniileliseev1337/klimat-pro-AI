@@ -4362,20 +4362,6 @@ async function extractYandexPdfRows(file) {
   return rowGroups.map(row => row.map(i => i.text).join(" "));
 }
 
-// parsePdfYandex — тонкая обёртка: извлекает строки через pdf.js,
-// разбирает чистой функцией parseYandexRows (src/lib/bankParsers.js),
-// приводит к формату {date, type, amount, description, bankCategory} для UI.
-async function parsePdfYandex(file) {
-  const rows = await extractYandexPdfRows(file);
-  const parsed = parseYandexRows(rows);
-  return parsed.map(op => ({
-    date:         op.date,
-    type:         op.sign < 0 ? "expense" : "income",
-    amount:       op.amount,
-    description:  op.rawDesc,
-    bankCategory: "",
-  }));
-}
 
 // ════════════════════════════════════════════════════════════════════════════
 // TASKS (v6.4a) — вкладка Задачи: список + фильтры, доска (drag-drop), модалка
@@ -5369,7 +5355,7 @@ function TasksView({ client, profile, projects, showToast }) {
 // selfNames — варианты ФИО владельца для распознавания self_transfer.
 // Полноценный UI-редактор настройки — отдельная микрозадача, вне scope.
 // client — Supabase-клиент, нужен для fetchMerchantRules/upsertMerchantRule.
-function CsvImportModal({ onClose, onImport, client, selfNames = [] }) {
+function CsvImportModal({ onClose, onImport, client, selfNames = [], existingHashes = new Set() }) {
   const [step, setStep]       = useState("upload");
   const [bank, setBank]       = useState("");
   const [parsed, setParsed]   = useState([]);
@@ -5423,7 +5409,7 @@ function CsvImportModal({ onClose, onImport, client, selfNames = [] }) {
       try {
         // extractYandexPdfRows возвращает string[], parseYandexRows → [{date,amount,sign,rawDesc}]
         const rows   = await extractYandexPdfRows(file);
-        const parsed = dedupe(parseYandexRows(rows), new Set());
+        const parsed = dedupe(parseYandexRows(rows), existingHashes);
         setBank("yandex");
         const enriched = enrichYandexOps(parsed);
         setParsed(enriched);
@@ -5939,6 +5925,7 @@ function Finance({ txs, setTxs, client, ownerId, showToast, projects = [], share
           onImport={handleCsvImport}
           client={client}
           selfNames={[]}
+          existingHashes={new Set(txs.map(t => hashOperation({ date: t.date, amount: t.amount, rawDesc: t.description })))}
         />
       )}
     </div>
