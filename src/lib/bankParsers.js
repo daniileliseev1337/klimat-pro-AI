@@ -133,6 +133,37 @@ export function categorizeByDict(rawDesc) {
   return null;
 }
 
+// --- Классификация типа операции (Task 5) ---
+
+const TRANSFER_RE = /перевод|перевода|сбп|transfer/i;
+// \w не матчит кириллицу в JS — используем [\s\S]*? для части между «начислен» и «процент»
+const TECH_RE = /капитализац|начислен.*процент|проценты на остаток|кэшбэк|cashback|внутрибанк/i;
+const PHONE_RE = /\+?\d[\d\s()-]{9,}\d/g;
+
+// Проверяет, содержит ли описание одно из имён владельца (для self_transfer).
+function containsName(desc, names) {
+  const d = desc.toLowerCase();
+  return names.some(n => n && d.includes(n.toLowerCase()));
+}
+
+// Классификация типа операции + очистка ПДн из описания.
+// opType: "technical" | "self_transfer" | "peer_transfer" | "payment"
+export function classifyOperation(op, meNames = []) {
+  const desc = op.rawDesc || "";
+  if (TECH_RE.test(desc)) {
+    return { opType: "technical", counterparty: null, cleanDesc: desc };
+  }
+  if (TRANSFER_RE.test(desc)) {
+    if (containsName(desc, meNames)) {
+      return { opType: "self_transfer", counterparty: null, cleanDesc: "Перевод себе" };
+    }
+    // перевод физлицу — вырезаем телефон и всё после первой запятой (ФИО контрагента)
+    const cleanDesc = desc.replace(PHONE_RE, "").split(",")[0].trim();
+    return { opType: "peer_transfer", counterparty: null, cleanDesc: cleanDesc || "Перевод физлицу" };
+  }
+  return { opType: "payment", counterparty: null, cleanDesc: desc };
+}
+
 // Слой 4 (LLM) — заглушка. Реальная локальная модель подключается позже,
 // не меняя сигнатуру: категоризатор станет async и вставит await между dict и none.
 export async function categorizeLLM(_merchant) { return null; }

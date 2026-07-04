@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { normalizeMerchant, categorizeByMcc, categorizeByDict, categorize } from "./bankParsers.js";
+import { normalizeMerchant, categorizeByMcc, categorizeByDict, categorize, classifyOperation, hashOperation, dedupe } from "./bankParsers.js";
 
 describe("normalizeMerchant", () => {
   it("сводит разные точки одной сети к одному ключу", () => {
@@ -47,6 +47,33 @@ describe("categorizeByDict", () => {
     expect(categorizeByDict("VET CLINIC")).toBe("Питомцы");
     // false-positive: 'vet' внутри другого слова не должен давать Питомцы
     expect(categorizeByDict("SOVIET UNION SHOP")).not.toBe("Питомцы");
+  });
+});
+
+const ME = ["даниил владимирович е", "елисеев даниил"];
+
+describe("classifyOperation", () => {
+  it("перевод себе распознаётся по ФИО владельца", () => {
+    const r = classifyOperation(
+      { rawDesc: "Входящий перевод СБП, Даниил Владимирович Е.", amount: 147000, sign: 1 }, ME);
+    expect(r.opType).toBe("self_transfer");
+  });
+  it("перевод физлицу обезличивается", () => {
+    const r = classifyOperation(
+      { rawDesc: "Исходящий перевод СБП, Римма Одеговна К., +79001234567", amount: 5000, sign: -1 }, ME);
+    expect(r.opType).toBe("peer_transfer");
+    expect(r.cleanDesc).not.toMatch(/Римма/);
+    expect(r.cleanDesc).not.toMatch(/79001234567/);
+  });
+  it("техническая операция — капитализация", () => {
+    const r = classifyOperation(
+      { rawDesc: "Начисление процентов на остаток", amount: 320, sign: 1 }, ME);
+    expect(r.opType).toBe("technical");
+  });
+  it("обычная оплата — payment", () => {
+    const r = classifyOperation(
+      { rawDesc: "MAGNIT MM STANTSIONNYJ", amount: 540, sign: -1 }, ME);
+    expect(r.opType).toBe("payment");
   });
 });
 
