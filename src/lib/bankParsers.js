@@ -193,3 +193,94 @@ export function categorize(op, learned = new Map()) {
   if (byDict) return { category: byDict, source: "dict" };
   return { category: op.type === "income" ? "Прочий доход" : "Прочие расходы", source: "none" };
 }
+
+// --- Парсинг строк выписки Яндекс Банка (Task 6) ---
+
+// Строки-заголовки и технические строки — пропускаем.
+// Перенесён из parsePdfYandex App.jsx; расширен служебными фрагментами.
+const YA_SKIP_RE = /входящий остаток|исходящий остаток|итого списаний|итого зачислений|всего расходных|всего приходных|страница \d|продолжение|выписка по договору|номер счёта|описание операции|сумма в валюте|дата.*мск|с уважением|начальник|ао «яндекс банк»|ао «яндекс|^дата\b|^описание\b|^итого\b|^остаток\b/i;
+
+// Дата в формате ДД.ММ.ГГГГ — всегда первая в строке операции.
+const YA_DATE_RE = /(\d{2})\.(\d{2})\.(\d{4})/;
+
+// Сумма в формате «[+–−-]пробелы_цифры,цц ₽» — берётся ПОСЛЕДНЯЯ в строке
+// (это «Сумма в валюте Договора»; предыдущие суммы могут быть суммами в валюте платежа).
+const YA_AMT_RE_ALL = /([+–−\-]\s*[\d\s]+,\d{2})\s*₽/g;
+
+// Чистка описания: убираем дату, время («в ЧЧ:ММ»), суммы, знак ₽, номер карты (*NNNN).
+function cleanYandexDesc(fullText) {
+  return fullText
+    .replace(/\d{2}\.\d{2}\.\d{4}/g, "")      // дата
+    .replace(/[+–−\-]\s*[\d\s]+,\d{2}\s*₽/g, "") // суммы с ₽
+    .replace(/в\s+\d{2}:\d{2}/g, "")           // время «в ЧЧ:ММ»
+    .replace(/\*\d{4}/g, "")                   // последние 4 цифры карты
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+/**
+ * parseYandexRows — чистый парсинг строк PDF-выписки Яндекс Банка.
+ *
+ * Принимает массив строк текста (уже сгруппированных по вертикали — как
+ * возвращает extractYandexPdfRows из App.jsx). Возвращает операции.
+ *
+ * @param {string[]} rows  — строки текста, по одной на «строку» PDF
+ * @returns {Array<{date:string, amount:number, sign:1|-1, rawDesc:string}>}
+ */
+export function parseYandexRows(rows) {
+  // Предвычислим метаданные каждой строки (аналог analyzed[] в parsePdfYandex)
+  const analyzed = (rows || []).map(row => {
+    const fullText = (row || "").trim();
+    const dateM    = fullText.match(YA_DATE_RE);
+    const amtAll   = [...fullText.matchAll(YA_AMT_RE_ALL)];
+    const lastAmt  = amtAll.length > 0 ? amtAll[amtAll.length - 1] : null;
+    const skip     = !fullText || YA_SKIP_RE.test(fullText);
+    return { fullText, dateM, lastAmt, skip };
+  });
+
+  const out = [];
+  let i = 0;
+  while (i < analyzed.length) {
+    const ar = analyzed[i];
+
+    if (ar.skip) { i++; continue; }
+
+    if (ar.dateM && ar.lastAmt) {
+      // Дата → ISO
+      const [, dd, mm, yyyy] = ar.dateM;
+      const date = `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
+
+      // Последняя сумма: «Сумма в валюте Договора» с учётом знака (– → минус)
+      const amtStr = ar.lastAmt[1]
+        .replace(/\s/g, "")
+        .replace(",", ".")
+        .replace("–", "-")
+        .replace("−", "-"); // en-dash и математический минус
+      const val = parseFloat(amtStr);
+      if (isNaN(val) || val === 0) { i++; continue; }
+
+      // Начальное описание из текущей строки
+      let rawDesc = cleanYandexDesc(ar.fullText);
+
+      // Дособираем многострочное описание: следующие строки без даты и суммы
+      // (до 4 строк — как в оригинале «j < i + 5»).
+      // В lib-версии нет minX, поэтому берём строки без даты/суммы подряд.
+      let j = i + 1;
+      while (j < analyzed.length && j < i + 5) {
+        const next = analyzed[j];
+        if (next.skip || next.dateM || next.lastAmt) break;
+        rawDesc = (rawDesc + " " + next.fullText).replace(/\s{2,}/g, " ").trim();
+        j++;
+      }
+
+      out.push({
+        date,
+        amount:  Math.abs(val),
+        sign:    val < 0 ? -1 : 1,
+        rawDesc,
+      });
+    }
+    i++;
+  }
+  return out;
+}

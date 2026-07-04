@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { normalizeMerchant, categorizeByMcc, categorizeByDict, categorize, classifyOperation, hashOperation, dedupe } from "./bankParsers.js";
+import { normalizeMerchant, categorizeByMcc, categorizeByDict, categorize, classifyOperation, hashOperation, dedupe, parseYandexRows } from "./bankParsers.js";
 
 describe("normalizeMerchant", () => {
   it("сводит разные точки одной сети к одному ключу", () => {
@@ -125,5 +125,99 @@ describe("categorize (цепочка)", () => {
   it("незнакомый доход → Прочий доход", () => {
     const r = categorize({ rawDesc: "UNKNOWN XYZ", type: "income" }, new Map());
     expect(r).toEqual({ category: "Прочий доход", source: "none" });
+  });
+});
+
+// --- Task 6: parseYandexRows ---
+
+describe("parseYandexRows", () => {
+  it("разбирает строку расходной операции (знак – перед суммой)", () => {
+    // Формат реального PDF: сумма с en-dash (–) перед числом, ₽ после
+    const rows = ["04.07.2026 MAGNIT MM STANTSIONNYJ –540,00 ₽"];
+    const r = parseYandexRows(rows);
+    expect(r).toHaveLength(1);
+    expect(r[0]).toMatchObject({
+      date: "2026-07-04",
+      amount: 540,
+      sign: -1,
+    });
+    expect(r[0].rawDesc).toContain("MAGNIT");
+  });
+
+  it("разбирает доходную операцию (знак + перед суммой)", () => {
+    const rows = ["03.07.2026 Входящий перевод СБП +147 000,00 ₽"];
+    const r = parseYandexRows(rows);
+    expect(r).toHaveLength(1);
+    expect(r[0]).toMatchObject({
+      date: "2026-07-03",
+      amount: 147000,
+      sign: 1,
+    });
+  });
+
+  it("пропускает служебные строки (SKIP_RE)", () => {
+    const rows = [
+      "Входящий остаток на 01.07.2026 +10 000,00 ₽",  // SKIP
+      "Итого списаний –500,00 ₽",                       // SKIP
+      "04.07.2026 MAGNIT MM –540,00 ₽",                // операция
+    ];
+    const r = parseYandexRows(rows);
+    expect(r).toHaveLength(1);
+    expect(r[0].date).toBe("2026-07-04");
+  });
+
+  it("пропускает заголовки таблицы", () => {
+    const rows = [
+      "Дата операции Описание Сумма",  // заголовок — SKIP
+      "03.07.2026 Входящий перевод СБП +147 000,00 ₽",
+    ];
+    const r = parseYandexRows(rows);
+    expect(r).toHaveLength(1);
+    expect(r[0].date).toBe("2026-07-03");
+  });
+
+  it("берёт ПОСЛЕДНЮЮ сумму (Сумма в валюте Договора), а не первую", () => {
+    // Реальный PDF может содержать промежуточную сумму в валюте платежа
+    // и итоговую (в рублях) последней. Берём последнюю.
+    const rows = ["02.07.2026 SOME FOREIGN SHOP 10,00 USD –850,00 ₽"];
+    const r = parseYandexRows(rows);
+    expect(r).toHaveLength(1);
+    expect(r[0].amount).toBe(850);
+    expect(r[0].sign).toBe(-1);
+  });
+
+  it("собирает многострочное описание", () => {
+    // Следующие строки без даты/суммы — продолжение описания операции
+    const rows = [
+      "05.07.2026 SOME LONG –1 000,00 ₽",
+      "MERCHANT NAME CONTINUATION",  // продолжение без даты/суммы
+    ];
+    const r = parseYandexRows(rows);
+    expect(r).toHaveLength(1);
+    expect(r[0].rawDesc).toContain("MERCHANT NAME CONTINUATION");
+  });
+
+  it("возвращает пустой массив на пустом входе", () => {
+    expect(parseYandexRows([])).toEqual([]);
+    expect(parseYandexRows(null)).toEqual([]);
+  });
+
+  it("пропускает строку с суммой 0", () => {
+    const rows = ["01.07.2026 ZERO OPERATION –0,00 ₽"];
+    const r = parseYandexRows(rows);
+    expect(r).toHaveLength(0);
+  });
+
+  it("ISO-дата: день и месяц дополняются нулями", () => {
+    const rows = ["01.01.2026 SHOP NAME –9,99 ₽"];
+    const r = parseYandexRows(rows);
+    expect(r[0].date).toBe("2026-01-01");
+  });
+
+  it("description не содержит дату и сумму", () => {
+    const rows = ["04.07.2026 MAGNIT MM –540,00 ₽"];
+    const r = parseYandexRows(rows);
+    expect(r[0].rawDesc).not.toMatch(/\d{2}\.\d{2}\.\d{4}/);
+    expect(r[0].rawDesc).not.toMatch(/₽/);
   });
 });
