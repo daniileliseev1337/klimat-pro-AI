@@ -7,7 +7,7 @@ import { periodRange, prevPeriodRange, granularityFor, periodBalance, trendDir, 
 import { dueState, dueSuffix, DUE_COLORS, PRIORITY_ORDER, tasksAttention } from "./lib/taskUi.js";
 import { projectRemaining, paymentsByProject as groupPaymentsByProject, clientTotals, attentionTasks } from "./lib/clientMetrics.js";
 import { validateNewUser } from "./lib/userCreateValidation.js";
-import { parseYandexRows } from "./lib/bankParsers.js";
+import { parseYandexRows, classifyOperation, categorize, dedupe, normalizeMerchant, hashOperation } from "./lib/bankParsers.js";
 import NotificationBell from "./components/NotificationBell";
 import MagneticButton from "./components/MagneticButton";
 import CommandPalette from "./components/CommandPalette";
@@ -499,6 +499,23 @@ async function insertTransactionsBulk(client, txs, ownerId) {
     .select();
   if (error) throw error;
   return (data || []).map(txDbToJs);
+}
+
+// Task 9: API-обёртки для merchant_rules (best-effort: ошибки не ломают импорт).
+// Пока миграция не применена (по «го» владельца) — RPC вернёт ошибку и вернётся пустой Map.
+async function fetchMerchantRules(client) {
+  try {
+    const { data, error } = await client.rpc("get_merchant_rules");
+    if (error) throw error;
+    return new Map((data || []).map(r => [r.merchant_key, r.category]));
+  } catch (e) { console.warn("merchant_rules fetch failed:", e); return new Map(); }
+}
+
+async function upsertMerchantRule(client, merchantKey, category) {
+  if (!merchantKey) return;
+  try {
+    await client.rpc("upsert_merchant_rule", { p_merchant_key: merchantKey, p_category: category });
+  } catch (e) { console.warn("merchant_rule upsert failed:", e); }
 }
 
 async function insertProjectsBulk(client, projects, ownerId) {
@@ -4163,103 +4180,10 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// CSV / PDF IMPORT — автокатегоризация и парсеры банков (без изменений)
+// CSV / PDF IMPORT — парсеры банков
+// CAT_RULES и guessCategory удалены (Task 10, step 6): логика перенесена в
+// src/lib/bankParsers.js (categorizeByDict / categorize). Используй categorize().
 // ════════════════════════════════════════════════════════════════════════════
-const CAT_RULES = [
-  { cat:"Такси", keys:[
-    "yandex*4121*taxi","yandex*4121*uber","yandex*4111*go_transpo",
-    "yandex7299*go_berizar","yandex*7299*go_berizar",
-    "яндекс го","yandex go","yango","uber","bolt","такси","taxi",
-    "ситимобил","maxim","indrive","indriver","яндекс такси","yandex taxi",
-  ]},
-  { cat:"Транспорт", keys:[
-    "mos.transport","mostransport","mos. transport",
-    "yandex*4111*troyka","troyka","тройка","strelkacard","strelka",
-    "cppk","цппк","centralnaya ppk","ao centralnaya ppk",
-    "petrovsko-razumov","petrovskorazumovskaya",
-    "aeroexpress","аэроэкспресс","rzd","ржд",
-    "tutu.ru","tutu ru","tpp_st_avtolajn",
-    "метро","metro","мцд","трамвай","троллейбус","мосгортранс","автобус",
-  ]},
-  { cat:"Кофе", keys:[
-    "onepricecoffe","cofix","po kofeyku","po kofejku","sp_kofejnya",
-    "kofejnya","kofein","kote kafe","street coffee","_kofejnya",
-    "b1 maypo","coffeeshop",
-  ]},
-  { cat:"Питание", keys:[
-    "vernyj 1300","vernyj","верный",
-    "pyaterochka","пятёрочка","пятерочка",
-    "magnit","магнит","perekrestok","перекрёсток","перекресток",
-    "vkusvill","вкусвилл","dixy","дикси","spar","спар","lenta","лента",
-    "auchan","ашан","окей","okej","глобус","globus",
-    "krasnoe&beloe","krasnoe beloe","красное белое",
-    "winelab","produkty","продукты","mikromarket",
-    "yandex*5411*lavka","yandex*5814*eda","lavka","лавка",
-    "delivery club","самокат","сбермаркет","азбука вкуса",
-    "суши","sushi","пицца","pizza","burger","бургер","burger king",
-    "mcdonalds","kfc","вкусно","dodo","додо","шоколадница","якитория",
-    "subway","ebidoebi","doner market","шаурма","giro","girogiros",
-    "qsr 29098","gastrokolledzh","mealty","столовая","ресторан","кафе",
-    "pekarnya","evo_pekarnya","хлеб","пекарня","sunduk","tapper",
-    "fix price","fixprice","spar 329","fix price 8090","fixprice 8090",
-    "od verkhnie kotly","verkhnie kotly","rest june","микромаркет",
-    "pizzasushiwok","donermkt",
-  ]},
-  { cat:"Здоровье / аптека", keys:[
-    "gorzdrav","горздрав","36,6","36.6","aptechnoe","аптека","apteka",
-    "rigla","ригла","pharmacy","antistress","ulybka radugi","улыбка радуги",
-  ]},
-  { cat:"Развлечения", keys:[
-    "mori sinema","mori_sinema","синема","cinema","кино",
-    "tslounge","lounge","duplet","бильярд","bowling","боулинг",
-    "playerok","ggsel","pay4game","starsbus","onlypay",
-    "ckassa","yp_kleekstore","onlypei","nrp","диалог восток",
-  ]},
-  { cat:"Кредит / займы", keys:[
-    "погашение процентов","погашение основного долга",
-    "погашение кредита","гашение долга",
-  ]},
-  { cat:"Табак", keys:[
-    "evo_tabak","tabak 4","tabak","dym par","вейп","vape",
-  ]},
-  { cat:"ПО и инструменты", keys:[
-    "yandex*5815*plus","yandex*5815","яндекс плюс","yandex plus",
-    "кинопоиск","kinopoisk","okko","иви","яндекс музыка","яндекс 360",
-    "google","apple","microsoft","adobe","jetbrains","notion","figma",
-    "github","spotify","netflix","youtube premium","autodesk","revit",
-    "telegram premium","discord nitro","chatgpt","openai","canva",
-    "kaspersky","dr.web","vseinstrumenti","все инструменты",
-  ]},
-  { cat:"Связь", keys:[
-    "yota_no3ds","yota","йота","мтс","мегафон","билайн",
-    "tele2","теле2","ростелеком","beeline",
-  ]},
-  { cat:"Жильё / аренда", keys:[
-    "жкх","квитанция","аренда","управляющая","тсж",
-    "водоканал","мосэнерго","газпром","коммунал","еирц",
-  ]},
-  { cat:"Партнёр",  keys:["партнёр","партнер"] },
-  { cat:"Семья",    keys:["родители","семья"] },
-  { cat:"Питомцы",  keys:["зоомагазин","chetyre lap","zoomagazin","четыре лапы","зоо","vet ","ветклиника","ветеринар","petshop","pet shop"] },
-  { cat:"Дети",     keys:["детский","детская","детсад","детский сад","игрушки","rosnova","школа"] },
-  { cat:"Подарки",  keys:["подарок","gift","цветы","флорист","flower","букет"] },
-  { cat:"Прочий доход", keys:[
-    "капитализация","начисление процентов","кэшбэк","cashback",
-    "возврат средств","отмена оплаты","внесение наличных","входящий перевод",
-  ]},
-];
-
-function guessCategory(description, type = "expense") {
-  const d = (description||"").toLowerCase();
-  for (const rule of CAT_RULES) {
-    if (!rule.keys.length) continue;
-    if (rule.keys.some(k => d.includes(k))) {
-      if (rule.cat === "Прочий доход" && type === "expense") continue;
-      return rule.cat;
-    }
-  }
-  return type === "income" ? "Прочий доход" : "Прочие расходы";
-}
 
 function parseTinkoff(rows) {
   const result = [];
@@ -5442,16 +5366,53 @@ function TasksView({ client, profile, projects, showToast }) {
 // ════════════════════════════════════════════════════════════════════════════
 // CSV IMPORT MODAL — без изменений в UI, только handleImport теперь bulk-insert
 // ════════════════════════════════════════════════════════════════════════════
-function CsvImportModal({ onClose, onImport }) {
+// selfNames — варианты ФИО владельца для распознавания self_transfer.
+// Полноценный UI-редактор настройки — отдельная микрозадача, вне scope.
+// client — Supabase-клиент, нужен для fetchMerchantRules/upsertMerchantRule.
+function CsvImportModal({ onClose, onImport, client, selfNames = [] }) {
   const [step, setStep]       = useState("upload");
   const [bank, setBank]       = useState("");
   const [parsed, setParsed]   = useState([]);
   const [edited, setEdited]   = useState([]);
   const [importing, setImporting] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
+  // Шаг 1 (Task 10): выученные правила из merchant_rules (пусто пока миграция не применена)
+  const [learned, setLearned] = useState(new Map());
   const fileRef = useRef();
 
+  useEffect(() => {
+    if (client) fetchMerchantRules(client).then(setLearned);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const BANK_LABELS = { tinkoff:"Тинькофф", sber:"Сбербанк", alfa:"Альфа-банк", yandex:"Яндекс Пэй / Яндекс Банк", unknown:"Определяется..." };
+
+  // Шаг 2 (Task 10): обогащение операций через ядро lib.
+  // Принимает сырые операции {date,amount,sign,rawDesc} — формат parseYandexRows.
+  const enrichYandexOps = (rawOps) => {
+    const meNames = selfNames || [];
+    return rawOps.map((op, i) => {
+      const cls = classifyOperation(op, meNames);
+      const cat = categorize(
+        { rawDesc: op.rawDesc, type: op.sign < 0 ? "expense" : "income" },
+        learned
+      );
+      return {
+        id: i,
+        date: op.date,
+        amount: op.amount,
+        type: op.sign < 0 ? "expense" : "income",
+        description: cls.cleanDesc,
+        rawDesc: op.rawDesc,
+        category: cat.category,
+        source: cat.source,
+        opType: cls.opType,
+        dupe: op.dupe || false,
+        // по умолчанию пропускаем переводы себе и дубли
+        skip: cls.opType === "self_transfer" || (op.dupe || false),
+      };
+    });
+  };
 
   const handleFile = async (e) => {
     const file = e.target.files[0];
@@ -5460,13 +5421,11 @@ function CsvImportModal({ onClose, onImport }) {
     if (file.name.toLowerCase().endsWith(".pdf") || file.type === "application/pdf") {
       setPdfLoading(true);
       try {
-        const items = await parsePdfYandex(file);
+        // extractYandexPdfRows возвращает string[], parseYandexRows → [{date,amount,sign,rawDesc}]
+        const rows   = await extractYandexPdfRows(file);
+        const parsed = dedupe(parseYandexRows(rows), new Set());
         setBank("yandex");
-        const enriched = items.map((item, i) => ({
-          ...item, id:i,
-          category:guessCategory(item.description, item.type),
-          skip: /перевод между счетами одного клиента/i.test(item.description||""),
-        }));
+        const enriched = enrichYandexOps(parsed);
         setParsed(enriched);
         setEdited(enriched);
         setStep("preview");
@@ -5481,11 +5440,21 @@ function CsvImportModal({ onClose, onImport }) {
       const text = ev.target.result;
       const { bank: b, items } = parseCSV(text);
       setBank(b);
-      const enriched = items.map((item, i) => ({
-        ...item, id:i,
-        category:guessCategory(item.description, item.type),
-        skip: /перевод между счетами одного клиента/i.test(item.description||""),
-      }));
+      // Для CSV других банков используем categorize (вместо старого guessCategory)
+      const enriched = items.map((item, i) => {
+        const cat = categorize(
+          { rawDesc: item.description || "", type: item.type || "expense" },
+          learned
+        );
+        return {
+          ...item, id:i,
+          category: cat.category,
+          source: cat.source,
+          opType: "payment",
+          dupe: false,
+          skip: /перевод между счетами одного клиента/i.test(item.description||""),
+        };
+      });
       setParsed(enriched);
       setEdited(enriched);
       setStep("preview");
@@ -5525,6 +5494,13 @@ function CsvImportModal({ onClose, onImport }) {
     try {
       const toAdd = edited.filter(r => !r.skip);
       await onImport(toAdd);
+      // Шаг 4 (Task 10): сохранить правки категорий в merchant_rules для payment-операций
+      if (client) {
+        for (const r of toAdd.filter(x => x.opType === "payment")) {
+          const key = normalizeMerchant(r.rawDesc || r.description || "");
+          if (key) await upsertMerchantRule(client, key, r.category);
+        }
+      }
       setStep("done");
     } catch (e) {
       console.error("Ошибка импорта:", e);
@@ -5658,7 +5634,7 @@ function CsvImportModal({ onClose, onImport }) {
                             padding:"3px 6px",flexShrink:0,fontWeight:700,
                           }}>✂</button>
                       </div>
-                      <div style={{display:"flex",gap:6}}>
+                      <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
                         {["expense","income"].map(t=>(
                           <button key={t} onClick={()=>changeType(row.id,t)} style={{
                             padding:"1px 7px",borderRadius:6,border:"none",cursor:"pointer",fontSize:10,fontWeight:700,
@@ -5666,6 +5642,27 @@ function CsvImportModal({ onClose, onImport }) {
                             color: row.type===t ? (t==="income"?"#d4af37":"#f8a3a3") : "#404040",
                           }}>{t==="income"?"Доход":"Расход"}</button>
                         ))}
+                        {/* Шаг 3 (Task 10): бейдж типа операции */}
+                        {row.opType === "self_transfer" && (
+                          <span style={{fontSize:9,padding:"1px 5px",borderRadius:4,background:"#2d3f5522",color:"#6b9fd4",fontWeight:700}}>↕ себе</span>
+                        )}
+                        {row.opType === "peer_transfer" && (
+                          <span style={{fontSize:9,padding:"1px 5px",borderRadius:4,background:"#3d2d5522",color:"#b49fd4",fontWeight:700}}>🔒 перевод</span>
+                        )}
+                        {row.opType === "technical" && (
+                          <span style={{fontSize:9,padding:"1px 5px",borderRadius:4,background:"#2d3d2522",color:"#6db479",fontWeight:700}}>⚙ техн.</span>
+                        )}
+                        {row.dupe && (
+                          <span style={{fontSize:9,padding:"1px 5px",borderRadius:4,background:"#3d2d2222",color:"#d47a6b",fontWeight:700}}>дубль</span>
+                        )}
+                        {row.source && row.source !== "none" && (
+                          <span style={{fontSize:9,color:"#404040"}}>
+                            {row.source === "learned" ? "выучено" : row.source === "mcc" ? "MCC" : "словарь"}
+                          </span>
+                        )}
+                        {row.source === "none" && !row.skip && (
+                          <span style={{fontSize:9,color:"#f59e0b"}}>нужен выбор</span>
+                        )}
                       </div>
                     </div>
                     <select
@@ -5940,6 +5937,8 @@ function Finance({ txs, setTxs, client, ownerId, showToast, projects = [], share
         <CsvImportModal
           onClose={()=>setCsvModal(false)}
           onImport={handleCsvImport}
+          client={client}
+          selfNames={[]}
         />
       )}
     </div>
