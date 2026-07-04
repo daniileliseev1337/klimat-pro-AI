@@ -269,6 +269,9 @@ export function parseYandexRows(rows) {
       while (j < analyzed.length && j < i + 5) {
         const next = analyzed[j];
         if (next.skip || next.dateM || next.lastAmt) break;
+        // пропускаем строки-продолжения без букв (right-column: суммы/остатки/даты) —
+        // восстанавливает потерянную при split minX-защиту в рамках string[]-интерфейса
+        if (!/[a-zа-яё]/i.test(next.fullText)) { j++; continue; }
         rawDesc = (rawDesc + " " + next.fullText).replace(/\s{2,}/g, " ").trim();
         j++;
       }

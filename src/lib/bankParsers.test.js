@@ -208,6 +208,17 @@ describe("parseYandexRows", () => {
     expect(r).toHaveLength(0);
   });
 
+  it("не тащит правоколоночный числовой фрагмент в описание (minX-защита)", () => {
+    const rows = [
+      "04.07.2026 12:30 MAGNIT MM STANTSIONNYJ -540,00 ₽",
+      "12 345,00", // right-column orphan number — must NOT join the description
+    ];
+    const r = parseYandexRows(rows);
+    expect(r).toHaveLength(1);
+    expect(r[0].rawDesc).toContain("MAGNIT");
+    expect(r[0].rawDesc).not.toContain("12 345");
+  });
+
   it("ISO-дата: день и месяц дополняются нулями", () => {
     const rows = ["01.01.2026 SHOP NAME –9,99 ₽"];
     const r = parseYandexRows(rows);
