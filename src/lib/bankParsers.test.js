@@ -50,6 +50,25 @@ describe("categorizeByDict", () => {
   });
 });
 
+describe("hashOperation + dedupe", () => {
+  it("одинаковые операции дают одинаковый хеш", () => {
+    const a = { date: "2026-07-04", amount: 540, rawDesc: "MAGNIT MM 12" };
+    const b = { date: "2026-07-04", amount: 540, rawDesc: "MAGNIT MM 12" };
+    expect(hashOperation(a)).toBe(hashOperation(b));
+  });
+  it("помечает уже существующие как dupe", () => {
+    const op = { date: "2026-07-04", amount: 540, rawDesc: "MAGNIT MM 12" };
+    const existing = new Set([hashOperation(op)]);
+    const [r] = dedupe([op], existing);
+    expect(r.dupe).toBe(true);
+  });
+  it("новую операцию не помечает", () => {
+    const op = { date: "2026-07-05", amount: 100, rawDesc: "NEW SHOP" };
+    const [r] = dedupe([op], new Set());
+    expect(r.dupe).toBe(false);
+  });
+});
+
 const ME = ["даниил владимирович е", "елисеев даниил"];
 
 describe("classifyOperation", () => {

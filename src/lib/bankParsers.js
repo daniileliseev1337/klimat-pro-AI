@@ -164,6 +164,18 @@ export function classifyOperation(op, meNames = []) {
   return { opType: "payment", counterparty: null, cleanDesc: desc };
 }
 
+// --- Дедупликация (Task 7) ---
+
+// Ключ операции для дедупа: дата + сумма + нормализованный мерчант.
+export function hashOperation(op) {
+  return `${op.date}|${op.amount}|${normalizeMerchant(op.rawDesc)}`;
+}
+
+// Пометка повторов относительно множества хешей уже импортированных операций.
+export function dedupe(ops, existingHashes = new Set()) {
+  return ops.map(op => ({ ...op, dupe: existingHashes.has(hashOperation(op)) }));
+}
+
 // Слой 4 (LLM) — заглушка. Реальная локальная модель подключается позже,
 // не меняя сигнатуру: категоризатор станет async и вставит await между dict и none.
 export async function categorizeLLM(_merchant) { return null; }
