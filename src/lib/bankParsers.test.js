@@ -126,6 +126,14 @@ describe("categorize (цепочка)", () => {
     const r = categorize({ rawDesc: "UNKNOWN XYZ", type: "income" }, new Map());
     expect(r).toEqual({ category: "Прочий доход", source: "none" });
   });
+  it("expense с ключом дохода не попадает в «Прочий доход» (восстановленный guard)", () => {
+    const r = categorize({ rawDesc: "Возврат средств по операции", type: "expense" }, new Map());
+    expect(r.category).toBe("Прочие расходы");
+  });
+  it("income с тем же ключом остаётся «Прочий доход»", () => {
+    const r = categorize({ rawDesc: "Возврат средств по операции", type: "income" }, new Map());
+    expect(r.category).toBe("Прочий доход");
+  });
 });
 
 // --- Task 6: parseYandexRows ---

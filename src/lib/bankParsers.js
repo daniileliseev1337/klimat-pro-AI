@@ -190,7 +190,9 @@ export function categorize(op, learned = new Map()) {
   const byMcc = categorizeByMcc(op.rawDesc);
   if (byMcc) return { category: byMcc, source: "mcc" };
   const byDict = categorizeByDict(op.rawDesc);
-  if (byDict) return { category: byDict, source: "dict" };
+  if (byDict && !(byDict === "Прочий доход" && op.type === "expense")) {
+    return { category: byDict, source: "dict" };
+  }
   return { category: op.type === "income" ? "Прочий доход" : "Прочие расходы", source: "none" };
 }
 
