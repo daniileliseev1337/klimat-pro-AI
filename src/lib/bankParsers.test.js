@@ -94,6 +94,14 @@ describe("classifyOperation", () => {
       { rawDesc: "MAGNIT MM STANTSIONNYJ", amount: 540, sign: -1 }, ME);
     expect(r.opType).toBe("payment");
   });
+  it("не оставляет ФИО в переводе БЕЗ запятой (I3 PII)", () => {
+    const r = classifyOperation(
+      { rawDesc: "Исходящий перевод СБП +79001234567 Иванов Иван И.", amount: 3000, sign: -1 },
+      ["даниил"]);
+    expect(r.opType).toBe("peer_transfer");
+    expect(r.cleanDesc).not.toMatch(/Иванов/);
+    expect(r.cleanDesc).not.toMatch(/79001234567/);
+  });
 });
 
 describe("categorize (цепочка)", () => {

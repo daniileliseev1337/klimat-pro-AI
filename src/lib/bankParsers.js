@@ -136,9 +136,9 @@ export function categorizeByDict(rawDesc) {
 // --- Классификация типа операции (Task 5) ---
 
 const TRANSFER_RE = /перевод|перевода|сбп|transfer/i;
-// \w не матчит кириллицу в JS — используем [\s\S]*? для части между «начислен» и «процент»
-const TECH_RE = /капитализац|начислен.*процент|проценты на остаток|кэшбэк|cashback|внутрибанк/i;
-const PHONE_RE = /\+?\d[\d\s()-]{9,}\d/g;
+// I1: начислен[а-яёa-z]* процент — тесный класс вместо жадного .*
+const TECH_RE = /капитализац|начислен[а-яёa-z]* процент|проценты на остаток|кэшбэк|cashback|внутрибанк/i;
+// I2: PHONE_RE удалён — регекс телефона скопирован локально в classifyOperation (нет g-флага на модуле)
 
 // Проверяет, содержит ли описание одно из имён владельца (для self_transfer).
 function containsName(desc, names) {
@@ -157,9 +157,11 @@ export function classifyOperation(op, meNames = []) {
     if (containsName(desc, meNames)) {
       return { opType: "self_transfer", counterparty: null, cleanDesc: "Перевод себе" };
     }
-    // перевод физлицу — вырезаем телефон и всё после первой запятой (ФИО контрагента)
-    const cleanDesc = desc.replace(PHONE_RE, "").split(",")[0].trim();
-    return { opType: "peer_transfer", counterparty: null, cleanDesc: cleanDesc || "Перевод физлицу" };
+    // I2+I3: локальный регекс (без g на модуле) + защита от утечки ФИО при отсутствии запятой
+    const noPhone = desc.replace(/\+?\d[\d\s()-]{9,}\d/g, "");
+    const parts = noPhone.split(",");
+    const cleanDesc = parts.length > 1 ? (parts[0].trim() || "Перевод физлицу") : "Перевод физлицу";
+    return { opType: "peer_transfer", counterparty: null, cleanDesc: cleanDesc };
   }
   return { opType: "payment", counterparty: null, cleanDesc: desc };
 }
