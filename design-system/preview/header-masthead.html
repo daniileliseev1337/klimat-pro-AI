@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>КЛИМАТ-ПРО · Мастхед — 5 вариаций</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&display=swap" />
+<style>
+  :root{
+    --gold:#d4af37;--gold-bright:#e8c860;--gold-soft:#c9a431;
+    --t1:#fafaf7;--t2:#a8a8a3;--t3:#6b6b67;--t4:#404040;
+    --bd:rgba(255,255,255,.08);--bd2:rgba(255,255,255,.12);--gbd:rgba(212,175,55,.3);
+    --glass-tint:linear-gradient(150deg,rgba(16,16,14,.5),rgba(8,8,7,.58) 52%,rgba(0,0,0,.66));
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;min-height:100vh;font-family:'Geist',system-ui,sans-serif;color:var(--t1);
+    background:#0a0a0a;-webkit-font-smoothing:antialiased;}
+  #bg{position:fixed;inset:0;z-index:0;pointer-events:none;}
+  .wrap{position:relative;z-index:1;max-width:1240px;margin:0 auto;padding:40px 22px 90px;}
+  .pagehd{margin-bottom:34px;}
+  .pagehd h1{margin:0 0 6px;font-size:20px;font-weight:700;letter-spacing:-.02em;}
+  .pagehd p{margin:0;font-size:13px;color:var(--t2);max-width:760px;line-height:1.5;}
+  .pagehd .base{margin-top:10px;font-size:12px;color:var(--gold-soft);}
+
+  .frame{margin-bottom:30px;}
+  .flabel{display:flex;align-items:baseline;gap:11px;margin-bottom:11px;padding-left:2px;flex-wrap:wrap;}
+  .fnum{font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--gold-bright);
+    background:rgba(212,175,55,.12);border:1px solid var(--gbd);border-radius:999px;padding:3px 10px;}
+  .fname{font-size:14px;font-weight:600;color:var(--t1);}
+  .fdesc{font-size:12.5px;color:var(--t3);}
+  .stripe{border:1px solid var(--bd);border-radius:16px;overflow:hidden;
+    background:radial-gradient(1000px 300px at 80% -40%,rgba(212,175,55,.08),transparent 60%),#0c0c0b;}
+
+  /* бренд-лок-ап */
+  .badge{flex:0 0 auto;display:grid;place-items:center;border-radius:12px;
+    background:radial-gradient(120% 120% at 30% 20%,rgba(232,200,96,.2),rgba(212,175,55,.05));
+    border:1px solid rgba(212,175,55,.4);}
+  @keyframes breathe{0%,100%{box-shadow:0 0 16px -4px rgba(232,200,96,.4)}50%{box-shadow:0 0 34px -2px rgba(246,231,168,.7)}}
+  .badge.br{animation:breathe 4.6s ease-in-out infinite;}
+  .brandname{margin:0;font-weight:700;letter-spacing:-.02em;display:flex;align-items:center;gap:8px;flex-wrap:nowrap;min-width:0;}
+  @keyframes shim{0%{background-position:0 0}100%{background-position:220% 0}}
+  .shimmer{background:linear-gradient(100deg,#a9821f,#d4af37 40%,#fff6d5 52%,#e8c860 62%,#a9821f 82%);
+    background-size:220% auto;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shim 5.5s linear infinite;}
+  .subt{font-size:12px;color:var(--gold-soft);font-weight:400;margin-top:3px;}
+  .eyebrow{font-size:10px;color:var(--gold-soft);font-weight:600;letter-spacing:.16em;text-transform:uppercase;}
+  .hair{height:1px;background:linear-gradient(90deg,rgba(212,175,55,.55),transparent);margin:6px 0 5px;}
+
+  /* PRO — «слитковый» чип */
+  .pro{position:relative;display:inline-flex;align-items:center;font-weight:800;letter-spacing:.14em;
+    color:#f7e6a8;background:#161310;border-radius:6px;padding:2px 7px 2px 8px;font-size:.62em;line-height:1;}
+  .pro::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.2px;pointer-events:none;
+    background:linear-gradient(120deg,#8c6c18,#fff6d5 42%,#e8c860 58%,#8c6c18);
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;
+    mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;}
+
+  /* действия */
+  .ico{display:grid;place-items:center;width:34px;height:34px;border-radius:8px;cursor:pointer;
+    background:rgba(212,175,55,.1);border:1px solid var(--gbd);color:var(--gold);transition:all .16s;position:relative;}
+  .ico:hover{background:rgba(212,175,55,.2);transform:translateY(-1px);}
+  .ico.neu{background:rgba(255,255,255,.04);border-color:var(--bd2);color:var(--t2);}
+  .ico.neu:hover{background:rgba(255,255,255,.09);}
+  .ico .dot{position:absolute;top:6px;right:7px;width:6px;height:6px;border-radius:999px;background:#f8a3a3;box-shadow:0 0 0 2px #0c0c0b;}
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:8px;cursor:pointer;
+    font:600 12px 'Geist';transition:all .16s;background:rgba(212,175,55,.12);border:1px solid var(--gbd);color:var(--gold-bright);white-space:nowrap;}
+  .btn:hover{background:rgba(212,175,55,.2);}
+  .btn.neu{background:rgba(255,255,255,.04);border-color:var(--bd2);color:var(--t2);}
+  .btn.pri{background:linear-gradient(180deg,#e8c860,#c9a431);border:1px solid rgba(255,246,213,.3);color:#1a1408;font-weight:700;box-shadow:0 4px 14px -4px rgba(212,175,55,.5);}
+  .btn.pri:hover{filter:brightness(1.08);background:linear-gradient(180deg,#efd679,#d4af37);}
+  .cmdk{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:8px;cursor:pointer;
+    background:rgba(255,255,255,.04);border:1px solid var(--bd2);color:var(--t2);font-size:12.5px;transition:all .16s;}
+  .cmdk:hover{border-color:var(--gbd);color:var(--t1);}
+  .cmdk kbd{font:700 11px 'Geist';background:rgba(212,175,55,.16);border:1px solid rgba(212,175,55,.3);
+    border-radius:5px;padding:1px 6px;color:var(--gold-bright);}
+  .avatar{width:34px;height:34px;border-radius:999px;display:grid;place-items:center;cursor:pointer;flex:0 0 auto;
+    background:linear-gradient(150deg,#2a2410,#141210);border:1px solid var(--gbd);color:var(--gold-bright);font-weight:700;font-size:13px;}
+  .date{font-size:11px;color:var(--t3);white-space:nowrap;}
+  .divv{width:1px;height:22px;background:var(--bd2);margin:0 3px;}
+
+  /* правило-разделитель ярусов */
+  .rule{height:1px;background:linear-gradient(90deg,transparent,rgba(212,175,55,.5),transparent);}
+  .rule.solid{background:linear-gradient(90deg,rgba(212,175,55,.15),rgba(212,175,55,.4),rgba(212,175,55,.15));}
+
+  /* вкладки — подчёркивание */
+  .tabs{display:flex;gap:2px;}
+  .tab{position:relative;padding:13px 16px;font-size:13.5px;font-weight:600;color:var(--t3);cursor:pointer;transition:color .16s;white-space:nowrap;}
+  .tab:hover{color:var(--t1);}
+  .tab.on{color:var(--gold-bright);}
+  .tab.on::after{content:"";position:absolute;left:12px;right:12px;bottom:0;height:2px;border-radius:2px;
+    background:linear-gradient(90deg,var(--gold),var(--gold-bright));box-shadow:0 0 10px rgba(212,175,55,.6);}
+  .tabrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 16px;}
+
+  /* вкладки — сегмент-таблетки */
+  .segtabs{display:inline-flex;gap:3px;padding:4px;border-radius:12px;background:rgba(0,0,0,.32);border:1px solid var(--bd);}
+  .segtab{padding:9px 16px;border-radius:8px;font:600 13px 'Geist';color:var(--t3);cursor:pointer;transition:all .16s;white-space:nowrap;}
+  .segtab:hover{color:var(--t1);}
+  .segtab.on{color:var(--gold-bright);background:rgba(212,175,55,.14);box-shadow:inset 0 0 0 1px rgba(212,175,55,.32);}
+
+  /* статус-чипы (контекст-бар) */
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;font:600 12px 'Geist';
+    background:rgba(255,255,255,.04);border:1px solid var(--bd2);color:var(--t2);white-space:nowrap;}
+  .chip b{color:var(--gold-bright);font-weight:700;}
+  .chip.g{background:rgba(212,175,55,.1);border-color:var(--gbd);color:var(--gold-soft);}
+  .chip .d{width:7px;height:7px;border-radius:999px;background:#6ee7a8;box-shadow:0 0 8px #6ee7a8;}
+
+  /* жидкое стекло (для M2) */
+  .lg{position:relative;isolation:isolate;background:var(--glass-tint);
+    backdrop-filter:blur(6px) saturate(1.8) brightness(1.0) url(#lgwarp);-webkit-backdrop-filter:blur(6px) saturate(1.8);
+    box-shadow:inset 0 1px 1px rgba(255,255,255,.5),inset 0 -1px 1px rgba(0,0,0,.4),0 14px 40px rgba(0,0,0,.5);border-radius:16px;}
+  .lg::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.5px;pointer-events:none;z-index:3;
+    background:linear-gradient(135deg,#a9821f,#e8c860 22%,#fff6d5 46%,#ffe9a8 56%,#e8c860 72%,#a9821f);
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;
+    mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;opacity:.9;}
+  .lg .in{position:relative;z-index:4;}
+  .subbar{position:relative;z-index:4;border-top:1px solid rgba(255,255,255,.07);background:rgba(0,0,0,.22);}
+
+  .smallcaps{font-weight:700;letter-spacing:.06em;font-size:15px;white-space:nowrap;}
+  .sticky-note{font-size:10.5px;color:var(--t4);padding:7px 20px;border-top:1px solid var(--bd);background:rgba(0,0,0,.2);}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <filter id="lgwarp" x="-40%" y="-40%" width="180%" height="180%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.008 0.010" numOctaves="2" seed="12" result="t"></feTurbulence>
+    <feGaussianBlur in="t" stdDeviation="1.3" result="s"></feGaussianBlur>
+    <feDisplacementMap in="SourceGraphic" in2="s" scale="40" xChannelSelector="R" yChannelSelector="G"></feDisplacementMap>
+  </filter>
+</defs></svg>
+<canvas id="bg"></canvas>
+
+<div class="wrap">
+  <div class="pagehd">
+    <h1>Мастхед · 5 вариаций</h1>
+    <p>Все построены на выбранном тобой V4 «Мастхед» — двухъярусная шапка: бренд-лок-ап сверху, золотое правило, встроенные вкладки снизу. Меняются: трактовка вкладок, правая зона и материал. Наведи — всё интерактивно.</p>
+    <div class="base">База: живой логотип · чистый «PRO»-чип · золотой фон · вкладки Дашборд / Проекты / Задачи / Финансы / Аналитика</div>
+  </div>
+
+  <!-- M1 Редакция -->
+  <div class="frame" data-screen-label="Мастхед M1 Редакция">
+    <div class="flabel"><span class="fnum">M1</span><span class="fname">Редакция</span><span class="fdesc">— чистая доводка V4: бренд с тайплайном, золотое правило по центру, на ярусе вкладок справа — главное действие «Новый проект»</span></div>
+    <div class="stripe">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 20px 14px;">
+        <div style="display:flex;align-items:center;gap:14px;min-width:0;">
+          <div style="min-width:0;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span id="m1" style="display:inline-block;"></span>
+              <span class="pro">PRO</span>
+            </div>
+            <div class="subt" style="margin-top:4px;margin-left:1px;">климат, рассчитанный профессионально</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="date" data-date></span><div class="divv"></div>
+          <div class="ico neu" data-i="help"></div>
+          <div class="ico" data-i="bell"><span class="dot"></span></div>
+          <div class="avatar">ДЕ</div>
+        </div>
+      </div>
+      <div class="rule"></div>
+      <div class="tabrow">
+        <div class="tabs">
+          <div class="tab on">Дашборд</div><div class="tab">Проекты</div><div class="tab">Задачи</div><div class="tab">Финансы</div><div class="tab">Аналитика</div>
+        </div>
+        <button class="btn pri" data-i-lead="plus">Новый проект</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- M2 Стеклянный мастхед -->
+  <div class="frame" data-screen-label="Мастхед M2 Стекло">
+    <div class="flabel"><span class="fnum">M2</span><span class="fname">Стеклянный мастхед</span><span class="fdesc">— весь двухъярусник = плавающая панель из нашего жидкого стекла с золотой кромкой; вкладки на затемнённом суб-баре внутри</span></div>
+    <div class="stripe" style="background:radial-gradient(900px 320px at 25% -30%,rgba(212,175,55,.12),transparent 60%),#0b0b0a;padding:16px;">
+      <div class="lg">
+        <div class="in" style="display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 18px;">
+          <div style="display:flex;align-items:center;gap:14px;min-width:0;">
+            <div style="min-width:0;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span id="m2" style="display:inline-block;"></span>
+                <span class="pro">PRO</span>
+              </div>
+              <div class="subt" style="margin-top:4px;margin-left:1px;">климат, рассчитанный профессионально</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="cmdk"><span data-i="search" style="display:grid"></span><span>Поиск…</span><kbd>⌘K</kbd></div>
+            <div class="ico" data-i="bell"><span class="dot"></span></div>
+            <div class="avatar">ДЕ</div>
+          </div>
+        </div>
+        <div class="subbar tabrow">
+          <div class="tabs">
+            <div class="tab on">Дашборд</div><div class="tab">Проекты</div><div class="tab">Задачи</div><div class="tab">Финансы</div><div class="tab">Аналитика</div>
+          </div>
+          <span class="chip g"><span class="d"></span>Все системы в норме</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- M3 Сегмент-вкладки -->
+  <div class="frame" data-screen-label="Мастхед M3 Сегмент-вкладки">
+    <div class="flabel"><span class="fnum">M3</span><span class="fname">Сегмент-вкладки</span><span class="fdesc">— вкладки как таблетки-переключатель по центру нижнего яруса; сверху бренд слева, ⌘K и действия справа. App-tool ощущение</span></div>
+    <div class="stripe">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;padding:15px 20px 13px;">
+        <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+          <span id="m3" style="display:inline-block;"></span>
+          <span class="pro">PRO</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="cmdk"><span data-i="search" style="display:grid"></span><span>Поиск</span><kbd>⌘K</kbd></div>
+          <div class="ico neu" data-i="help"></div>
+          <div class="ico" data-i="bell"><span class="dot"></span></div>
+          <div class="avatar">ДЕ</div>
+        </div>
+      </div>
+      <div class="rule"></div>
+      <div style="display:flex;justify-content:center;padding:12px;">
+        <div class="segtabs">
+          <div class="segtab on">Дашборд</div><div class="segtab">Проекты</div><div class="segtab">Задачи</div><div class="segtab">Финансы</div><div class="segtab">Аналитика</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- M4 Контекст-бар -->
+  <div class="frame" data-screen-label="Мастхед M4 Контекст-бар">
+    <div class="flabel"><span class="fnum">M4</span><span class="fname">Контекст-бар</span><span class="fdesc">— ярус вкладок работает вдвойне: слева вкладки, справа живые статус-чипы (задачи, счета, климат). Данные всегда на виду</span></div>
+    <div class="stripe">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 20px 13px;">
+        <div style="display:flex;align-items:center;gap:14px;min-width:0;">
+          <div style="min-width:0;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span id="m4" style="display:inline-block;"></span>
+              <span class="pro">PRO</span>
+            </div>
+            <div class="subt" style="margin-top:4px;margin-left:1px;">климат, рассчитанный профессионально</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button class="btn pri" data-i-lead="plus">Новый проект</button>
+          <div class="ico" data-i="bell"><span class="dot"></span></div>
+          <div class="avatar">ДЕ</div>
+        </div>
+      </div>
+      <div class="rule"></div>
+      <div class="tabrow" style="padding-top:0;padding-bottom:0;">
+        <div class="tabs">
+          <div class="tab on">Дашборд</div><div class="tab">Проекты</div><div class="tab">Задачи</div><div class="tab">Финансы</div><div class="tab">Аналитика</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;">
+          <span class="chip"><b>6</b> задач сегодня</span>
+          <span class="chip"><b>2</b> счёта к оплате</span>
+          <span class="chip g"><span class="d"></span>+22°C внутри</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- M5 Компакт-липкий -->
+  <div class="frame" data-screen-label="Мастхед M5 Компакт-липкий">
+    <div class="flabel"><span class="fnum">M5</span><span class="fname">Компакт · липкий</span><span class="fdesc">— как мастхед схлопывается при скролле: два яруса сжимаются в одну плотную строку — знак + КЛИМАТ·ПРО, вкладки по центру, действия справа</span></div>
+    <div class="stripe">
+      <div style="display:flex;align-items:center;gap:16px;padding:11px 20px;">
+        <div style="display:flex;align-items:center;gap:10px;flex:0 0 auto;">
+          <div class="badge br" id="m5" style="width:34px;height:34px;border-radius:9px;"></div>
+          <span class="smallcaps"><span class="shimmer">КЛИМАТ</span><span style="color:var(--t4);margin:0 3px;">·</span><span class="pro" style="font-size:9px;">PRO</span></span>
+        </div>
+        <div class="tabs" style="flex:1;justify-content:center;">
+          <div class="tab on" style="padding:10px 13px;">Дашборд</div><div class="tab" style="padding:10px 13px;">Проекты</div><div class="tab" style="padding:10px 13px;">Задачи</div><div class="tab" style="padding:10px 13px;">Финансы</div><div class="tab" style="padding:10px 13px;">Аналитика</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;flex:0 0 auto;">
+          <div class="cmdk" style="padding:6px 10px;"><kbd>⌘K</kbd></div>
+          <div class="ico" data-i="bell"><span class="dot"></span></div>
+          <div class="avatar" style="width:32px;height:32px;">ДЕ</div>
+        </div>
+      </div>
+      <div class="sticky-note">↑ компактное состояние (появляется при прокрутке) · в покое разворачивается в полный мастхед M1</div>
+    </div>
+  </div>
+
+</div>
+
+<script src="logo-mark.js"></script>
+<script>
+  var IC={
+    search:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>',
+    bell:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>',
+    help:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.8.4-1 .9-1 1.7"/><path d="M12 17h.01"/></svg>',
+    plus:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>'
+  };
+  // иконки
+  document.querySelectorAll('[data-i]').forEach(function(e){if(IC[e.dataset.i])e.innerHTML=IC[e.dataset.i];});
+  document.querySelectorAll('[data-i-lead]').forEach(function(b){if(IC[b.dataset.iLead])b.insertAdjacentHTML('afterbegin',IC[b.dataset.iLead]);});
+  // дата
+  var DATE=new Date().toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'});
+  document.querySelectorAll('[data-date]').forEach(function(e){e.textContent=DATE;});
+
+  // клики вкладок
+  document.querySelectorAll('.tabs,.segtabs').forEach(function(group){
+    group.addEventListener('click',function(e){
+      var t=e.target.closest('.tab,.segtab');if(!t)return;
+      group.querySelectorAll('.tab,.segtab').forEach(function(x){x.classList.remove('on');});
+      t.classList.add('on');
+    });
+  });
+
+  // логотипы (живой знак)
+  if(window.KPLogo){
+    // канон: полный цикл Л·К·Л·К (знаки + текст-марка «КЛИМАТ Pro»), как утверждено
+    KPLogo.mount(document.getElementById('m1'),{height:40});
+    KPLogo.mount(document.getElementById('m2'),{height:36});
+    KPLogo.mount(document.getElementById('m3'),{height:36});
+    KPLogo.mount(document.getElementById('m4'),{height:38});
+    KPLogo.mount(document.getElementById('m5'),{height:27,wordmark:false}); // M5 — свёрнутое sticky-состояние, намеренно только знак
+  }
+
+  // золотой фон
+  (function(){
+    var c=document.getElementById('bg'),x=c.getContext('2d'),W,H,DPR=Math.min(devicePixelRatio||1,2),nd=[];
+    var blobs=[{x:.14,y:.12,r:360,a:.14,sx:7e-5,sy:5e-5,p:0},{x:.84,y:.24,r:320,a:.11,sx:5e-5,sy:8e-5,p:2.1},{x:.5,y:.9,r:400,a:.1,sx:6e-5,sy:4e-5,p:4}];
+    function rs(){W=innerWidth;H=innerHeight;c.width=W*DPR|0;c.height=H*DPR|0;c.style.width=W+'px';c.style.height=H+'px';x.setTransform(DPR,0,0,DPR,0,0);nd=[];var n=Math.min(Math.round(W*H/34000),40);for(var i=0;i<n;i++)nd.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.16,vy:(Math.random()-.5)*.16,r:Math.random()*1.3+.5});}
+    addEventListener('resize',rs);rs();
+    function f(t){x.clearRect(0,0,W,H);x.fillStyle='#0a0a0a';x.fillRect(0,0,W,H);x.globalCompositeOperation='lighter';
+      blobs.forEach(function(b){var cx=(b.x+Math.sin(t*b.sx+b.p)*.05)*W,cy=(b.y+Math.cos(t*b.sy+b.p)*.05)*H;var g=x.createRadialGradient(cx,cy,0,cx,cy,b.r);g.addColorStop(0,'rgba(212,175,55,'+b.a+')');g.addColorStop(.5,'rgba(240,216,120,'+b.a*.45+')');g.addColorStop(1,'rgba(212,175,55,0)');x.fillStyle=g;x.beginPath();x.arc(cx,cy,b.r,0,6.2832);x.fill();});
+      for(var i=0;i<nd.length;i++){var n=nd[i];n.x+=n.vx;n.y+=n.vy;if(n.x<0||n.x>W)n.vx*=-1;if(n.y<0||n.y>H)n.vy*=-1;}
+      x.lineWidth=1;for(var a=0;a<nd.length;a++)for(var b2=a+1;b2<nd.length;b2++){var dx=nd[a].x-nd[b2].x,dy=nd[a].y-nd[b2].y,d=Math.sqrt(dx*dx+dy*dy);if(d<150){x.strokeStyle='rgba(212,175,55,'+(1-d/150)*.13+')';x.beginPath();x.moveTo(nd[a].x,nd[a].y);x.lineTo(nd[b2].x,nd[b2].y);x.stroke();}}
+      for(var q=0;q<nd.length;q++){x.beginPath();x.arc(nd[q].x,nd[q].y,nd[q].r,0,6.2832);x.fillStyle='rgba(240,216,120,.5)';x.fill();}
+      x.globalCompositeOperation='source-over';requestAnimationFrame(f);}
+    requestAnimationFrame(f);
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Klimat Pro — знак компании, варианты</title>
+<link rel="stylesheet" href="../../styles.css" />
+<style>
+  body { margin: 0; padding: 40px 36px 48px; min-height: 100vh; color: var(--text-body); background:
+    radial-gradient(1100px 600px at 80% -10%, rgba(212,175,55,0.08), transparent 60%),
+    radial-gradient(800px 500px at 5% 110%, rgba(212,175,55,0.05), transparent 60%), #0a0a0a; }
+  .eyebrow { font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--accent); font-weight: 600; }
+  h1 { font-size: 25px; font-weight: 600; letter-spacing: -0.022em; color: var(--text-strong); margin: 8px 0 4px; }
+  .lede { font-size: 13.5px; color: var(--text-muted); max-width: 620px; line-height: 1.55; }
+  .row { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 34px; }
+  .opt { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 26px 20px 20px;
+    border-radius: var(--radius-xl); background: linear-gradient(135deg, rgba(30,30,27,0.5), rgba(18,18,16,0.4));
+    border: 1px solid var(--border-subtle); box-shadow: var(--shadow-inset-hi); min-width: 188px; flex: 1;
+    transition: border-color var(--dur-base), transform var(--dur-base); }
+  .opt:hover { border-color: var(--border-gold-subtle); transform: translateY(-3px); }
+  .opt .tile { height: 92px; display: grid; place-items: center; }
+  .opt .name { font-size: 13.5px; font-weight: 600; color: var(--text-strong); }
+  .opt .desc { font-size: 11px; color: var(--text-subtle); text-align: center; line-height: 1.45; min-height: 30px; }
+  .opt .tag { font-family: var(--font-mono); font-size: 11px; color: var(--accent); letter-spacing: 0.12em; }
+  @keyframes wordshine { 0%,100% { background-position: 0 0; } 50% { background-position: 100% 0; } }
+</style>
+</head>
+<body>
+  <div class="eyebrow">Klimat Pro · Знак компании (К)</div>
+  <h1>Фирменный знак — выбери форму</h1>
+  <p class="lede">Четыре принципиально разных подхода к единому знаку «К», который появляется между тематическими. Капля и остальные Л остаются. Скажи букву — доведу выбранный до финала и поставлю в цикл.</p>
+
+  <div class="row" id="row"></div>
+
+<script>
+function grad(id, dur) {
+  return `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="48" y2="48">
+    <stop offset="0" stop-color="#a9821f"/><stop offset="0.42" stop-color="#d4af37"/>
+    <stop offset="0.5" stop-color="#fff6d5"/><stop offset="0.58" stop-color="#e8c860"/><stop offset="1" stop-color="#a9821f"/>
+    <animateTransform attributeName="gradientTransform" type="translate" values="-48 -48;48 48;-48 -48" dur="${dur||4}s" repeatCount="indefinite"/>
+  </linearGradient>`;
+}
+
+const OPTS = [
+  { tag:"A", name:"Негатив-печать", desc:"Сплошная золотая плашка, «КП» вырезана насквозь. Фирменный медальон.",
+    svg:(s)=>`<svg width="84" height="84" viewBox="0 0 48 48"><defs>${grad('a'+s,4.5)}
+      <mask id="mk${s}"><rect x="2" y="2" width="44" height="44" rx="13" fill="#fff"/>
+      <text x="24" y="31" text-anchor="middle" fill="#000" font-family="Geist, sans-serif" font-weight="700" font-size="19" letter-spacing="-0.5">\u041a\u041f</text></mask></defs>
+      <rect x="2" y="2" width="44" height="44" rx="13" fill="url(#a${s})" mask="url(#mk${s})"/></svg>` },
+
+  { tag:"B", name:"Одиночная «К»", desc:"Один уверенный знак «К» (Климат) + золотая точка «Pro». Минимум, максимум характера.",
+    svg:(s)=>`<svg width="84" height="84" viewBox="0 0 48 48" fill="none"><defs>${grad('b'+s)}</defs>
+      <rect x="2" y="2" width="44" height="44" rx="13" fill="#0d0d0c" stroke="url(#b${s})" stroke-width="1.5"/>
+      <text x="22" y="33" text-anchor="middle" fill="url(#b${s})" font-family="Geist, sans-serif" font-weight="700" font-size="26" letter-spacing="-1">\u041a</text>
+      <circle cx="34" cy="16" r="2.6" fill="url(#b${s})"/></svg>` },
+
+  { tag:"C", name:"Круглая печать", desc:"Золотое кольцо-штамп с «КП» внутри и насечками. Как клеймо на металле.",
+    svg:(s)=>`<svg width="84" height="84" viewBox="0 0 48 48" fill="none"><defs>${grad('c'+s,5)}</defs>
+      <rect x="2" y="2" width="44" height="44" rx="13" fill="#0d0d0c" stroke="url(#c${s})" stroke-width="1.5"/>
+      <circle cx="24" cy="24" r="14" fill="none" stroke="url(#c${s})" stroke-width="1.6"/>
+      <circle cx="24" cy="24" r="14" fill="none" stroke="url(#c${s})" stroke-width="2.4" stroke-dasharray="0.5 4.05" stroke-linecap="round" opacity="0.7"/>
+      <text x="24" y="30" text-anchor="middle" fill="url(#c${s})" font-family="Geist, sans-serif" font-weight="700" font-size="15" letter-spacing="-0.5">\u041a\u041f</text></svg>` },
+
+  { tag:"D", name:"Словесный знак", desc:"Сам логотип «КЛИМАТ Pro» как единый блок — буквально в стиле названия.",
+    svg:(s)=>`<svg width="150" height="84" viewBox="0 0 150 84"><defs>${grad('d'+s,5)}</defs>
+      <rect x="3" y="22" width="144" height="40" rx="14" fill="#0d0d0c" stroke="url(#d${s})" stroke-width="1.5"/>
+      <text x="75" y="48" text-anchor="middle" font-family="Geist, sans-serif" font-weight="700" font-size="20" letter-spacing="0.5" fill="url(#d${s})">\u041a\u041b\u0418\u041c\u0410\u0422<tspan font-weight="400" fill="#a8a8a3" dx="3">Pro</tspan></text></svg>` },
+];
+
+document.getElementById('row').innerHTML = OPTS.map(o=>
+  `<div class="opt"><div class="tile">${o.svg(o.tag)}</div><div class="name">${o.name}</div><div class="desc">${o.desc}</div><div class="tag">${o.tag}</div></div>`
+).join('');
+</script>
+</body>
+</html>

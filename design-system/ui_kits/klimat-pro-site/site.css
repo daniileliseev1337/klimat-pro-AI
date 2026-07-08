@@ -1,0 +1,163 @@
+/* ============================================================================
+   КЛИМАТ-ПРО — site mock stylesheet
+   Real design tokens + brand/logo animations lifted verbatim from the live app
+   (src/index.css), with the old flat .kp-card / .glass-card REPLACED by our new
+   refracting liquid-glass material (.lg — dark smoked tint, feDisplacementMap
+   edge-lens, brighter/refined gold edge). Requires #lg-warp / #lg-rim SVG
+   filters on the page (in index.html).
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300..800&display=swap');
+
+:root {
+  /* ── surfaces ── */
+  --bg-base: #0a0a0a;
+  --bg-elevated: #141414;
+  --bg-higher: #1c1c1a;
+
+  /* ── borders ── */
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.10);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --border-gold-subtle: rgba(212, 175, 55, 0.15);
+  --border-gold: rgba(212, 175, 55, 0.30);
+
+  /* ── text ── */
+  --text-primary: #fafaf7;
+  --text-secondary: #a8a8a3;
+  --text-tertiary: #6b6b67;
+  --text-quaternary: #404040;
+
+  /* ── gold accent ── */
+  --gold: #d4af37;
+  --gold-bright: #e8c860;
+  --gold-soft: #c9a431;
+  --gold-bg-subtle: rgba(212, 175, 55, 0.06);
+  --gold-bg: rgba(212, 175, 55, 0.12);
+  --gold-bg-strong: rgba(212, 175, 55, 0.20);
+  --gold-glow: rgba(212, 175, 55, 0.40);
+
+  /* ── states ── */
+  --success: #6ee7a8;  --success-bg: rgba(110,231,168,0.10);  --success-border: rgba(110,231,168,0.25);
+  --warning: #f3d77b;  --warning-bg: rgba(243,215,123,0.10);  --warning-border: rgba(243,215,123,0.25);
+  --danger:  #f8a3a3;  --danger-bg:  rgba(248,163,163,0.10);  --danger-border:  rgba(248,163,163,0.25);
+  --info:    #93c5fd;  --info-bg:    rgba(147,197,253,0.10);  --info-border:    rgba(147,197,253,0.25);
+
+  /* ── NEW liquid-glass material ── */
+  --glass-tint:       linear-gradient(150deg, rgba(16,16,14,0.46), rgba(8,8,7,0.55) 52%, rgba(0,0,0,0.64));
+  --glass-tint-gold:  linear-gradient(150deg, rgba(58,46,16,0.44), rgba(18,15,6,0.54) 52%, rgba(0,0,0,0.62));
+  --glass-bevel:      inset 0 1px 1px rgba(255,255,255,0.55), inset 0 -1px 1px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.12);
+  --glass-bevel-gold: inset 0 1px 1.5px rgba(255,244,200,0.8), inset 0 -1px 1px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(226,186,74,0.6);
+  --glass-spec:       linear-gradient(135deg, rgba(255,255,255,0.9), transparent 30%, transparent 66%, rgba(255,255,255,0.32));
+  --glass-spec-gold:  linear-gradient(135deg, #fff2c8, rgba(226,186,74,0.55) 20%, transparent 42%, transparent 58%, rgba(226,186,74,0.65) 80%, #ffe9a8);
+}
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg-base); color: var(--text-primary);
+  font-family: 'Geist', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'tnum' 1, 'ss01' 1, 'cv11' 1;
+  letter-spacing: -0.011em;
+}
+input, textarea, select, button { font-family: inherit; font-feature-settings: 'tnum' 1, 'cv11' 1; }
+#root { position: relative; z-index: 1; }
+* { box-sizing: border-box; }
+
+/* ── scrollbar + selection ── */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.10); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(212,175,55,0.25); }
+::selection { background: var(--gold-bg-strong); color: var(--text-primary); }
+
+/* ══ BRAND / LOGO animations (verbatim from live app) ═══════════════════════ */
+@keyframes kp-breathe {
+  0%,100% { box-shadow: 0 0 18px -3px rgba(232,200,96,0.45), inset 0 0 14px rgba(212,175,55,0.16); }
+  50%     { box-shadow: 0 0 42px 0 rgba(246,231,168,0.78), inset 0 0 24px rgba(232,200,96,0.32); }
+}
+.brand-breathe { animation: kp-breathe 4.6s ease-in-out infinite; }
+
+@keyframes kp-shimmer { from { background-position: 0% center; } to { background-position: 220% center; } }
+.brand-shimmer {
+  background: linear-gradient(100deg, var(--gold-soft) 0%, var(--gold) 25%, #fff6d5 50%, var(--gold) 72%, var(--gold-soft) 100%);
+  background-size: 220% auto; -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: kp-shimmer 4.6s ease-in-out infinite alternate;
+}
+.brand-static-gold {
+  background: linear-gradient(100deg, #a9821f, #d4af37 45%, #ead27a 58%, #c9a431 78%, #a9821f);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 0 7px rgba(212,175,55,0.30));
+}
+.brand-hair { height: 1px; width: 248px; max-width: 58vw; margin: 6px 0 5px; background: linear-gradient(90deg, rgba(212,175,55,.6), rgba(212,175,55,0)); }
+
+@keyframes kpl-flow { to { stroke-dashoffset: -32; } }
+@keyframes kpl-spin { to { transform: rotate(360deg); } }
+@keyframes kpl-tc { 0%,42% { opacity: 1; } 58%,100% { opacity: 0; } }
+@keyframes kpl-beat { 0%,100% { transform: scale(1); } 50% { transform: scale(1.15); } }
+.kpl-flow { stroke-dasharray: 9 7; animation: kpl-flow 2s linear infinite; }
+.kpl-spin { transform-origin: 12px 12px; animation: kpl-spin 4.4s linear infinite; }
+.kpl-cold { animation: kpl-tc 5s ease-in-out infinite; }
+.kpl-warm { animation: kpl-tc 5s ease-in-out infinite reverse; }
+.kpl-beat { transform-origin: 12px 14.5px; animation: kpl-beat 1.8s ease-in-out infinite; }
+
+/* cmdk badge */
+.cmdk-badge { display: inline-flex; align-items: center; gap: 7px; padding: 7px 10px; border-radius: 11px; cursor: pointer;
+  background: rgba(212,175,55,0.07); border: 1px solid var(--border-gold-subtle); color: var(--text-secondary); font-size: 12.5px;
+  transition: border-color .25s, color .25s, box-shadow .25s; }
+.cmdk-badge:hover { border-color: var(--border-gold); color: var(--text-primary); box-shadow: 0 0 18px -6px var(--gold-glow); }
+.cmdk-badge kbd { font: inherit; font-size: 11.5px; font-weight: 700; padding: 2px 6px; border-radius: 6px;
+  background: linear-gradient(180deg, rgba(212,175,55,0.22), rgba(212,175,55,0.10)); border: 1px solid rgba(212,175,55,0.30); color: var(--gold-bright); }
+
+@keyframes kp-rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+.kp-rise { animation: kp-rise 0.6s cubic-bezier(.22,1,.36,1) both; }
+
+/* ══ NEW LIQUID GLASS MATERIAL ══════════════════════════════════════════════
+   Replaces old .kp-card / .glass-card. Layers are explicit child spans (set by
+   the <Glass> component) so refraction + gold edge + spotlight all compose. ── */
+.lg {
+  position: relative; isolation: isolate; border-radius: var(--r, 14px);
+  background: var(--glass-tint);
+  backdrop-filter: blur(var(--blur, 6px)) saturate(1.7) brightness(1.0) var(--warp, url(#lg-warp));
+  -webkit-backdrop-filter: blur(var(--blur, 6px)) saturate(1.7) brightness(1.0);
+  box-shadow: var(--glass-bevel), 0 12px 34px rgba(0,0,0,0.5);
+  transition: transform 0.18s cubic-bezier(.2,.7,.3,1), box-shadow 0.18s;
+}
+.lg-lens {  /* edge-lens refraction ring */
+  position: absolute; inset: 0; z-index: 1; border-radius: inherit; pointer-events: none;
+  padding: var(--band, 14px);
+  backdrop-filter: blur(1px) var(--rim, url(#lg-rim)); -webkit-backdrop-filter: blur(1px);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+}
+.lg-shine { /* specular bevel / lit gold edge */
+  position: absolute; inset: 0; z-index: 3; border-radius: inherit; pointer-events: none; padding: 1.4px;
+  background: var(--glass-spec);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+}
+.lg-spot { /* cursor spotlight (gold) */
+  position: absolute; inset: 0; z-index: 2; border-radius: inherit; pointer-events: none; opacity: 0;
+  transition: opacity 0.25s;
+  background: radial-gradient(340px circle at var(--mx,50%) var(--my,50%), rgba(212,175,55,0.12), transparent 60%);
+}
+.lg-body { position: relative; z-index: 4; }
+.lg:hover { transform: translateY(-3px); box-shadow: var(--glass-bevel), 0 16px 44px rgba(0,0,0,0.55), 0 0 26px -8px var(--gold-glow); }
+.lg:hover .lg-spot { opacity: 1; }
+
+.lg--gold { box-shadow: var(--glass-bevel-gold), 0 12px 34px rgba(0,0,0,0.5), 0 0 22px -8px var(--gold-glow); }
+.lg--gold .lg-shine { background: var(--glass-spec-gold); }
+.lg--gold:hover { box-shadow: var(--glass-bevel-gold), 0 16px 44px rgba(0,0,0,0.55), 0 0 30px -6px var(--gold-glow); }
+.lg--gold-tint { background: var(--glass-tint-gold); }
+
+/* graceful fallback without backdrop-filter */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .lg { background: rgba(20,20,18,0.92); border: 1px solid var(--border-gold-subtle); }
+  .lg-lens { display: none; }
+}
+
+/* motion discipline */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+  .lg:hover { transform: none; }
+}

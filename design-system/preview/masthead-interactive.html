@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>КЛИМАТ Pro · Мастхед — живое климат-поле (интерактив)</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&family=Geist+Mono:wght@400..600&family=Marck+Script&family=Caveat:wght@500..700&family=Pacifico&family=Bad+Script&display=swap" />
+<style>
+  :root{
+    --gold:#d4af37;--gold-bright:#e8c860;--gold-soft:#c9a431;
+    --t1:#fafaf7;--t2:#a8a8a3;--t3:#6b6b67;--t4:#4a4a46;
+    --bd:rgba(255,255,255,.08);--bd2:rgba(255,255,255,.12);--gbd:rgba(212,175,55,.3);
+    --mint:#6ee7a8;--rose:#e7a3a3;
+    --ease:cubic-bezier(.16,1,.3,1);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;min-height:100vh;font-family:'Geist',system-ui,sans-serif;color:var(--t1);
+    background:radial-gradient(1200px 700px at 50% -10%,#141210,#0a0a0a 60%);-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;}
+  .stage{max-width:1200px;margin:0 auto;padding:70px 24px 40px;}
+  .kicker{font:600 11px 'Geist Mono';letter-spacing:.18em;text-transform:uppercase;color:var(--gold-soft);margin:0 0 16px 4px;}
+
+  /* ─── масштхед как живое поле ─── */
+  .mast{position:relative;border-radius:20px;overflow:hidden;isolation:isolate;
+    background:linear-gradient(160deg,#100f0d,#0a0a09 70%);
+    box-shadow:0 30px 80px -20px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.06);cursor:default;}
+  .mast::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.3px;pointer-events:none;z-index:6;
+    background:linear-gradient(135deg,#8c6c18,#e8c860 24%,#fff6d5 48%,#e8c860 70%,#8c6c18);
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;
+    mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;opacity:.9;}
+  .field{position:absolute;inset:0;z-index:1;display:block;}
+  .spot{position:absolute;inset:0;z-index:2;pointer-events:none;opacity:0;transition:opacity .5s var(--ease);
+    background:radial-gradient(280px circle at var(--x,50%) var(--y,50%),rgba(232,200,96,.16),transparent 62%);mix-blend-mode:screen;}
+  .scrim{position:absolute;inset:0;z-index:3;pointer-events:none;
+    background:linear-gradient(90deg,rgba(8,8,7,.86),rgba(8,8,7,.5) 34%,rgba(8,8,7,.28) 60%,rgba(8,8,7,.55));}
+  .mast>.layer{position:relative;z-index:4;}
+
+  .top{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:22px 24px 18px;}
+  .brand{display:flex;align-items:center;gap:16px;min-width:0;}
+  .slogans{display:flex;flex-direction:column;gap:4px;border-left:1px solid rgba(212,175,55,.28);padding-left:17px;transition:opacity .32s var(--ease),transform .32s var(--ease);}
+  .slogans.dim{opacity:0;transform:translateX(-8px);pointer-events:none;}
+  .sig{display:block;height:44px;width:auto;overflow:visible;margin-bottom:4px;
+    transform:skewX(-13deg);transform-origin:left center;
+    clip-path:inset(-32% 100% -40% -4%);animation:sigdraw 2.4s var(--ease) .35s forwards;}
+  @keyframes sigdraw{to{clip-path:inset(-32% -8% -40% -4%);}}
+  .sig text{font-family:'Marck Script',cursive;font-size:33px;fill:url(#ink);stroke:none;
+    filter:drop-shadow(0 1px 4px rgba(0,0,0,.35));}
+  @media (prefers-reduced-motion:reduce){.sig{clip-path:none;animation:none;}}
+  @media (max-width:1080px){.sig{height:36px;}.btn-new{padding:11px !important;}.btn-new .lbl{display:none;}}
+  .slog-tech{font-size:11px;font-weight:600;letter-spacing:.05em;white-space:nowrap;
+    background:linear-gradient(100deg,#b8901f,#d4af37 34%,#fff6d5 50%,#e8c860 60%,#b8901f 84%);background-size:240% auto;
+    -webkit-background-clip:text;background-clip:text;color:transparent;animation:shim 6.5s linear infinite;}
+  @keyframes shim{0%{background-position:0 0}100%{background-position:240% 0}}
+  @media (prefers-reduced-motion:reduce){.slog-tech{animation:none;}}
+
+  .tools{display:flex;align-items:center;gap:10px;}
+  .search{display:flex;align-items:center;gap:0;height:40px;width:44px;padding:0;border-radius:11px;cursor:pointer;overflow:hidden;
+    background:rgba(0,0,0,.34);border:1px solid var(--bd2);color:var(--t3);transition:width .4s var(--ease),border-color .2s,background .2s;}
+  .search:hover{border-color:var(--gbd);}
+  .search .si{display:grid;place-items:center;width:42px;height:40px;flex-shrink:0;color:var(--t2);}
+  .search input{flex:1;min-width:0;height:40px;border:none;background:none;outline:none;color:var(--t1);font:500 13.5px 'Geist';padding:0 6px 0 0;}
+  .search input::placeholder{color:var(--t3);}
+  .search kbd{font:600 11px 'Geist Mono';background:rgba(212,175,55,.14);border:1px solid rgba(212,175,55,.28);border-radius:5px;padding:2px 6px;color:var(--gold-bright);margin-right:9px;opacity:0;transition:opacity .25s;flex-shrink:0;}
+  .search.open{width:270px;background:rgba(0,0,0,.5);border-color:var(--gbd);}
+  .search.open kbd{opacity:1;}
+  .iconbtn{position:relative;display:grid;place-items:center;width:40px;height:40px;border-radius:11px;cursor:pointer;flex-shrink:0;
+    background:rgba(0,0,0,.28);border:1px solid var(--bd2);color:var(--t2);transition:color .18s,border-color .18s,background .18s;}
+  .iconbtn:hover{color:var(--t1);border-color:var(--gbd);background:rgba(212,175,55,.08);}
+  .iconbtn .dot{position:absolute;top:9px;right:10px;width:6px;height:6px;border-radius:999px;background:var(--rose);box-shadow:0 0 0 2px #0d0d0c;}
+  .btn-new{display:inline-flex;align-items:center;gap:7px;padding:11px 16px;border-radius:11px;font:700 13px 'Geist';color:#1a1408;cursor:pointer;white-space:nowrap;
+    background:linear-gradient(180deg,#e8c860,#c9a431);border:1px solid rgba(255,246,213,.4);
+    box-shadow:0 8px 22px -8px rgba(212,175,55,.8);transition:transform .25s var(--ease),box-shadow .2s;will-change:transform;}
+  .avatar{width:40px;height:40px;border-radius:999px;display:grid;place-items:center;flex-shrink:0;cursor:pointer;
+    background:linear-gradient(150deg,#2a2410,#141210);border:1px solid var(--gbd);color:var(--gold-bright);font-weight:700;font-size:13px;}
+
+  .nav{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:0 22px 0 20px;
+    border-top:1px solid rgba(255,255,255,.07);background:rgba(0,0,0,.32);}
+  .tabs{position:relative;display:flex;}
+  .slider{position:absolute;bottom:0;height:2px;border-radius:2px;background:linear-gradient(90deg,var(--gold),var(--gold-bright));
+    box-shadow:0 0 12px rgba(212,175,55,.7);transition:left .34s var(--ease),width .34s var(--ease);pointer-events:none;}
+  .tab{position:relative;padding:13px 13px;font-size:13px;font-weight:600;color:var(--t3);cursor:pointer;transition:color .18s;white-space:nowrap;background:none;border:none;font-family:inherit;}
+  .tab:hover{color:var(--t1);}
+  .tab.on{color:var(--gold-bright);}
+  .statusbar{display:inline-flex;align-items:center;}
+  .stat{display:inline-flex;align-items:center;gap:7px;padding:0 11px;font:500 12px 'Geist',system-ui,sans-serif;color:var(--t2);white-space:nowrap;letter-spacing:.01em;}
+  .stat svg{color:var(--gold-soft);flex-shrink:0;}
+  .stat b{color:var(--t1);font-weight:700;}
+  .stat .hot{color:var(--gold-bright);font-weight:600;}
+  .stat.time{font-family:'Geist',system-ui,sans-serif;font-weight:300;font-size:16.5px;letter-spacing:.005em;color:var(--t1);font-variant-numeric:tabular-nums;}
+  .stat.time .cs{color:var(--gold-soft);font-weight:300;margin:0 .5px;display:inline-block;animation:breathe 2.6s ease-in-out infinite;}
+  @keyframes breathe{0%,100%{opacity:1}50%{opacity:.24}}
+  @media (prefers-reduced-motion:reduce){.stat.time .cs{animation:none;}}
+  .stat.date{font-size:10.5px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--t2);}
+  .vr{width:1px;height:16px;background:linear-gradient(180deg,transparent,rgba(255,255,255,.15),transparent);flex-shrink:0;}
+  .sync{display:inline-flex;align-items:center;gap:9px;padding:0 2px 0 11px;font:500 12px 'Geist',system-ui,sans-serif;color:var(--t3);white-space:nowrap;}
+  .sync b{color:var(--t2);font-weight:600;}
+  .sync .d{position:relative;width:8px;height:8px;border-radius:999px;background:var(--mint);box-shadow:0 0 9px var(--mint);flex-shrink:0;}
+  .sync .d::after{content:"";position:absolute;inset:-1px;border-radius:inherit;box-shadow:0 0 0 0 rgba(110,231,168,.5);animation:ping 2.6s ease-out infinite;}
+  @keyframes ping{0%{box-shadow:0 0 0 0 rgba(110,231,168,.5)}70%,100%{box-shadow:0 0 0 9px rgba(110,231,168,0)}}
+  @media (prefers-reduced-motion:reduce){.sync .d::after{animation:none;}}
+
+  .hint{margin:18px 4px 0;font-size:12px;color:var(--t4);letter-spacing:.01em;}
+  .hint b{color:var(--gold-soft);font-weight:600;}
+  .fontpick{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:16px 4px 0;}
+  .fp-label{font:600 10.5px 'Geist Mono';letter-spacing:.1em;text-transform:uppercase;color:var(--t4);}
+  .fp{display:inline-flex;align-items:center;height:42px;padding:0 16px;border-radius:10px;cursor:pointer;font-size:21px;line-height:1;color:#c9c9c4;
+    background:rgba(0,0,0,.3);border:1px solid var(--bd2);transition:border-color .16s,color .16s,background .16s;}
+  .fp:hover{border-color:var(--gbd);color:#f3ecda;}
+  .fp.on{border-color:var(--gbd);background:rgba(212,175,55,.1);color:#f3ecda;box-shadow:inset 0 0 0 1px rgba(212,175,55,.25);}
+  @media (max-width:1120px){.stat.date,.vr.d-date,.fresh{display:none;}}
+  @media (max-width:900px){.stat.tasks,.vr.d-tasks{display:none;}}
+  @media (max-width:720px){.slogans{display:none;}}
+</style>
+</head>
+<body>
+<div class="stage">
+  <p class="kicker">КЛИМАТ Pro · первое впечатление · интерактив</p>
+
+  <header class="mast" id="mast">
+    <canvas class="field" id="field"></canvas>
+    <div class="spot" id="spot"></div>
+    <div class="scrim"></div>
+
+    <div class="layer">
+      <div class="top">
+        <div class="brand">
+          <span id="logo" style="display:inline-block;"></span>
+          <div class="slogans">
+            <svg class="sig" viewBox="0 0 520 60" preserveAspectRatio="xMinYMid meet" role="img" aria-label="Заботимся о тех, кто внутри">
+              <defs>
+                <linearGradient id="ink" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0" stop-color="#c9a431"></stop><stop offset=".5" stop-color="#f6ecc0"></stop><stop offset="1" stop-color="#c9a431"></stop>
+                </linearGradient>
+              </defs>
+              <text x="3" y="42" textLength="495" lengthAdjust="spacingAndGlyphs">Заботимся о тех, кто внутри</text>
+            </svg>
+            <div class="slog-tech">климат, рассчитанный профессионально</div>
+          </div>
+        </div>
+        <div class="tools">
+          <div class="search" id="search">
+            <span class="si"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.2-3.2"></path></svg></span>
+            <input id="searchInput" type="text" placeholder="Проект, счёт, задача…" />
+            <kbd>ESC</kbd>
+          </div>
+          <div class="iconbtn"><span class="dot"></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.7 21a2 2 0 0 1-3.4 0"></path></svg></div>
+          <button class="btn-new" id="magnet"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg><span class="lbl">Новый проект</span></button>
+          <div class="avatar">ДЕ</div>
+        </div>
+      </div>
+
+      <div class="nav">
+        <nav class="tabs" id="tabs">
+          <span class="slider" id="slider"></span>
+          <button class="tab on">Дашборд</button>
+          <button class="tab">Проекты</button>
+          <button class="tab">Финансы</button>
+          <button class="tab">Аналитика</button>
+          <button class="tab">Задачи</button>
+        </nav>
+        <div class="statusbar">
+          <div class="stat tasks">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+            <span><b>6</b> задач <span class="hot">· 2 срочные</span></span>
+          </div>
+          <span class="vr d-tasks"></span>
+          <div class="stat time" id="clock"><span id="hh">--</span><span class="cs">:</span><span id="mm">--</span></div>
+          <span class="vr"></span>
+          <div class="stat date" id="date">—</div>
+          <span class="vr d-date"></span>
+          <div class="sync"><span class="d"></span>Синхронизировано<b class="fresh"> · только что</b></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <p class="hint">Живой интерактив: <b>подпись вычерчивается пером</b> (наведи на бренд — напишется заново) · <b>курсор по полю</b> — воздух расходится · <b>поиск</b> раскрывается · <b>вкладки</b> — индикатор скользит.</p>
+  <div class="fontpick" style="display:none"></div>
+</div>
+
+<script src="logo-mark.js"></script>
+<script>
+  // ── зафиксированный живой логотип (полный цикл Л·К·Л·К) ──
+  if(window.KPLogo) KPLogo.mount(document.getElementById('logo'),{height:68});
+
+  var mast=document.getElementById('mast'), field=document.getElementById('field'), spot=document.getElementById('spot');
+  var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+  // ── подпись вычерчивается заново при наведении на бренд ──
+  (function(){
+    var sig=document.querySelector('.sig'), brand=document.querySelector('.brand');
+    brand.addEventListener('mouseenter',function(){sig.style.animation='none';void sig.offsetWidth;sig.style.animation='';});
+  })();
+
+  // ── КЛИМАТ-ПОЛЕ: золотые потоки воздуха, расходятся под курсором ──
+  (function(){
+    var ctx=field.getContext('2d'),W=0,H=0,DPR=Math.min(devicePixelRatio||1,2),ps=[],mx=-9999,my=-9999,R=155;
+    function build(){
+      ps=[];var n=Math.min(Math.round(W*H/1300),190);
+      for(var i=0;i<n;i++)ps.push({x:Math.random()*W,y:Math.random()*H,vx:Math.random()*.6+.2,vy:0,r:Math.random()*1.3+.5});
+    }
+    function size(){W=mast.clientWidth;H=mast.clientHeight;field.width=W*DPR|0;field.height=H*DPR|0;field.style.width=W+'px';field.style.height=H+'px';ctx.setTransform(DPR,0,0,DPR,0,0);ctx.fillStyle='#0a0a09';ctx.fillRect(0,0,W,H);build();}
+    new ResizeObserver(size).observe(mast); size();
+    mast.addEventListener('pointermove',function(e){var r=mast.getBoundingClientRect();mx=e.clientX-r.left;my=e.clientY-r.top;
+      spot.style.setProperty('--x',mx+'px');spot.style.setProperty('--y',my+'px');spot.style.opacity='1';});
+    mast.addEventListener('pointerleave',function(){mx=my=-9999;spot.style.opacity='0';});
+    function frame(t){
+      ctx.fillStyle='rgba(9,9,8,.20)';ctx.fillRect(0,0,W,H);
+      ctx.globalCompositeOperation='lighter';
+      for(var i=0;i<ps.length;i++){var p=ps[i];
+        var curl=Math.sin(p.y*.014+t*.0006)*.5+Math.sin(p.x*.006-t*.0004)*.3;
+        p.vx+=((.55+p.r*.15)-p.vx)*.02; p.vy+=(curl-p.vy)*.05;
+        if(mx>-9998){var dx=p.x-mx,dy=p.y-my,d2=dx*dx+dy*dy;if(d2<R*R){var d=Math.sqrt(d2)||1,f=(1-d/R)*3.2;p.vx+=dx/d*f;p.vy+=dy/d*f;}}
+        var px=p.x,py=p.y; p.x+=p.vx; p.y+=p.vy;
+        if(p.x>W+10){p.x=-10;px=p.x;} if(p.x<-10){p.x=W+10;px=p.x;}
+        if(p.y>H+10){p.y=-10;py=p.y;} if(p.y<-10){p.y=H+10;py=p.y;}
+        var sp=Math.min(1,Math.hypot(p.vx,p.vy)/3.4);
+        ctx.strokeStyle='rgba('+(232)+','+(200+sp*20|0)+',96,'+(.1+sp*.55)+')';
+        ctx.lineWidth=p.r; ctx.lineCap='round';
+        ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(p.x,p.y);ctx.stroke();
+      }
+      ctx.globalCompositeOperation='source-over';
+      if(!reduce)requestAnimationFrame(frame);
+    }
+    if(reduce){ // статичный кадр
+      for(var k=0;k<ps.length;k++){var p=ps[k];ctx.fillStyle='rgba(232,200,96,.4)';ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,6.28);ctx.fill();}
+    } else requestAnimationFrame(frame);
+  })();
+
+  // ── магнитный индикатор вкладок ──
+  (function(){
+    var tabs=[].slice.call(document.querySelectorAll('.tab')),slider=document.getElementById('slider'),wrap=document.getElementById('tabs');
+    var active=document.querySelector('.tab.on');
+    function move(el){slider.style.left=el.offsetLeft+'px';slider.style.width=el.offsetWidth+'px';}
+    requestAnimationFrame(function(){move(active);});
+    tabs.forEach(function(tb){
+      tb.addEventListener('mouseenter',function(){move(tb);});
+      tb.addEventListener('click',function(){active.classList.remove('on');active=tb;active.classList.add('on');move(active);});
+    });
+    wrap.addEventListener('mouseleave',function(){move(active);});
+    addEventListener('resize',function(){move(active);});
+  })();
+
+  // ── раскрывающийся поиск ──
+  (function(){
+    var s=document.getElementById('search'),inp=document.getElementById('searchInput'),slg=document.querySelector('.slogans');
+    s.addEventListener('click',function(){if(!s.classList.contains('open')){s.classList.add('open');if(slg)slg.classList.add('dim');setTimeout(function(){inp.focus();},120);}});
+    inp.addEventListener('keydown',function(e){if(e.key==='Escape'){inp.blur();}});
+    inp.addEventListener('blur',function(){if(!inp.value){s.classList.remove('open');if(slg)slg.classList.remove('dim');}});
+  })();
+
+  // ── магнитная кнопка ──
+  (function(){
+    var b=document.getElementById('magnet');
+    if(reduce)return;
+    b.addEventListener('pointermove',function(e){var r=b.getBoundingClientRect();var dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2);b.style.transform='translate('+dx*.28+'px,'+dy*.4+'px)';});
+    b.addEventListener('pointerleave',function(){b.style.transform='';});
+  })();
+
+  // ── живые мини-сводки: изящное местное время + дата ──
+  (function(){
+    var hh=document.getElementById('hh'), mm=document.getElementById('mm'), dateEl=document.getElementById('date');
+    var wd=['вс','пн','вт','ср','чт','пт','сб'];
+    var mo=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+    function p(n){return n<10?'0'+n:''+n;}
+    function tick(){var d=new Date();
+      hh.textContent=p(d.getHours()); mm.textContent=p(d.getMinutes());
+      dateEl.textContent=wd[d.getDay()]+' · '+d.getDate()+' '+mo[d.getMonth()];
+    }
+    tick(); setInterval(tick,1000);
+  })();
+
+  // ── (переключатель шрифта убран — подпись теперь векторный росчерк) ──
+</script>
+</body>
+</html>

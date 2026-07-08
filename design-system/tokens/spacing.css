@@ -1,0 +1,84 @@
+/* ============================================================================
+   SPACING · RADII · BORDERS · SHADOWS · MOTION · LAYERS
+   ----------------------------------------------------------------------------
+   The non-color foundations. A 4px base grid keeps everything on rhythm.
+   Radii are restrained (a premium tool isn't bubbly). Shadows are dark and
+   close — depth comes from black-on-black plus the gold edge, not big soft
+   drop shadows. Motion is deliberately quiet: short, eased, purposeful.
+   ========================================================================== */
+
+:root {
+  /* ── SPACING · 4px base grid ──────────────────────────────────────── */
+  --space-0:   0;
+  --space-1:   4px;
+  --space-2:   8px;
+  --space-3:   12px;
+  --space-4:   16px;
+  --space-5:   20px;
+  --space-6:   24px;
+  --space-8:   32px;
+  --space-10:  40px;
+  --space-12:  48px;
+  --space-16:  64px;
+  --space-20:  80px;
+
+  /* ── RADII ─────────────────────────────────────────────────────────────
+     Tight, engineered corners. Cards land at 14; controls at 8–10. */
+  --radius-xs:   4px;   /* inline chips, kbd                               */
+  --radius-sm:   6px;   /* small icon buttons, tags                        */
+  --radius-md:   8px;   /* inputs, buttons                                 */
+  --radius-lg:   10px;  /* command badge, segmented controls               */
+  --radius-xl:   14px;  /* cards, modals — the signature card radius       */
+  --radius-2xl:  20px;  /* large feature panels                            */
+  --radius-pill: 999px; /* avatars, status dots, pills                     */
+
+  /* ── BORDER widths ────────────────────────────────────────────────── */
+  --border-hair: 1px;
+  --border-ingot: 1.4px; /* the gold gradient card edge                    */
+
+  /* ── SHADOWS ───────────────────────────────────────────────────────────
+     Dark and tight. The top inset hairline gives the "lit edge" of glass;
+     gold glows are separate so they can be layered onto hover states. */
+  --shadow-inset-hi: inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
+  --shadow-sm:  0 1px 3px 0 rgba(0, 0, 0, 0.6);
+  --shadow-md:  0 6px 18px -6px rgba(0, 0, 0, 0.6);
+  --shadow-lg:  0 16px 40px rgba(0, 0, 0, 0.5);
+  --shadow-xl:  0 30px 70px -20px rgba(0, 0, 0, 0.7);
+
+  /* gold glows — for focus rings and hovered premium surfaces */
+  --glow-gold-sm: 0 0 18px -6px var(--accent-glow);
+  --glow-gold-md: 0 0 28px -6px var(--accent-glow);
+  --focus-ring:   0 0 0 3px rgba(212, 175, 55, 0.18);
+
+  /* ── GLASS (liquid material) ───────────────────────────────────────────
+     Blur steps, the edge-lens ring thickness, and the inset specular bevels.
+     The bevel is what reads as "thick glass": a bright top edge, a dark
+     bottom edge, and a hairline inner rim of light. */
+  --glass-blur:       6px;   /* @kind spacing */ /* default frost            */
+  --glass-blur-sheer: 3px;   /* @kind spacing */ /* light, everyday surfaces */
+  --glass-blur-frost: 14px;  /* @kind spacing */ /* modals / overlays        */
+  --glass-lens-band:  14px;  /* @kind spacing */ /* edge-lens ring thickness */
+  --glass-bevel:      inset 0 1px 1px rgba(255,255,255,0.55), inset 0 -1px 1px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.12); /* @kind shadow */
+  --glass-bevel-gold: inset 0 1px 1.5px rgba(255,244,200,0.8), inset 0 -1px 1px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(226,186,74,0.6); /* @kind shadow */
+
+  /* ── MOTION ────────────────────────────────────────────────────────────
+     Quiet by design. Two springs: a UI ease (Linear-ish) and a soft entrance.
+     Reserve longer durations for entrances; interactions are near-instant. */
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);   /* default UI easing      */
+  --ease-spring: cubic-bezier(0.2, 0.7, 0.3, 1);  /* hover lift / cards     */
+  --ease-rise:   cubic-bezier(0.22, 1, 0.36, 1);  /* entrance rise          */
+
+  --dur-instant: 0.12s;  /* press / toggle                                  */
+  --dur-fast:    0.18s;  /* hover, color, border                            */
+  --dur-base:    0.25s;  /* popovers, fades                                 */
+  --dur-slow:    0.6s;   /* entrance rise, staggered reveals                */
+
+  /* ── Z-LAYERS ─────────────────────────────────────────────────────── */
+  --z-base:      1;
+  --z-sticky:    100;  /* sticky headers / nav                             */
+  --z-dropdown:  200;
+  --z-overlay:   900;  /* modal scrim                                      */
+  --z-modal:     1000;
+  --z-toast:     1100;
+  --z-command:   1200; /* ⌘K palette sits above everything                 */
+}

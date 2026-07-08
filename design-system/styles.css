@@ -1,0 +1,11 @@
+/* ============================================================================
+   Klimat Pro — Noir & Gold · Design System
+   Global stylesheet entry point. Consumers link THIS one file.
+   Keep it a manifest of @import lines only — never inline rules here.
+   ========================================================================== */
+
+@import url('./tokens/fonts.css');
+@import url('./tokens/colors.css');
+@import url('./tokens/typography.css');
+@import url('./tokens/spacing.css');
+@import url('./tokens/primitives.css');

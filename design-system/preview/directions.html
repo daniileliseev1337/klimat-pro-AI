@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>КЛИМАТ Pro — направления для карточек</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&display=swap" />
+<style>
+  :root{
+    --gold:#d4af37; --gold-bright:#e8c860; --gold-soft:#c9a431; --gold-glow:rgba(212,175,55,.40);
+    --border-subtle:rgba(255,255,255,.06); --border-gold:rgba(212,175,55,.30);
+    --text-primary:#fafaf7; --text-secondary:#a8a8a3; --text-tertiary:#6b6b67;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;min-height:100vh;background:#0a0a0a;color:var(--text-primary);font-family:'Geist',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+  #bg{position:fixed;inset:0;z-index:-1;display:block;pointer-events:none;}
+  .wrap{max-width:1120px;margin:0 auto;padding:32px 26px 70px;position:relative;z-index:1;}
+
+  /* ── живой логотип К·Л·К·Л ── */
+  @keyframes kp-breathe{0%,100%{box-shadow:0 0 18px -3px rgba(232,200,96,.4), inset 0 0 14px rgba(212,175,55,.14);}50%{box-shadow:0 0 40px 0 rgba(246,231,168,.7), inset 0 0 22px rgba(232,200,96,.3);}}
+  .logo-stage{position:relative;width:180px;height:58px;flex:0 0 auto;}
+  .logo-layer{position:absolute;inset:0;display:flex;align-items:center;opacity:0;transition:opacity .6s ease, transform .6s cubic-bezier(.5,0,.18,1.2), filter .6s ease;}
+  @keyframes spin{to{transform:rotate(360deg);}} @keyframes flow{to{stroke-dashoffset:-64;}}
+  @keyframes fillk{0%,100%{stroke-dasharray:30 52;}50%{stroke-dasharray:52 30;}} @keyframes glow{0%,100%{opacity:.45;}50%{opacity:1;}}
+  @keyframes breathe{0%,100%{transform:scale(.94);}50%{transform:scale(1);}}
+  .j-spin{transform-origin:24px 24px;animation:spin 18s linear infinite;} .j-flow{stroke-dasharray:10 8;animation:flow 2.4s linear infinite;}
+  .j-fill{animation:fillk 4s cubic-bezier(.16,1,.3,1) infinite;} .j-glow{animation:glow 3s ease-in-out infinite;} .j-breathe{transform-origin:24px 25px;animation:breathe 3.4s ease-in-out infinite;}
+  .brand-hair{height:1px;width:220px;max-width:58vw;margin:9px 0 5px;background:linear-gradient(90deg, rgba(212,175,55,.6), rgba(212,175,55,0));}
+  .tagline{font-size:10.5px;color:var(--gold-soft);font-weight:600;letter-spacing:.16em;text-transform:uppercase;}
+  h1{font-size:22px;font-weight:600;letter-spacing:-.022em;color:var(--text-primary);margin:26px 0 4px;}
+  .lede{font-size:13.5px;color:var(--text-secondary);max-width:680px;line-height:1.55;margin:0 0 26px;}
+
+  /* ── сетка направлений ── */
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;align-items:start;}
+  @media (max-width:900px){.grid{grid-template-columns:repeat(2,1fr);}}
+  @media (max-width:520px){.grid{grid-template-columns:1fr;}}
+  .dir{display:flex;flex-direction:column;gap:11px;}
+  .dname{font-size:13px;font-weight:600;color:var(--text-primary);}
+  .ddesc{font-size:11.5px;color:var(--text-tertiary);line-height:1.45;min-height:48px;}
+  .num{font-family:ui-monospace,monospace;font-size:11px;color:var(--gold);border:1px solid var(--border-gold);border-radius:999px;padding:2px 8px;align-self:flex-start;}
+
+  /* контент карточки */
+  .card{position:relative;border-radius:16px;padding:18px;min-height:150px;overflow:hidden;transition:transform .18s cubic-bezier(.2,.7,.3,1),box-shadow .18s,border-color .18s;}
+  .card:hover{transform:translateY(-3px);}
+  .eyebrow{font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.08em;margin:0;position:relative;z-index:2;}
+  .val{font-size:22px;font-weight:700;color:#f7f8f8;margin-top:7px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;position:relative;z-index:2;}
+  .sub{font-size:11px;color:var(--text-tertiary);margin-top:6px;position:relative;z-index:2;}
+  .ic{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;flex-shrink:0;background:#d4af371a;border:1px solid #d4af3733;color:#d4af37;position:relative;z-index:2;}
+  .row{display:flex;justify-content:space-between;align-items:flex-start;}
+  @keyframes kp-ingot{from{background-position:0% 50%;}to{background-position:260% 50%;}}
+  .ingot-edge::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.4px;pointer-events:none;z-index:3;
+    background:linear-gradient(135deg,#a9821f 0%,#e8c860 24%,#fff6d5 46%,#ffe9a8 56%,#e8c860 72%,#a9821f 100%);background-size:260% 260%;
+    -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.9;animation:kp-ingot 6s ease-in-out infinite alternate;}
+
+  /* 1 · СЛИТОК — матовая карточка + яркая золотая кромка (без стекла) */
+  .d-ingot{background:linear-gradient(150deg,#181816,#111110);border:1px solid transparent;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 12px 30px rgba(0,0,0,.5);}
+  .d-ingot:hover{box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 16px 40px rgba(0,0,0,.55),0 0 24px -10px var(--gold-glow);}
+
+  /* 2 · ГРАВЮРА — брашированный металл + гравированный золотой мотив */
+  .d-etch{background:
+    repeating-linear-gradient(135deg, rgba(255,255,255,.014) 0 2px, transparent 2px 5px),
+    linear-gradient(150deg,#1a1712,#100e0a);
+    border:1px solid rgba(212,175,55,.16);box-shadow:inset 0 1px 0 rgba(246,231,168,.08),inset 0 0 0 1px rgba(0,0,0,.3),0 12px 30px rgba(0,0,0,.5);}
+  .d-etch .engrave{position:absolute;right:-6px;bottom:-8px;opacity:.5;z-index:1;filter:drop-shadow(0 1px 0 rgba(0,0,0,.6));}
+  .d-etch:hover{border-color:rgba(212,175,55,.3);}
+
+  /* 3 · ЧЕРТЁЖ — инженерная схема: сетка + угловые засечки */
+  .d-plan{background:linear-gradient(150deg,#0e0f0e,#0a0b0a);border:1px solid rgba(212,175,55,.22);
+    box-shadow:0 12px 30px rgba(0,0,0,.5);}
+  .d-plan::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;opacity:.5;
+    background-image:linear-gradient(rgba(212,175,55,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(212,175,55,.05) 1px,transparent 1px);background-size:22px 22px;}
+  .d-plan .tick{position:absolute;width:12px;height:12px;border:1.5px solid var(--gold);z-index:2;}
+  .d-plan .t1{top:8px;left:8px;border-right:none;border-bottom:none;} .d-plan .t2{top:8px;right:8px;border-left:none;border-bottom:none;}
+  .d-plan .t3{bottom:8px;left:8px;border-right:none;border-top:none;} .d-plan .t4{bottom:8px;right:8px;border-left:none;border-top:none;}
+
+  /* 4 · СВЕТ — матовая карточка + тёплое золотое свечение за курсором */
+  .d-light{background:radial-gradient(120% 120% at 20% 0%,rgba(212,175,55,.10),transparent 55%),#121211;border:1px solid var(--border-subtle);
+    box-shadow:0 12px 30px rgba(0,0,0,.5);}
+  .d-light::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:1;opacity:0;transition:opacity .25s;
+    background:radial-gradient(300px circle at var(--mx,50%) var(--my,50%),rgba(212,175,55,.16),transparent 60%);}
+  .d-light:hover{border-color:var(--border-gold);}
+  .d-light:hover::after{opacity:1;}
+</style>
+</head>
+<body>
+<canvas id="bg" aria-hidden="true"></canvas>
+<div class="wrap">
+  <div style="display:flex;align-items:center;gap:8px;">
+    <div class="logo-stage" id="logo"></div>
+  </div>
+  <div class="brand-hair"></div>
+  <div class="tagline">Заботимся о тех, кто внутри</div>
+
+  <h1>Направления для карточек</h1>
+  <p class="lede">Стекло — лишь один путь, и на чёрно-золотом «ювелирном» он спорит с характером бренда. Вот четыре других направления на той же одной карточке (KPI «Портфель»). Скажи номер — доведу выбранное до финала на всех экранах.</p>
+
+  <div class="grid">
+    <!-- 1 -->
+    <div class="dir">
+      <span class="num">01</span>
+      <div class="card d-ingot ingot-edge">
+        <div class="row"><div><p class="eyebrow">Портфель</p><div class="val">8 400 000 ₽</div><div class="sub">моё: 5 200 000 ₽</div></div>
+          <div class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16v13H4zM9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg></div>
+        </div>
+      </div>
+      <div><div class="dname">Слиток</div><div class="ddesc">Плотная матовая карточка + яркая золотая кромка. Наша сигнатура, без стекла — чисто и «ювелирно».</div></div>
+    </div>
+    <!-- 2 -->
+    <div class="dir">
+      <span class="num">02</span>
+      <div class="card d-etch">
+        <svg class="engrave" width="120" height="120" viewBox="0 0 48 48" fill="none" stroke="#d4af37" stroke-opacity="0.5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17h13a3.4 3.4 0 1 0-3.4-3.4"/><path d="M9 24h19a3.4 3.4 0 1 1-3.4 3.4"/><path d="M9 31h10a3.4 3.4 0 1 0-3.4 3.4"/></svg>
+        <div class="row"><div><p class="eyebrow">Портфель</p><div class="val">8 400 000 ₽</div><div class="sub">моё: 5 200 000 ₽</div></div>
+          <div class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16v13H4zM9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg></div>
+        </div>
+      </div>
+      <div><div class="dname">Гравюра</div><div class="ddesc">Брашированный тёмный металл + гравированный золотой знак-водяной. Как циферблат часов / шильдик.</div></div>
+    </div>
+    <!-- 3 -->
+    <div class="dir">
+      <span class="num">03</span>
+      <div class="card d-plan">
+        <span class="tick t1"></span><span class="tick t2"></span><span class="tick t3"></span><span class="tick t4"></span>
+        <div class="row"><div><p class="eyebrow">Портфель</p><div class="val">8 400 000 ₽</div><div class="sub">моё: 5 200 000 ₽</div></div>
+          <div class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16v13H4zM9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg></div>
+        </div>
+      </div>
+      <div><div class="dname">Чертёж</div><div class="ddesc">Инженерная схема: тонкая золотая сетка и угловые засечки, как на рабочке ОВиК. Технично и по делу.</div></div>
+    </div>
+    <!-- 4 -->
+    <div class="dir">
+      <span class="num">04</span>
+      <div class="card d-light">
+        <div class="row"><div><p class="eyebrow">Портфель</p><div class="val">8 400 000 ₽</div><div class="sub">моё: 5 200 000 ₽</div></div>
+          <div class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16v13H4zM9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg></div>
+        </div>
+      </div>
+      <div><div class="dname">Свет</div><div class="ddesc">Матовая карточка + тёплое золотое свечение, что идёт за курсором. Минимум приёмов, максимум «дорого».</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── живой логотип К·Л·К·Л (марка ↔ «КЛИМАТ Pro») ──
+  (function(){
+    function grad(id){return '<linearGradient id="'+id+'" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="48" y2="48"><stop offset="0" stop-color="#a9821f"/><stop offset="0.42" stop-color="#d4af37"/><stop offset="0.5" stop-color="#fff6d5"/><stop offset="0.58" stop-color="#e8c860"/><stop offset="1" stop-color="#a9821f"/><animateTransform attributeName="gradientTransform" type="translate" values="-48 -48;48 48;-48 -48" dur="4s" repeatCount="indefinite"/></linearGradient>';}
+    function gradW(id){return '<linearGradient id="'+id+'" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="150" y2="0"><stop offset="0" stop-color="#a9821f"/><stop offset="0.42" stop-color="#d4af37"/><stop offset="0.5" stop-color="#fff6d5"/><stop offset="0.58" stop-color="#e8c860"/><stop offset="1" stop-color="#a9821f"/><animateTransform attributeName="gradientTransform" type="translate" values="-150 0;150 0;-150 0" dur="4.5s" repeatCount="indefinite"/></linearGradient>';}
+    var tile=function(g){return '<rect x="2" y="2" width="44" height="44" rx="13" fill="#0d0d0c" stroke="url(#'+g+')" stroke-width="1.5"/>';};
+    var M={
+      apert:function(s){return '<defs>'+grad(s)+'</defs>'+tile(s)+'<g class="j-spin" stroke="url(#'+s+')" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><polygon points="31,24 27.5,30.06 20.5,30.06 17,24 20.5,17.94 27.5,17.94" stroke-width="1.4" opacity="0.55"/><line x1="31" y1="24" x2="31" y2="36.12"/><line x1="27.5" y1="30.06" x2="17" y2="36.12"/><line x1="20.5" y1="30.06" x2="10" y2="24"/><line x1="17" y1="24" x2="17" y2="11.88"/><line x1="20.5" y1="17.94" x2="31" y2="11.88"/><line x1="27.5" y1="17.94" x2="38" y2="24"/></g>';},
+      gauge:function(s){return '<defs>'+grad(s)+'</defs>'+tile(s)+'<circle cx="24" cy="24" r="13" fill="none" stroke="#d4af37" stroke-opacity="0.18" stroke-width="3" stroke-linecap="round" stroke-dasharray="61.3 20.4" transform="rotate(135 24 24)"/><circle class="j-fill" cx="24" cy="24" r="13" fill="none" stroke="url(#'+s+')" stroke-width="3" stroke-linecap="round" stroke-dasharray="44 38" transform="rotate(135 24 24)"/><circle cx="24" cy="24" r="3.1" fill="url(#'+s+')"/><line x1="24" y1="24" x2="32.5" y2="15.5" stroke="url(#'+s+')" stroke-width="2" stroke-linecap="round"/>';},
+      hex:function(s){return '<defs>'+grad(s)+'</defs>'+tile(s)+'<polygon points="24,7 38.7,15.5 38.7,32.5 24,41 9.3,32.5 9.3,15.5" fill="none" stroke="url(#'+s+')" stroke-width="2" stroke-linejoin="round"/><g stroke="url(#'+s+')" stroke-width="2.4" stroke-linecap="round"><line class="j-glow" x1="19" y1="20" x2="29" y2="20"/><line class="j-glow" style="animation-delay:-1s" x1="16.5" y1="24" x2="31.5" y2="24"/><line class="j-glow" style="animation-delay:-2s" x1="19" y1="28" x2="29" y2="28"/></g>';},
+      drop:function(s){return '<defs>'+grad(s)+'</defs>'+tile(s)+'<path class="j-breathe" d="M24 10C24 10 33 21 33 28a9 9 0 1 1-18 0C15 21 24 10 24 10Z" fill="url(#'+s+')" fill-opacity="0.15" stroke="url(#'+s+')" stroke-width="2" stroke-linejoin="round"/><path class="j-breathe" d="M19.5 27.5a4.5 4.5 0 0 0 3.4 5.4" fill="none" stroke="#fff6d5" stroke-opacity="0.7" stroke-width="1.6" stroke-linecap="round"/>';},
+      flow:function(s){return '<defs>'+grad(s)+'</defs>'+tile(s)+'<g stroke="url(#'+s+')" stroke-width="2.4" stroke-linecap="round" fill="none"><path class="j-flow" d="M12 18h16a4 4 0 1 0-4-4"/><path class="j-flow" style="animation-delay:-0.8s" d="M12 24h22a4 4 0 1 1-4 4"/><path class="j-flow" style="animation-delay:-1.6s" d="M12 30h12a4 4 0 1 0-4 4"/></g>';},
+      co:function(s){return '<defs>'+gradW(s)+'</defs><rect x="3" y="22" width="144" height="40" rx="14" fill="#0d0d0c" stroke="url(#'+s+')" stroke-width="1.5"/><text x="75" y="48" text-anchor="middle" font-family="Geist, system-ui, sans-serif" font-weight="700" font-size="20" letter-spacing="0.4" fill="url(#'+s+')">КЛИМАТ<tspan font-weight="400" fill="#a8a8a3" dx="3">Pro</tspan></text>';}
+    };
+    var stage=document.getElementById('logo');
+    var defs={apert:['0 0 48 48',50,50],gauge:['0 0 48 48',50,50],hex:['0 0 48 48',50,50],drop:['0 0 48 48',50,50],flow:['0 0 48 48',50,50],co:['0 0 150 84',175,52]};
+    var keys=['apert','gauge','hex','drop','flow','co'], layerEl={};
+    keys.forEach(function(k){var d=document.createElement('div');d.className='logo-layer';var v=defs[k];
+      d.innerHTML='<svg width="'+(k==='co'?175:50)+'" height="'+(k==='co'?52:50)+'" viewBox="'+v[0]+'" fill="none">'+M[k]('L_'+k)+'</svg>';
+      stage.appendChild(d);layerEl[k]=d;});
+    var SEQ=['apert','co','gauge','co','hex','co','drop','co','flow','co'],i=0;
+    function tick(){var key=SEQ[i];keys.forEach(function(k){var on=k===key;layerEl[k].style.opacity=on?'1':'0';layerEl[k].style.transform=on?'none':'scale(.72)';layerEl[k].style.filter=on?'none':'blur(6px)';});i=(i+1)%SEQ.length;}
+    tick();setInterval(tick,1900);
+  })();
+
+  // ── живой золотой фон ──
+  (function(){
+    var canvas=document.getElementById('bg');if(!canvas)return;var ctx=canvas.getContext('2d');
+    var W=innerWidth,H=innerHeight,DPR=Math.min(devicePixelRatio||1,2),nodes=[],sparks=[],tgtX=.5,tgtY=.5,easeX=.5,easeY=.5;
+    addEventListener('pointermove',function(e){if(W){tgtX=e.clientX/W;tgtY=e.clientY/H;}},{passive:true});
+    var blobs=[{x:.16,y:.2,r:340,a:.13,sx:7e-5,sy:5e-5,p:0},{x:.82,y:.3,r:300,a:.1,sx:5e-5,sy:8e-5,p:2.1},{x:.55,y:.85,r:380,a:.09,sx:6e-5,sy:4e-5,p:4}];
+    function build(){nodes=[];var n=Math.min(Math.round(W*H/26000),46);for(var i=0;i<n;i++)nodes.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.16,vy:(Math.random()-.5)*.16,r:Math.random()*1.3+.6});sparks=[];var m=Math.min(Math.round(W*H/17000),64);for(var j=0;j<m;j++)sparks.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.2+.3,base:Math.random()*.5+.2,tw:Math.random()*6.28,sp:Math.random()*.8+.3,dy:-(Math.random()*.22+.05)});}
+    function resize(){W=innerWidth;H=innerHeight;canvas.width=W*DPR|0;canvas.height=H*DPR|0;canvas.style.width=W+'px';canvas.style.height=H+'px';ctx.setTransform(DPR,0,0,DPR,0,0);build();}
+    addEventListener('resize',resize);resize();
+    function frame(t){ctx.clearRect(0,0,W,H);var bgm=ctx.createLinearGradient(0,0,0,H);bgm.addColorStop(0,'#0a0a0a');bgm.addColorStop(1,'#0c0b08');ctx.fillStyle=bgm;ctx.fillRect(0,0,W,H);ctx.globalCompositeOperation='lighter';easeX+=(tgtX-easeX)*.085;easeY+=(tgtY-easeY)*.085;var pX=easeX-.5,pY=easeY-.5;
+      for(var bi=0;bi<blobs.length;bi++){var b=blobs[bi],depth=110+bi*60;var cx=(b.x+Math.sin(t*b.sx+b.p)*.06)*W+pX*depth;var cy=(b.y+Math.cos(t*b.sy+b.p)*.06)*H+pY*depth;var g=ctx.createRadialGradient(cx,cy,0,cx,cy,b.r);g.addColorStop(0,'rgba(212,175,55,'+b.a+')');g.addColorStop(.5,'rgba(240,216,120,'+b.a*.5+')');g.addColorStop(1,'rgba(212,175,55,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,b.r,0,6.2832);ctx.fill();}
+      for(var k=0;k<nodes.length;k++){var nd=nodes[k];nd.x+=nd.vx;nd.y+=nd.vy;if(nd.x<0||nd.x>W)nd.vx*=-1;if(nd.y<0||nd.y>H)nd.vy*=-1;}
+      ctx.lineWidth=1;for(var a=0;a<nodes.length;a++)for(var c=a+1;c<nodes.length;c++){var dx=nodes[a].x-nodes[c].x,dy=nodes[a].y-nodes[c].y,d=Math.sqrt(dx*dx+dy*dy);if(d<140){var al=(1-d/140)*.13;ctx.strokeStyle='rgba(212,175,55,'+al+')';ctx.beginPath();ctx.moveTo(nodes[a].x,nodes[a].y);ctx.lineTo(nodes[c].x,nodes[c].y);ctx.stroke();}}
+      for(var q=0;q<nodes.length;q++){ctx.beginPath();ctx.arc(nodes[q].x,nodes[q].y,nodes[q].r,0,6.2832);ctx.fillStyle='rgba(240,216,120,0.5)';ctx.fill();}
+      for(var sp2=0;sp2<sparks.length;sp2++){var sp=sparks[sp2];sp.y+=sp.dy;if(sp.y<0){sp.y=H;sp.x=Math.random()*W;}var tw=sp.base+Math.sin(t*.001*sp.sp+sp.tw)*.35;if(tw<0)tw=0;ctx.beginPath();ctx.arc(sp.x,sp.y,sp.r,0,6.2832);ctx.fillStyle='rgba(245,230,170,'+tw+')';ctx.fill();}
+      ctx.globalCompositeOperation='source-over';requestAnimationFrame(frame);}
+    requestAnimationFrame(frame);
+  })();
+
+  document.querySelectorAll('.d-light').forEach(function(el){el.addEventListener('mousemove',function(e){var r=el.getBoundingClientRect();el.style.setProperty('--mx',(e.clientX-r.left)+'px');el.style.setProperty('--my',(e.clientY-r.top)+'px');});});
+</script>
+</body>
+</html>

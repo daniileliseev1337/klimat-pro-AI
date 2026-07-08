@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>КЛИМАТ Pro — карточки: много вариантов</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&display=swap" />
+<style>
+  :root{--gold:#d4af37;--gold-bright:#e8c860;--gold-soft:#c9a431;--gold-glow:rgba(212,175,55,.4);
+    --border-subtle:rgba(255,255,255,.06);--border-gold:rgba(212,175,55,.3);
+    --text-primary:#fafaf7;--text-secondary:#a8a8a3;--text-tertiary:#6b6b67;}
+  *{box-sizing:border-box;}
+  body{margin:0;min-height:100vh;background:#0a0a0a;color:var(--text-primary);font-family:'Geist',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+  #bg{position:fixed;inset:0;z-index:-1;display:block;pointer-events:none;}
+  .wrap{max-width:1200px;margin:0 auto;padding:26px 26px 70px;position:relative;z-index:1;}
+  .logoframe{width:140px;height:78px;border:0;display:block;background:transparent;}
+  .brand-hair{height:1px;width:220px;max-width:58vw;margin:2px 0 5px;background:linear-gradient(90deg,rgba(212,175,55,.6),rgba(212,175,55,0));}
+  .tagline{font-size:10.5px;color:var(--gold-soft);font-weight:600;letter-spacing:.16em;text-transform:uppercase;}
+  h1{font-size:22px;font-weight:600;letter-spacing:-.022em;margin:22px 0 4px;}
+  .lede{font-size:13.5px;color:var(--text-secondary);max-width:720px;line-height:1.55;margin:0 0 24px;}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+  @media (max-width:940px){.grid{grid-template-columns:repeat(2,1fr);}}
+  @media (max-width:600px){.grid{grid-template-columns:1fr;}}
+  .dir{display:flex;flex-direction:column;gap:11px;}
+  .num{font-family:ui-monospace,monospace;font-size:11px;color:var(--gold);border:1px solid var(--border-gold);border-radius:999px;padding:2px 8px;align-self:flex-start;}
+  .dname{font-size:13px;font-weight:600;}
+  .ddesc{font-size:11.5px;color:var(--text-tertiary);line-height:1.45;}
+
+  .card{position:relative;border-radius:16px;padding:18px;min-height:132px;overflow:hidden;transition:transform .18s cubic-bezier(.2,.7,.3,1),box-shadow .18s,border-color .18s;}
+  .card:hover{transform:translateY(-3px);}
+  .eyebrow{font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.08em;margin:0;position:relative;z-index:4;}
+  .val{font-size:22px;font-weight:700;color:#f7f8f8;margin-top:7px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;position:relative;z-index:4;}
+  .sub{font-size:11px;color:var(--text-tertiary);margin-top:6px;position:relative;z-index:4;}
+  .ic{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;flex-shrink:0;background:#d4af371a;border:1px solid #d4af3733;color:#d4af37;position:relative;z-index:4;}
+  .row{display:flex;justify-content:space-between;align-items:flex-start;}
+  @keyframes kp-ingot{from{background-position:0% 50%;}to{background-position:260% 50%;}}
+
+  /* 1 Слиток */
+  .d-ingot{background:linear-gradient(150deg,#181816,#111110);border:1px solid transparent;box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 12px 30px rgba(0,0,0,.5);}
+  .d-ingot::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.4px;pointer-events:none;z-index:3;background:linear-gradient(135deg,#a9821f,#e8c860 24%,#fff6d5 46%,#ffe9a8 56%,#e8c860 72%,#a9821f);background-size:260% 260%;-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.92;animation:kp-ingot 6s ease-in-out infinite alternate;}
+  .d-ingot:hover{box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 16px 40px rgba(0,0,0,.55),0 0 24px -10px var(--gold-glow);}
+
+  /* 2 Гравюра */
+  .d-etch{background:repeating-linear-gradient(135deg,rgba(255,255,255,.014) 0 2px,transparent 2px 5px),linear-gradient(150deg,#1a1712,#100e0a);border:1px solid rgba(212,175,55,.16);box-shadow:inset 0 1px 0 rgba(246,231,168,.08),inset 0 0 0 1px rgba(0,0,0,.3),0 12px 30px rgba(0,0,0,.5);}
+  .d-etch .engrave{position:absolute;right:-6px;bottom:-8px;opacity:.5;z-index:1;filter:drop-shadow(0 1px 0 rgba(0,0,0,.6));}
+  .d-etch:hover{border-color:rgba(212,175,55,.3);}
+
+  /* 3 Чертёж */
+  .d-plan{background:linear-gradient(150deg,#0e0f0e,#0a0b0a);border:1px solid rgba(212,175,55,.22);box-shadow:0 12px 30px rgba(0,0,0,.5);}
+  .d-plan::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;opacity:.5;background-image:linear-gradient(rgba(212,175,55,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(212,175,55,.05) 1px,transparent 1px);background-size:22px 22px;}
+  .d-plan .tick{position:absolute;width:12px;height:12px;border:1.5px solid var(--gold);z-index:2;}
+  .d-plan .t1{top:8px;left:8px;border-right:none;border-bottom:none;}.d-plan .t2{top:8px;right:8px;border-left:none;border-bottom:none;}
+  .d-plan .t3{bottom:8px;left:8px;border-right:none;border-top:none;}.d-plan .t4{bottom:8px;right:8px;border-left:none;border-top:none;}
+
+  /* 4 Свет */
+  .d-light{background:radial-gradient(120% 120% at 20% 0%,rgba(212,175,55,.1),transparent 55%),#121211;border:1px solid var(--border-subtle);box-shadow:0 12px 30px rgba(0,0,0,.5);}
+  .d-light::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:1;opacity:0;transition:opacity .25s;background:radial-gradient(300px circle at var(--mx,50%) var(--my,50%),rgba(212,175,55,.16),transparent 60%);}
+  .d-light:hover{border-color:var(--border-gold);}.d-light:hover::after{opacity:1;}
+
+  /* 5 Грань — золотая полоса сверху */
+  .d-edge{background:linear-gradient(150deg,#161514,#0e0e0d);border:1px solid var(--border-subtle);box-shadow:0 12px 30px rgba(0,0,0,.5);}
+  .d-edge::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;z-index:3;background:linear-gradient(90deg,#a9821f,#fff6d5 45%,#e8c860 60%,#a9821f);}
+  .d-edge:hover{border-color:var(--border-gold);}
+
+  /* 6 Оникс — глубокий чёрный + тёплая виньетка + золотой акцент слева */
+  .d-onyx{background:radial-gradient(140% 120% at 100% 0%,rgba(212,175,55,.08),transparent 50%),#0b0b0a;border:1px solid rgba(255,255,255,.05);box-shadow:0 12px 30px rgba(0,0,0,.55);}
+  .d-onyx::before{content:"";position:absolute;top:14px;bottom:14px;left:0;width:2.5px;border-radius:0 3px 3px 0;z-index:3;background:linear-gradient(#e8c860,#a9821f);box-shadow:0 0 10px -2px var(--gold-glow);}
+  .d-onyx:hover{border-color:rgba(212,175,55,.2);}
+
+  /* 7 Контур — двойная тонкая золотая рамка */
+  .d-frame{background:linear-gradient(150deg,#141312,#0d0d0c);border:1px solid rgba(212,175,55,.35);box-shadow:0 12px 30px rgba(0,0,0,.5);}
+  .d-frame::before{content:"";position:absolute;inset:5px;border-radius:11px;border:1px solid rgba(212,175,55,.18);pointer-events:none;z-index:3;}
+  .d-frame:hover{border-color:rgba(212,175,55,.55);}
+
+  /* 8 Уголки — только золотые уголки */
+  .d-corners{background:linear-gradient(150deg,#151413,#0d0d0c);border:1px solid var(--border-subtle);box-shadow:0 12px 30px rgba(0,0,0,.5);}
+  .d-corners .cnr{position:absolute;width:16px;height:16px;border:1.6px solid var(--gold);z-index:3;}
+  .d-corners .c1{top:10px;left:10px;border-right:none;border-bottom:none;}.d-corners .c2{top:10px;right:10px;border-left:none;border-bottom:none;}
+  .d-corners .c3{bottom:10px;left:10px;border-right:none;border-top:none;}.d-corners .c4{bottom:10px;right:10px;border-left:none;border-top:none;}
+  .d-corners:hover .cnr{box-shadow:0 0 8px -2px var(--gold-glow);}
+
+  /* 9 Стекло спокойное — сдержанный фрост + золотая нить */
+  .d-glass{background:linear-gradient(135deg,rgba(255,255,255,.03),rgba(255,255,255,.008));backdrop-filter:blur(12px) saturate(1.5);-webkit-backdrop-filter:blur(12px) saturate(1.5);border:1px solid rgba(212,175,55,.22);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 12px 30px rgba(0,0,0,.5);}
+  .d-glass:hover{border-color:rgba(212,175,55,.38);}
+</style>
+</head>
+<body>
+<canvas id="bg" aria-hidden="true"></canvas>
+<div class="wrap">
+  <iframe class="logoframe" src="logo-live.html" title="КЛИМАТ Pro — живой логотип" scrolling="no"></iframe>
+  <div class="brand-hair"></div>
+  <div class="tagline">Заботимся о тех, кто внутри</div>
+
+  <h1>Карточки — много направлений</h1>
+  <p class="lede">Девять вариантов поверхности на одной карточке KPI «Портфель», все на нашем чёрно-золотом, без гелевого стекла. Наведи курсор (особенно на «Свет»). Скажи номера, что нравится — сведу в 1–2 финальных и раскатаю на все экраны.</p>
+
+  <div class="grid" id="grid"></div>
+</div>
+
+<script>
+  var IC='<div class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16v13H4zM9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg></div>';
+  var BODY='<div class="row"><div><p class="eyebrow">Портфель</p><div class="val">8 400 000 ₽</div><div class="sub">моё: 5 200 000 ₽</div></div>'+IC+'</div>';
+  var ENGRAVE='<svg class="engrave" width="120" height="120" viewBox="0 0 48 48" fill="none" stroke="#d4af37" stroke-opacity="0.5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17h13a3.4 3.4 0 1 0-3.4-3.4"/><path d="M9 24h19a3.4 3.4 0 1 1-3.4 3.4"/><path d="M9 31h10a3.4 3.4 0 1 0-3.4 3.4"/></svg>';
+  var TICKS='<span class="tick t1"></span><span class="tick t2"></span><span class="tick t3"></span><span class="tick t4"></span>';
+  var CNRS='<span class="cnr c1"></span><span class="cnr c2"></span><span class="cnr c3"></span><span class="cnr c4"></span>';
+  var V=[
+    {c:'d-ingot',n:'Слиток',d:'Матовая карточка + яркая золотая кромка. Наша сигнатура без стекла — чисто и «ювелирно».',x:''},
+    {c:'d-etch',n:'Гравюра',d:'Брашированный тёмный металл + гравированный золотой знак. Как циферблат часов / шильдик.',x:ENGRAVE},
+    {c:'d-plan',n:'Чертёж',d:'Тонкая золотая сетка и угловые засечки — как на рабочке ОВиК. Технично.',x:TICKS},
+    {c:'d-light',n:'Свет',d:'Матовая + тёплое золотое свечение за курсором. Минимум приёмов, максимум «дорого».',x:''},
+    {c:'d-edge',n:'Грань',d:'Тонкая золотая полоса сверху на матовом теле. Строго и по-редакторски.',x:''},
+    {c:'d-onyx',n:'Оникс',d:'Глубокий чёрный + тёплая виньетка в углу + золотой акцент слева. Дорого и спокойно.',x:''},
+    {c:'d-frame',n:'Контур',d:'Двойная тонкая золотая рамка. Аккуратный «сертификатный» вид.',x:''},
+    {c:'d-corners',n:'Уголки',d:'Только золотые уголки-кронштейны, без сплошной рамки. Лёгкий инженерный акцент.',x:CNRS},
+    {c:'d-glass',n:'Стекло спокойное',d:'Если стекло всё же хочется — сдержанный фрост + золотая нить, без искажений.',x:''}
+  ];
+  document.getElementById('grid').innerHTML=V.map(function(v,idx){
+    var nn=('0'+(idx+1)).slice(-2);
+    return '<div class="dir"><span class="num">'+nn+'</span><div class="card '+v.c+'">'+v.x+'<div style="position:relative;z-index:4">'+BODY+'</div></div><div><div class="dname">'+v.n+'</div><div class="ddesc">'+v.d+'</div></div></div>';
+  }).join('');
+  document.querySelectorAll('.d-light').forEach(function(el){el.addEventListener('mousemove',function(e){var r=el.getBoundingClientRect();el.style.setProperty('--mx',(e.clientX-r.left)+'px');el.style.setProperty('--my',(e.clientY-r.top)+'px');});});
+
+  // фон
+  (function(){var canvas=document.getElementById('bg');if(!canvas)return;var ctx=canvas.getContext('2d');
+    var W=innerWidth,H=innerHeight,DPR=Math.min(devicePixelRatio||1,2),nodes=[],sparks=[],tgtX=.5,tgtY=.5,easeX=.5,easeY=.5;
+    addEventListener('pointermove',function(e){if(W){tgtX=e.clientX/W;tgtY=e.clientY/H;}},{passive:true});
+    var blobs=[{x:.16,y:.2,r:340,a:.12,sx:7e-5,sy:5e-5,p:0},{x:.82,y:.3,r:300,a:.09,sx:5e-5,sy:8e-5,p:2.1},{x:.55,y:.85,r:380,a:.08,sx:6e-5,sy:4e-5,p:4}];
+    function build(){nodes=[];var n=Math.min(Math.round(W*H/28000),40);for(var i=0;i<n;i++)nodes.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.15,vy:(Math.random()-.5)*.15,r:Math.random()*1.3+.5});sparks=[];var m=Math.min(Math.round(W*H/18000),56);for(var j=0;j<m;j++)sparks.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.2+.3,base:Math.random()*.5+.2,tw:Math.random()*6.28,sp:Math.random()*.8+.3,dy:-(Math.random()*.2+.05)});}
+    function resize(){W=innerWidth;H=innerHeight;canvas.width=W*DPR|0;canvas.height=H*DPR|0;canvas.style.width=W+'px';canvas.style.height=H+'px';ctx.setTransform(DPR,0,0,DPR,0,0);build();}
+    addEventListener('resize',resize);resize();
+    function frame(t){ctx.clearRect(0,0,W,H);var bgm=ctx.createLinearGradient(0,0,0,H);bgm.addColorStop(0,'#0a0a0a');bgm.addColorStop(1,'#0c0b08');ctx.fillStyle=bgm;ctx.fillRect(0,0,W,H);ctx.globalCompositeOperation='lighter';easeX+=(tgtX-easeX)*.08;easeY+=(tgtY-easeY)*.08;var pX=easeX-.5,pY=easeY-.5;
+      for(var bi=0;bi<blobs.length;bi++){var b=blobs[bi],depth=100+bi*55;var cx=(b.x+Math.sin(t*b.sx+b.p)*.06)*W+pX*depth;var cy=(b.y+Math.cos(t*b.sy+b.p)*.06)*H+pY*depth;var g=ctx.createRadialGradient(cx,cy,0,cx,cy,b.r);g.addColorStop(0,'rgba(212,175,55,'+b.a+')');g.addColorStop(.5,'rgba(240,216,120,'+b.a*.5+')');g.addColorStop(1,'rgba(212,175,55,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,b.r,0,6.2832);ctx.fill();}
+      for(var k=0;k<nodes.length;k++){var nd=nodes[k];nd.x+=nd.vx;nd.y+=nd.vy;if(nd.x<0||nd.x>W)nd.vx*=-1;if(nd.y<0||nd.y>H)nd.vy*=-1;}
+      ctx.lineWidth=1;for(var a=0;a<nodes.length;a++)for(var c=a+1;c<nodes.length;c++){var dx=nodes[a].x-nodes[c].x,dy=nodes[a].y-nodes[c].y,d=Math.sqrt(dx*dx+dy*dy);if(d<135){ctx.strokeStyle='rgba(212,175,55,'+(1-d/135)*.12+')';ctx.beginPath();ctx.moveTo(nodes[a].x,nodes[a].y);ctx.lineTo(nodes[c].x,nodes[c].y);ctx.stroke();}}
+      for(var q=0;q<nodes.length;q++){ctx.beginPath();ctx.arc(nodes[q].x,nodes[q].y,nodes[q].r,0,6.2832);ctx.fillStyle='rgba(240,216,120,0.45)';ctx.fill();}
+      for(var s2=0;s2<sparks.length;s2++){var sp=sparks[s2];sp.y+=sp.dy;if(sp.y<0){sp.y=H;sp.x=Math.random()*W;}var tw=sp.base+Math.sin(t*.001*sp.sp+sp.tw)*.35;if(tw<0)tw=0;ctx.beginPath();ctx.arc(sp.x,sp.y,sp.r,0,6.2832);ctx.fillStyle='rgba(245,230,170,'+tw+')';ctx.fill();}
+      ctx.globalCompositeOperation='source-over';requestAnimationFrame(frame);}
+    requestAnimationFrame(frame);
+  })();
+</script>
+</body>
+</html>

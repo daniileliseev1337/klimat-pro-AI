@@ -1,0 +1,19 @@
+<!-- @dsCard group="Spacing" viewport="700x160" name="Radii & Elevation" subtitle="Tight engineered corners; dark, close shadows + the gold edge" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"/><link rel="stylesheet" href="../styles.css"/>
+<style>
+  body{margin:0;padding:22px 24px;background:var(--surface-base);color:var(--text-body);display:flex;gap:16px;align-items:center}
+  .swatch{width:74px;height:74px;background:var(--surface-card);border:1px solid var(--border-default);display:flex;align-items:flex-end;justify-content:center;padding-bottom:7px}
+  .t{font-size:10px;font-family:var(--font-mono);color:var(--text-subtle)}
+  .sep{width:1px;height:64px;background:var(--border-subtle);margin:0 6px}
+  .elev{width:84px;height:74px;border-radius:var(--radius-xl);background:var(--surface-card)}
+  .lbl{font-size:10px;color:var(--text-subtle);text-align:center;margin-top:8px;font-family:var(--font-mono)}
+</style></head>
+<body>
+  <div><div class="swatch" style="border-radius:6px"><span class="t">6</span></div></div>
+  <div><div class="swatch" style="border-radius:8px"><span class="t">8</span></div></div>
+  <div><div class="swatch" style="border-radius:14px"><span class="t">14 · card</span></div></div>
+  <div><div class="swatch" style="border-radius:999px;width:74px"><span class="t">pill</span></div></div>
+  <div class="sep"></div>
+  <div><div class="elev" style="box-shadow:var(--shadow-md)"></div><div class="lbl">shadow-md</div></div>
+  <div><div class="elev gold-edge glass" style="box-shadow:var(--shadow-lg),var(--glow-gold-md)"></div><div class="lbl">gold-edge</div></div>
+</body></html>

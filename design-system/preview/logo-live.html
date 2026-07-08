@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<!-- Живой логотип К·Л·К·Л — 1:1 из components/logo-mark/logo-cycle.html (стиль morph,
+     утверждённые дефолты hold 2.2с / trans 1.1с). Прозрачный фон, для встраивания в шапку. -->
+<style>
+  html,body{margin:0;background:transparent;overflow:hidden;}
+  .scaler{transform:scale(0.5);transform-origin:top left;width:264px;height:150px;}
+  .hero{position:relative;width:264px;height:150px;--t:1100ms;--te:cubic-bezier(0.5,0,0.18,1.22);}
+  .hero .layer{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0;}
+  .hero svg{filter:drop-shadow(0 10px 26px rgba(0,0,0,.55));}
+  .capsule{position:absolute;top:50%;left:50%;width:132px;height:132px;border-radius:34px;transform:translate(-50%,-50%);background:#0d0d0c;z-index:1;
+    box-shadow:0 0 40px -6px rgba(212,175,55,.5), inset 0 0 20px -8px rgba(212,175,55,.45), 0 8px 24px rgba(0,0,0,.5);
+    transition:width var(--t) var(--te),height var(--t) var(--te),border-radius var(--t) var(--te);}
+  .capsule::before{content:'';position:absolute;inset:0;border-radius:inherit;padding:2px;pointer-events:none;
+    background:linear-gradient(115deg,#8c6c18 0%,#b8901f 18%,#fff6d5 32%,#e8c860 42%,#a9821f 60%,#fff1c4 76%,#b8901f 90%,#8c6c18 100%);background-size:280% 100%;
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;
+    filter:drop-shadow(0 0 5px rgba(212,175,55,.55));animation:ringsheen 4s linear infinite;}
+  @keyframes ringsheen{0%{background-position:0 0;}100%{background-position:280% 0;}}
+  @keyframes spin{to{transform:rotate(360deg);}} @keyframes flow{to{stroke-dashoffset:-64;}}
+  @keyframes fillk{0%,100%{stroke-dasharray:30 52;}50%{stroke-dasharray:52 30;}} @keyframes glow{0%,100%{opacity:.45;}50%{opacity:1;}}
+  @keyframes breathe{0%,100%{transform:scale(.94);}50%{transform:scale(1);}}
+  .j-spin{transform-origin:24px 24px;animation:spin 18s linear infinite;} .j-flow{stroke-dasharray:10 8;animation:flow 2.4s linear infinite;}
+  .j-fill{animation:fillk 4s cubic-bezier(.16,1,.3,1) infinite;} .j-glow{animation:glow 3s ease-in-out infinite;} .j-breathe{transform-origin:24px 25px;animation:breathe 3.4s ease-in-out infinite;}
+</style>
+</head>
+<body>
+<div class="scaler"><div class="hero" id="hero"></div></div>
+<script>
+function grad(id,dur,w,h){w=w||48;h=(h==null?48:h);var vals=h===0?('-'+(w+12)+' 0;'+(w+12)+' 0;-'+(w+12)+' 0'):('-'+w+' -'+h+';'+w+' '+h+';-'+w+' -'+h);
+  return '<linearGradient id="'+id+'" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="'+w+'" y2="'+h+'"><stop offset="0" stop-color="#a9821f"/><stop offset="0.42" stop-color="#d4af37"/><stop offset="0.5" stop-color="#fff6d5"/><stop offset="0.58" stop-color="#e8c860"/><stop offset="1" stop-color="#a9821f"/><animateTransform attributeName="gradientTransform" type="translate" values="'+vals+'" dur="'+(dur||4)+'s" repeatCount="indefinite"/></linearGradient>';}
+var MARKS={
+  apert:{ar:1,vb:'0 0 48 48',inner:function(s){return '<defs>'+grad('g'+s)+'</defs><g class="j-spin" stroke="url(#g'+s+')" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><polygon points="31,24 27.5,30.06 20.5,30.06 17,24 20.5,17.94 27.5,17.94" stroke-width="1.4" opacity="0.55"/><line x1="31" y1="24" x2="31" y2="36.12"/><line x1="27.5" y1="30.06" x2="17" y2="36.12"/><line x1="20.5" y1="30.06" x2="10" y2="24"/><line x1="17" y1="24" x2="17" y2="11.88"/><line x1="20.5" y1="17.94" x2="31" y2="11.88"/><line x1="27.5" y1="17.94" x2="38" y2="24"/></g>';}},
+  gauge:{ar:1,vb:'0 0 48 48',inner:function(s){return '<defs>'+grad('g'+s)+'</defs><circle cx="24" cy="24" r="13" fill="none" stroke="#d4af37" stroke-opacity="0.18" stroke-width="3" stroke-linecap="round" stroke-dasharray="61.3 20.4" transform="rotate(135 24 24)"/><circle class="j-fill" cx="24" cy="24" r="13" fill="none" stroke="url(#g'+s+')" stroke-width="3" stroke-linecap="round" stroke-dasharray="44 38" transform="rotate(135 24 24)"/><circle cx="24" cy="24" r="3.1" fill="url(#g'+s+')"/><line x1="24" y1="24" x2="32.5" y2="15.5" stroke="url(#g'+s+')" stroke-width="2" stroke-linecap="round"/>';}},
+  hex:{ar:1,vb:'0 0 48 48',inner:function(s){return '<defs>'+grad('g'+s,5)+'</defs><polygon points="24,7 38.7,15.5 38.7,32.5 24,41 9.3,32.5 9.3,15.5" fill="none" stroke="url(#g'+s+')" stroke-width="2" stroke-linejoin="round"/><g stroke="url(#g'+s+')" stroke-width="2.4" stroke-linecap="round"><line class="j-glow" x1="19" y1="20" x2="29" y2="20"/><line class="j-glow" style="animation-delay:-1s" x1="16.5" y1="24" x2="31.5" y2="24"/><line class="j-glow" style="animation-delay:-2s" x1="19" y1="28" x2="29" y2="28"/></g>';}},
+  drop:{ar:1,vb:'0 0 48 48',inner:function(s){return '<defs>'+grad('g'+s,4.2)+'</defs><path class="j-breathe" d="M24 10C24 10 33 21 33 28a9 9 0 1 1-18 0C15 21 24 10 24 10Z" fill="url(#g'+s+')" fill-opacity="0.15" stroke="url(#g'+s+')" stroke-width="2" stroke-linejoin="round"/><path class="j-breathe" d="M19.5 27.5a4.5 4.5 0 0 0 3.4 5.4" fill="none" stroke="#fff6d5" stroke-opacity="0.7" stroke-width="1.6" stroke-linecap="round"/>';}},
+  flow:{ar:1,vb:'0 0 48 48',inner:function(s){return '<defs>'+grad('g'+s)+'</defs><g stroke="url(#g'+s+')" stroke-width="2.4" stroke-linecap="round" fill="none"><path class="j-flow" d="M12 18h16a4 4 0 1 0-4-4"/><path class="j-flow" style="animation-delay:-0.8s" d="M12 24h22a4 4 0 1 1-4 4"/><path class="j-flow" style="animation-delay:-1.6s" d="M12 30h12a4 4 0 1 0-4 4"/></g>';}},
+  co:{ar:150/84,vb:'0 0 150 84',inner:function(s){return '<defs>'+grad('g'+s,5,150,0)+'</defs><text x="75" y="48" text-anchor="middle" font-family="Geist, system-ui, sans-serif" font-weight="700" font-size="20" letter-spacing="0.4" fill="url(#g'+s+')">КЛИМАТ<tspan font-weight="400" fill="#a8a8a3" dx="3">Pro</tspan></text>';}}
+};
+function svg(key,s,h){var m=MARKS[key];var w=Math.round(h*m.ar);return '<svg width="'+w+'" height="'+h+'" viewBox="'+m.vb+'" fill="none">'+m.inner(s)+'</svg>';}
+var hero=document.getElementById('hero');
+var heroKeys=['apert','gauge','hex','drop','flow','co'];
+var dimOf=function(k){return k==='co'?{w:248,h:78,r:24}:{w:132,h:132,r:34};};
+var capsule=document.createElement('div');capsule.className='capsule';hero.appendChild(capsule);
+var layers={};
+heroKeys.forEach(function(k){var el=document.createElement('div');el.className='layer';el.innerHTML=svg(k, 'A_'+k, k==='co'?70:118);hero.appendChild(el);layers[k]=el;});
+var SEQ=['apert','co','gauge','co','hex','co','drop','co','flow','co'],i=0,transMs=1100,holdMs=2200;
+function tick(){
+  var key=SEQ[i], out=transMs*0.5, inn=transMs*0.62, delay=transMs*0.32;
+  Object.keys(layers).forEach(function(k){var el=layers[k];el.style.transition='opacity '+out+'ms cubic-bezier(0.5,0,0.75,0.4), transform '+out+'ms ease-in, filter '+out+'ms ease-in';el.style.opacity='0';el.style.transform='scale(0.66)';el.style.filter='blur(7px)';el.style.zIndex='1';});
+  var inc=layers[key];inc.style.transition='opacity '+inn+'ms ease-out '+delay+'ms, transform '+(transMs*0.7)+'ms var(--te) '+(delay*0.7)+'ms, filter '+inn+'ms ease-out '+delay+'ms';inc.style.opacity='1';inc.style.transform='scale(1)';inc.style.filter='none';inc.style.zIndex='2';
+  var d=dimOf(key);capsule.style.width=d.w+'px';capsule.style.height=d.h+'px';capsule.style.borderRadius=d.r+'px';
+  i=(i+1)%SEQ.length;
+}
+tick();setInterval(tick,holdMs);
+</script>
+</body>
+</html>

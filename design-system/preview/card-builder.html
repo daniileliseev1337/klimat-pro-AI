@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>КЛИМАТ Pro — конструктор карточки</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&family=Geist+Mono:wght@400..600&display=swap" />
+<style>
+  :root{--gold:#d4af37;--gold-bright:#e8c860;--gold-soft:#c9a431;--gold-glow:rgba(212,175,55,.4);
+    --border-subtle:rgba(255,255,255,.06);--border-gold:rgba(212,175,55,.3);
+    --text-primary:#fafaf7;--text-secondary:#a8a8a3;--text-tertiary:#6b6b67;}
+  *{box-sizing:border-box;}
+  body{margin:0;min-height:100vh;color:var(--text-primary);font-family:'Geist',system-ui,sans-serif;-webkit-font-smoothing:antialiased;
+    background:radial-gradient(1100px 700px at 82% -8%,rgba(212,175,55,.13),transparent 60%),radial-gradient(820px 600px at 3% 108%,rgba(212,175,55,.07),transparent 60%),#0a0a0a;}
+  .wrap{max-width:1180px;margin:0 auto;padding:26px 26px 80px;}
+  .head{display:flex;align-items:center;gap:11px;}
+  .badge{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;background:radial-gradient(120% 120% at 30% 20%,rgba(232,200,96,.18),rgba(212,175,55,.04));border:1px solid rgba(212,175,55,.4);}
+  .wm{font-size:16px;font-weight:700;letter-spacing:.02em;background:linear-gradient(100deg,#a9821f,#d4af37 45%,#ead27a 58%,#c9a431 78%,#a9821f);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .wm b{font-weight:400;color:var(--text-secondary);-webkit-text-fill-color:var(--text-secondary);}
+  h1{font-size:23px;font-weight:600;letter-spacing:-.022em;margin:22px 0 4px;}
+  .lede{font-size:13.5px;color:var(--text-secondary);max-width:760px;line-height:1.55;margin:0 0 26px;}
+
+  /* ── верх: превью + резюме ── */
+  .stage{display:grid;grid-template-columns:1fr 300px;gap:22px;align-items:stretch;margin-bottom:34px;}
+  @media (max-width:820px){.stage{grid-template-columns:1fr;}}
+  .previewbox{position:relative;border-radius:20px;border:1px dashed rgba(212,175,55,.28);padding:34px;display:grid;place-items:center;min-height:280px;
+    background:repeating-linear-gradient(45deg,rgba(255,255,255,.012) 0 10px,transparent 10px 20px);}
+  .previewbox .tagbadge{position:absolute;top:12px;left:14px;font-size:10px;font-family:'Geist Mono',monospace;color:var(--gold-soft);letter-spacing:.1em;text-transform:uppercase;}
+  .summary{border-radius:18px;border:1px solid var(--border-gold);background:rgba(16,15,13,.7);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:18px;display:flex;flex-direction:column;gap:14px;}
+  .sumrow{display:flex;flex-direction:column;gap:4px;}
+  .sumk{font-size:10.5px;text-transform:uppercase;letter-spacing:.11em;color:var(--text-tertiary);}
+  .sumv{font-size:15px;font-weight:600;color:var(--gold-bright);}
+  .sumv small{color:var(--text-secondary);font-weight:400;font-size:12px;}
+  .btns{margin-top:auto;display:flex;flex-direction:column;gap:8px;}
+  .btn{cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:600;border-radius:10px;padding:10px;border:none;}
+  .btn-gold{color:#1a1408;background:linear-gradient(#e8c860,#a9821f);}
+  .btn-ghost{color:var(--text-secondary);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);}
+
+  /* ── секции пикеров ── */
+  .sec{margin-bottom:30px;}
+  .sechd{display:flex;align-items:baseline;gap:10px;margin-bottom:14px;}
+  .sechd h2{font-size:16px;font-weight:600;margin:0;letter-spacing:-.01em;}
+  .sechd span{font-size:12px;color:var(--text-tertiary);}
+  .pick{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;}
+  @media (max-width:820px){.pick{grid-template-columns:repeat(2,1fr);}}
+  .opt{position:relative;border-radius:14px;padding:11px;cursor:pointer;border:1.5px solid rgba(255,255,255,.09);background:rgba(255,255,255,.02);transition:border-color .18s,transform .12s,background .18s;}
+  .opt:hover{transform:translateY(-2px);border-color:rgba(212,175,55,.4);}
+  .opt.on{border-color:var(--gold-bright);background:rgba(212,175,55,.07);box-shadow:0 0 18px -6px var(--gold-glow);}
+  .opt .check{position:absolute;top:9px;right:9px;width:18px;height:18px;border-radius:50%;background:linear-gradient(#e8c860,#c9a431);display:none;place-items:center;z-index:5;}
+  .opt.on .check{display:grid;}
+  .opt .demo{height:74px;border-radius:9px;overflow:hidden;position:relative;margin-bottom:9px;}
+  .opt .oname{font-size:12.5px;font-weight:600;}
+  .opt .odesc{font-size:10.5px;color:var(--text-tertiary);margin-top:2px;line-height:1.35;}
+
+  /* мини-KPI для демо */
+  .mini{position:absolute;inset:0;padding:10px 11px;z-index:2;}
+  .mini .l{font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-tertiary);}
+  .mini .n{font-size:15px;font-weight:700;color:#f7f8f8;margin-top:3px;font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+  .mini .ic{position:absolute;top:10px;right:11px;width:20px;height:20px;border-radius:6px;display:grid;place-items:center;background:#d4af371a;border:1px solid #d4af3733;}
+
+  /* ═══════ СКИНЫ (материалы) ═══════ */
+  .sk-classic{background:linear-gradient(135deg,rgba(30,30,27,.85),rgba(18,18,16,.72));border:1px solid rgba(255,255,255,.08);box-shadow:inset 0 1px 0 rgba(255,255,255,.05);}
+  .sk-classic .edge{position:absolute;inset:0;border-radius:inherit;padding:1.4px;pointer-events:none;z-index:3;background:linear-gradient(135deg,#c9a431 0%,#d4af37 22%,#fff6d5 46%,#e8c860 56%,#d4af37 72%,#c9a431 100%);background-size:260% 260%;-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.8;animation:ingot 6s ease-in-out infinite alternate;}
+  .sk-ingot{background:linear-gradient(150deg,#17150f,#0f0e0b);}
+  .sk-ingot .edge,.sk-marble .edge{position:absolute;inset:0;border-radius:inherit;padding:1.2px;pointer-events:none;z-index:3;background:linear-gradient(135deg,#8c6c18,#fff6d5 32%,#e8c860 48%,#a9821f 66%,#fff1c4 84%,#8c6c18);background-size:220% 220%;-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:ingot 6s ease-in-out infinite alternate;}
+  @keyframes ingot{from{background-position:0 50%}to{background-position:100% 50%}}
+  .sk-carbon{background:repeating-linear-gradient(45deg,#1c1c1c 0 4px,#141414 4px 8px),repeating-linear-gradient(-45deg,rgba(255,255,255,.04) 0 4px,transparent 4px 8px);border:1px solid rgba(212,175,55,.35);}
+  .sk-carbon .gloss{position:absolute;inset:0;pointer-events:none;z-index:1;background:linear-gradient(160deg,rgba(255,255,255,.1),transparent 42%);}
+  .sk-data{background:linear-gradient(150deg,#141413,#0c0c0b);border:1px solid rgba(212,175,55,.22);}
+  .sk-data .dspark{position:absolute;left:0;right:0;bottom:0;height:44%;z-index:1;pointer-events:none;}
+  .sk-data .dspark svg{display:block;width:100%;height:100%;}
+  .sk-neon{background:#0c0c0b;border:1.5px solid rgba(232,200,96,.6);animation:neonbr 3.2s ease-in-out infinite;}
+  @keyframes neonbr{0%,100%{box-shadow:0 0 10px rgba(212,175,55,.3),inset 0 0 10px rgba(212,175,55,.07);border-color:rgba(232,200,96,.5)}50%{box-shadow:0 0 22px rgba(232,200,96,.65),inset 0 0 18px rgba(212,175,55,.15);border-color:rgba(232,200,96,.95)}}
+  .sk-holo{background:#0b0b0a;border:1px solid rgba(212,175,55,.3);}
+  .sk-holo .irid{position:absolute;inset:0;z-index:1;pointer-events:none;mix-blend-mode:screen;opacity:.26;background:conic-gradient(from 0deg at 35% 25%,#d4af37,#fff6d5,#b8901f,#ead27a,#e8c860,#d4af37);animation:holo 7s linear infinite;}
+  @keyframes holo{to{filter:hue-rotate(300deg)}}
+  /* ── новые скины — второе поколение ── */
+  .sk-marble{background:linear-gradient(150deg,#111010,#0a0a09);}
+  .sk-marble .veins{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;}
+  .sk-kintsugi{background:linear-gradient(150deg,#131211,#0b0b0a);border:1px solid rgba(212,175,55,.3);}
+  .sk-kintsugi .cracks{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;}
+  .sk-kintsugi .cracks path,.sk-marble .veins path{stroke-dasharray:5 3;animation:veinflow 6s linear infinite;filter:drop-shadow(0 0 2.5px rgba(232,200,96,.55));}
+  @keyframes veinflow{to{stroke-dashoffset:-96}}
+  .sk-aurora{background:#0b0b0a;border:1px solid rgba(212,175,55,.25);}
+  .sk-aurora .aur{position:absolute;inset:-40%;z-index:1;pointer-events:none;filter:blur(14px);background:radial-gradient(40% 30% at 30% 40%,rgba(212,175,55,.3),transparent 70%),radial-gradient(35% 28% at 70% 60%,rgba(240,216,120,.18),transparent 70%);animation:aurd 9s ease-in-out infinite alternate;}
+  @keyframes aurd{from{transform:translate(-6%,-4%) rotate(-4deg)}to{transform:translate(6%,5%) rotate(5deg)}}
+  .sk-satin{background:linear-gradient(120deg,#181510,#0e0d0b 38%,#151210 58%,#0c0b09);background-size:300% 300%;animation:satind 8s ease-in-out infinite alternate;border:1px solid rgba(212,175,55,.3);}
+  @keyframes satind{from{background-position:0% 0%}to{background-position:100% 100%}}
+  .sk-topo{background:linear-gradient(150deg,#121110,#0b0b0a);border:1px solid rgba(212,175,55,.28);}
+  .sk-topo .topo{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;opacity:.65;}
+  .sk-dust{background:radial-gradient(120% 100% at 80% 0%,rgba(212,175,55,.07),transparent 55%),#0c0c0b;border:1px solid rgba(212,175,55,.26);}
+  .sk-dust .st{position:absolute;border-radius:50%;background:#ffe9a8;z-index:1;animation:tw 2.6s ease-in-out infinite;box-shadow:0 0 6px rgba(232,200,96,.7);}
+  @keyframes tw{0%,100%{opacity:.12}50%{opacity:.95}}
+  @property --oa{syntax:'<angle>';initial-value:0deg;inherits:false;}
+  .sk-orbit{background:linear-gradient(150deg,#141312,#0c0c0b);border:1px solid rgba(212,175,55,.18);}
+  .sk-orbit .orb{position:absolute;inset:0;border-radius:inherit;padding:1.5px;pointer-events:none;z-index:3;background:conic-gradient(from var(--oa),transparent 0 70%,#e8c860 82%,#fff6d5 88%,#e8c860 94%,transparent 100%);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:orbd 4s linear infinite;}
+  @keyframes orbd{to{--oa:360deg}}
+  .sk-smoke{background:#0b0b0a;border:1px solid rgba(212,175,55,.24);}
+  .sk-smoke .sm{position:absolute;inset:-30%;z-index:1;pointer-events:none;filter:blur(10px);background:radial-gradient(30% 40% at 60% 80%,rgba(212,175,55,.18),transparent 70%),radial-gradient(24% 32% at 40% 60%,rgba(255,246,213,.09),transparent 70%);animation:smoked 11s ease-in-out infinite alternate;}
+  @keyframes smoked{from{transform:translateY(9%) scale(1)}to{transform:translateY(-11%) scale(1.16)}}
+  /* ── новые поведения: большое превью ── */
+  #card.lev{transition:transform .25s ease,box-shadow .25s;}
+  #card.lev:hover{transform:translateY(-12px) scale(1.02);box-shadow:0 34px 70px rgba(0,0,0,.75),0 0 34px -8px var(--gold-glow);}
+  #card.inflate{transition:transform .45s cubic-bezier(.3,1.4,.4,1);}
+  #card.inflate:hover{transform:scale(1.045);}
+  #card.glitching{animation:glitcha .5s steps(2) 2;}
+  @keyframes glitcha{0%{transform:translate(0)}20%{transform:translate(-3px,2px)}40%{transform:translate(3px,-2px)}60%{transform:translate(-2px,-2px)}80%{transform:translate(2px,2px)}100%{transform:translate(0)}}
+  #card.pend{transform-origin:top center;animation:penda .9s ease;}
+  @keyframes penda{0%{transform:rotate(0)}25%{transform:rotate(2.6deg)}55%{transform:rotate(-1.8deg)}80%{transform:rotate(.8deg)}100%{transform:rotate(0)}}
+  #card .cflash{position:absolute;inset:0;z-index:5;background:radial-gradient(circle,rgba(255,246,213,.55),rgba(212,175,55,.25) 50%,transparent 75%);opacity:0;pointer-events:none;animation:flasha .55s ease-out forwards;}
+  @keyframes flasha{0%{opacity:0}15%{opacity:1}100%{opacity:0}}
+  .cring{position:absolute;border-radius:50%;border:1.6px solid rgba(232,200,96,.65);width:260px;height:260px;transform:translate(-50%,-50%) scale(0);animation:ringa .9s ease-out forwards;pointer-events:none;z-index:2;}
+  @keyframes ringa{to{transform:translate(-50%,-50%) scale(1);opacity:0}}
+  #card.hbeat #knum{animation:hbeata 1.6s ease-in-out infinite;transform-origin:left center;display:inline-block;}
+  @keyframes hbeata{0%,100%{transform:scale(1)}12%{transform:scale(1.06)}24%{transform:scale(1)}36%{transform:scale(1.045)}48%{transform:scale(1)}}
+  /* ── новые поведения: авто-демо ── */
+  .demo-lev .mini{animation:levd 3s ease-in-out infinite;}
+  @keyframes levd{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+  .demo-compass .ic{animation:compd 3.4s linear infinite;}
+  @keyframes compd{to{transform:rotate(360deg)}}
+  .demo-glitch .mini{animation:glitchd 3s infinite;}
+  @keyframes glitchd{0%,88%,100%{transform:translate(0)}90%{transform:translate(-2px,1px)}93%{transform:translate(2px,-1px)}96%{transform:translate(-1px,-1px)}}
+  .demo-flash .fx{position:absolute;inset:0;z-index:2;background:radial-gradient(circle,rgba(255,246,213,.5),rgba(212,175,55,.22) 50%,transparent 75%);animation:flashd 2.8s ease-out infinite;}
+  @keyframes flashd{0%,70%{opacity:0}78%{opacity:1}100%{opacity:0}}
+  .demo-pend .mini{transform-origin:top center;animation:pendd 3.2s ease-in-out infinite;}
+  @keyframes pendd{0%,55%,100%{transform:rotate(0)}65%{transform:rotate(2.6deg)}80%{transform:rotate(-1.8deg)}90%{transform:rotate(.8deg)}}
+  .demo-inflate .mini{animation:infd 3s ease-in-out infinite;}
+  @keyframes infd{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+  .demo-echo .ring{position:absolute;left:50%;top:50%;width:120px;height:120px;border-radius:50%;border:1.6px solid rgba(232,200,96,.6);transform:translate(-50%,-50%) scale(0);animation:ringd2 2.4s ease-out infinite;z-index:2;}
+  .demo-echo .ring:nth-child(3){animation-delay:.35s;}
+  @keyframes ringd2{0%{transform:translate(-50%,-50%) scale(0);opacity:1}75%,100%{transform:translate(-50%,-50%) scale(1);opacity:0}}
+  .demo-hbeat .n{animation:hbeata 1.6s ease-in-out infinite;transform-origin:left center;display:inline-block;}
+  .demo-type .n::after{content:'▌';color:var(--gold-bright);animation:blink 1s steps(1) infinite;}
+  @keyframes blink{50%{opacity:0}}
+  /* ── галочки одобрения ── */
+  .opt .appr{position:absolute;top:8px;left:8px;z-index:6;width:22px;height:22px;border-radius:50%;border:1.5px solid rgba(212,175,55,.45);background:rgba(12,12,11,.85);color:transparent;cursor:pointer;font-size:12px;font-weight:700;line-height:1;display:grid;place-items:center;transition:all .15s;padding:0;}
+  .opt .appr.on{background:linear-gradient(#e8c860,#c9a431);color:#1a1408;border-color:#e8c860;box-shadow:0 0 10px -2px var(--gold-glow);}
+  .opt.ap{border-color:rgba(212,175,55,.55);}
+  .sk-foil{background:#0b0b0a;border:1px solid rgba(212,175,55,.24);}
+  .sk-foil .foil{position:absolute;inset:0;pointer-events:none;z-index:1;mix-blend-mode:screen;background:linear-gradient(115deg,transparent 30%,rgba(212,175,55,.16) 44%,rgba(255,246,213,.4) 50%,rgba(212,175,55,.16) 56%,transparent 70%);background-size:250% 250%;animation:foil 5.5s linear infinite;}
+  @keyframes foil{0%{background-position:0 0}100%{background-position:250% 250%}}
+  /* поведение 26 · спарклайн вырастает на hover (большое превью) */
+  #card .cspark{position:absolute;left:0;right:0;bottom:0;height:64px;z-index:1;opacity:0;transform:translateY(18px);transition:opacity .45s ease,transform .55s cubic-bezier(.3,1,.4,1);pointer-events:none;}
+  #card.sparkb:hover .cspark{opacity:1;transform:none;}
+  #card .cspark svg{display:block;width:100%;height:100%;}
+  .demo-sparkb .dsp{position:absolute;left:0;right:0;bottom:0;height:36px;z-index:2;animation:sparkd 3.2s ease-in-out infinite;}
+  .demo-sparkb .dsp svg{display:block;width:100%;height:100%;}
+  @keyframes sparkd{0%,30%{opacity:0;transform:translateY(12px)}50%,88%{opacity:1;transform:none}100%{opacity:0;transform:translateY(12px)}}
+  /* ── новые поведения: большое превью ── */
+  .rip{position:absolute;border-radius:50%;width:420px;height:420px;background:rgba(232,200,96,.32);transform:translate(-50%,-50%) scale(0);animation:ripa .6s ease-out forwards;pointer-events:none;z-index:2;}
+  @keyframes ripa{to{transform:translate(-50%,-50%) scale(1);opacity:0}}
+  #card .cscan{position:absolute;left:0;right:0;top:0;height:2px;background:linear-gradient(90deg,transparent,#e8c860,transparent);box-shadow:0 0 12px #e8c860;z-index:3;opacity:0;pointer-events:none;}
+  #card.scan:hover .cscan{opacity:1;animation:scana 1.6s ease-in-out infinite;}
+  @keyframes scana{0%{top:0}50%{top:calc(100% - 2px)}100%{top:0}}
+  #card .cfill{position:absolute;left:0;right:0;bottom:0;height:0;z-index:1;background:linear-gradient(0deg,rgba(212,175,55,.22),rgba(212,175,55,.04));transition:height .7s cubic-bezier(.3,1,.4,1);pointer-events:none;}
+  #card.liquid:hover .cfill{height:100%;}
+  /* ── новые поведения: авто-демо плиток ── */
+  .demo-morph .demobg{animation:morphd 3.4s ease-in-out infinite;}
+  @keyframes morphd{0%,100%{border-radius:0}50%{border-radius:26px 8px 26px 8px}}
+  .demo-rip .r{position:absolute;left:50%;top:50%;width:120px;height:120px;border-radius:50%;background:rgba(232,200,96,.28);transform:translate(-50%,-50%) scale(0);animation:ripd 2.4s ease-out infinite;z-index:2;}
+  @keyframes ripd{0%{transform:translate(-50%,-50%) scale(0);opacity:1}70%,100%{transform:translate(-50%,-50%) scale(1);opacity:0}}
+  .demo-sparks .s{position:absolute;left:55%;top:45%;width:4px;height:4px;border-radius:50%;background:#ffe9a8;animation:spkd 2.1s ease-out infinite;z-index:2;}
+  @keyframes spkd{0%{transform:translate(0,0);opacity:0}12%{opacity:1}60%,100%{transform:translate(var(--dx,20px),var(--dy,-20px));opacity:0}}
+  .demo-scan .ln{position:absolute;left:0;right:0;top:6%;height:2px;background:linear-gradient(90deg,transparent,#e8c860,transparent);box-shadow:0 0 8px #e8c860;animation:scand 2.6s ease-in-out infinite;z-index:2;}
+  @keyframes scand{0%{top:6%}50%{top:86%}100%{top:6%}}
+  .demo-liquid .fl{position:absolute;left:0;right:0;bottom:0;height:0;background:linear-gradient(0deg,rgba(212,175,55,.26),rgba(212,175,55,.05));animation:liqd 3.2s ease-in-out infinite;z-index:1;}
+  @keyframes liqd{0%,15%{height:0}50%,80%{height:100%}100%{height:0}}
+
+  /* ═══════ ПОВЕДЕНИЯ — авто-демо (CSS-петли) ═══════ */
+  .bh .mini .n{transition:none;}
+  /* спот-свет: пятно ездит */
+  .demo-spot .glow{position:absolute;inset:0;z-index:1;background:radial-gradient(90px circle at 30% 40%,rgba(212,175,55,.32),transparent 60%);animation:spotmove 3.4s ease-in-out infinite;}
+  @keyframes spotmove{0%{background-position:0 0}25%{background-position:60px 20px}50%{background-position:20px 44px}75%{background-position:70px 10px}100%{background-position:0 0}}
+  .demo-spot .glow{background-repeat:no-repeat;}
+  /* наклон-3D */
+  .demo-tilt .mini{animation:tiltd 3.6s ease-in-out infinite;transform-origin:center;}
+  @keyframes tiltd{0%,100%{transform:perspective(300px) rotateX(0) rotateY(0)}30%{transform:perspective(300px) rotateX(7deg) rotateY(-10deg)}60%{transform:perspective(300px) rotateX(-5deg) rotateY(9deg)}}
+  /* флип */
+  .demo-flip .mini{animation:flipd 4s ease-in-out infinite;backface-visibility:hidden;}
+  @keyframes flipd{0%,40%{transform:rotateY(0)}55%,90%{transform:rotateY(180deg)}100%{transform:rotateY(0)}}
+  /* счётчик — «мигает» цифрой */
+  /* магнит — иконка кружит */
+  .demo-magnet .ic{animation:magd 2.6s ease-in-out infinite;}
+  @keyframes magd{0%,100%{transform:translate(0,0)}25%{transform:translate(-9px,6px)}50%{transform:translate(6px,9px)}75%{transform:translate(8px,-5px)}}
+  /* шиммер */
+  .demo-shim .sweep{position:absolute;inset:0;z-index:2;background:linear-gradient(115deg,transparent 40%,rgba(255,246,213,.3) 48%,transparent 56%);background-size:250% 100%;animation:shimd 2.6s ease infinite;}
+  @keyframes shimd{0%{background-position:150% 0}60%,100%{background-position:-90% 0}}
+  /* раскрытие */
+  .demo-exp .more{position:absolute;left:11px;right:11px;bottom:8px;font-size:9px;color:var(--gold-soft);z-index:3;animation:expd 3.4s ease-in-out infinite;}
+  @keyframes expd{0%,40%{opacity:0;transform:translateY(8px)}55%,90%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(8px)}}
+  /* пульс-рамка */
+  .demo-pulse{animation:pulsed 2.6s ease-in-out infinite;}
+  @keyframes pulsed{0%,100%{box-shadow:inset 0 0 0 1px rgba(212,175,55,.2)}50%{box-shadow:inset 0 0 0 1.5px rgba(232,200,96,.9),0 0 16px -4px var(--gold-glow)}}
+  .demobg{position:absolute;inset:0;background:linear-gradient(150deg,#1a1813,#0f0e0c);z-index:0;}
+
+  /* ═══════ БОЛЬШОЕ ПРЕВЬЮ ═══════ */
+  #card{position:relative;width:340px;min-height:172px;border-radius:18px;padding:22px;overflow:hidden;cursor:pointer;
+    transition:transform .16s cubic-bezier(.2,.7,.3,1),box-shadow .2s,border-radius .5s cubic-bezier(.5,0,.2,1.3);box-shadow:0 16px 40px rgba(0,0,0,.55);transform-style:preserve-3d;}
+  #card .khead{display:flex;justify-content:space-between;align-items:flex-start;position:relative;z-index:4;}
+  #card .klabel{font-size:11.5px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.09em;}
+  #card .knum{font-size:30px;font-weight:700;color:#f7f8f8;margin-top:10px;letter-spacing:-.022em;font-variant-numeric:tabular-nums;}
+  #card .ksub{font-size:12px;color:var(--text-tertiary);margin-top:8px;}
+  #card .cic{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:#d4af371a;border:1px solid #d4af3733;transition:transform .14s;}
+  #card .cbody{position:relative;z-index:4;}
+  #card .cmore{max-height:0;overflow:hidden;opacity:0;transition:max-height .4s ease,opacity .3s,margin-top .4s;position:relative;z-index:4;}
+  #card.exp:hover .cmore{max-height:90px;opacity:1;margin-top:14px;}
+  .cexprow{display:flex;justify-content:space-between;font-size:12.5px;padding:6px 0;border-top:1px solid rgba(255,255,255,.08);}
+  #card .cglow{position:absolute;inset:0;z-index:1;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .25s;background:radial-gradient(300px circle at var(--mx,50%) var(--my,50%),rgba(212,175,55,.2),transparent 58%);}
+  #card.spot:hover .cglow{opacity:1;}
+  #card .csweep{position:absolute;inset:0;z-index:2;pointer-events:none;background:linear-gradient(115deg,transparent 40%,rgba(255,246,213,.28) 48%,transparent 56%);background-size:250% 100%;background-position:150% 0;}
+  #card.shim:hover .csweep{animation:cshim .9s ease;}
+  @keyframes cshim{from{background-position:150% 0}to{background-position:-90% 0}}
+  #card.pulse{animation:cpulse 3s ease-in-out infinite;}
+  @keyframes cpulse{0%,100%{box-shadow:0 16px 40px rgba(0,0,0,.55)}50%{box-shadow:0 0 24px -4px var(--gold-glow),0 16px 40px rgba(0,0,0,.55)}}
+  #card.morph:hover{border-radius:40px 14px 40px 14px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div class="badge"><svg width="22" height="22" viewBox="0 0 48 48" fill="none"><defs><linearGradient id="g" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse"><stop stop-color="#c9a431"/><stop offset=".46" stop-color="#fff6d5"/><stop offset=".56" stop-color="#e8c860"/><stop offset="1" stop-color="#a9821f"/></linearGradient></defs><g stroke="url(#g)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M13 17h13a3.4 3.4 0 1 0-3.4-3.4"/><path d="M13 24h19a3.4 3.4 0 1 1-3.4 3.4"/><path d="M13 31h10a3.4 3.4 0 1 0-3.4 3.4"/></g></svg></div>
+    <div class="wm">КЛИМАТ<b> Pro</b></div>
+  </div>
+  <h1>Конструктор карточки</h1>
+  <p class="lede">Пользователь собирает свою карточку из двух независимых слоёв: <b style="color:var(--text-secondary)">скин</b> (дизайн) и <b style="color:var(--text-secondary)">поведение</b> (интерактив). Плитки внизу сами показывают, что делает каждый вариант. Наверху — живое превью выбранной комбинации. По умолчанию — как на сайте сейчас.</p>
+
+  <div class="stage">
+    <div class="previewbox">
+      <span class="tagbadge">живое превью · наведи / кликни</span>
+      <div id="card"></div>
+    </div>
+    <div class="summary">
+      <div class="sumrow"><span class="sumk">Скин</span><span class="sumv" id="sum-skin">Классика</span></div>
+      <div class="sumrow"><span class="sumk">Поведение</span><span class="sumv" id="sum-bh">Спот-свет</span></div>
+      <div class="sumrow"><span class="sumk">Совместимость</span><span class="sumv"><small>любой скин × любое поведение</small></span></div>
+      <div class="btns">
+        <button class="btn btn-gold" id="apply">Сделать моей темой</button>
+        <button class="btn btn-ghost" id="reset">Сбросить к сайту</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sechd"><h2>Скин</h2><span>9 финалистов — утверждено</span></div>
+    <div class="pick" id="skins"></div>
+  </div>
+  <div class="sec">
+    <div class="sechd"><h2>Поведение</h2><span>7 финалистов — утверждено</span></div>
+    <div class="pick" id="behaviors"></div>
+  </div>
+</div>
+
+<script>
+  var IC='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#d4af37" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16v13H4zM9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>';
+  var miniKPI='<div class="mini"><div class="l">Портфель</div><div class="n">8,4М ₽</div><div class="ic">'+IC+'</div></div>';
+
+  // ── СКИНЫ ──
+  function sparkSVG(id){return '<svg viewBox="0 0 300 64" preserveAspectRatio="none"><defs><linearGradient id="'+id+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(212,175,55,.42)"/><stop offset="1" stop-color="rgba(212,175,55,0)"/></linearGradient></defs><polygon points="0,56 0,42 40,46 80,28 120,34 160,16 200,26 240,10 300,18 300,64" fill="url(#'+id+')"/><polyline points="0,42 40,46 80,28 120,34 160,16 200,26 240,10 300,18" fill="none" stroke="#e8c860" stroke-width="2.2"/></svg>';}
+  var ENG='<svg class="eng" width="110" height="110" viewBox="0 0 48 48" fill="none" stroke="#d4af37" stroke-opacity=".5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17h13a3.4 3.4 0 1 0-3.4-3.4"/><path d="M9 24h19a3.4 3.4 0 1 1-3.4 3.4"/><path d="M9 31h10a3.4 3.4 0 1 0-3.4 3.4"/></svg>';
+  var VEINS='<svg class="veins" viewBox="0 0 300 160" preserveAspectRatio="none"><path d="M-10,44 C60,18 120,86 185,52 S280,26 320,64" fill="none" stroke="rgba(232,200,96,.85)" stroke-width="1.6"/><path d="M-10,108 C70,92 132,142 210,108 S300,120 330,98" fill="none" stroke="rgba(232,200,96,.55)" stroke-width="1.3"/><path d="M40,-10 C60,50 30,90 70,150" fill="none" stroke="rgba(255,246,213,.4)" stroke-width="1"/></svg>';
+  var CRACKS='<svg class="cracks" viewBox="0 0 300 160" preserveAspectRatio="none" fill="none"><path d="M40,-5 L58,38 L45,66 L72,98 L60,130 L84,165" stroke="rgba(232,200,96,.8)" stroke-width="1.6"/><path d="M58,38 L96,52 L128,44" stroke="rgba(232,200,96,.55)" stroke-width="1.2"/><path d="M225,-8 L210,40 L236,74 L218,110 L248,150" stroke="rgba(232,200,96,.7)" stroke-width="1.5"/><path d="M236,74 L196,92" stroke="rgba(232,200,96,.45)" stroke-width="1"/></svg>';
+  var TOPO='<svg class="topo" viewBox="0 0 300 160" preserveAspectRatio="none" fill="none" stroke="rgba(212,175,55,.3)" stroke-width="1"><path d="M-10,120 C60,90 90,140 160,118 S260,90 320,110"/><path d="M-10,95 C55,70 100,115 170,94 S255,70 320,86"/><path d="M-10,70 C50,50 110,90 180,70 S250,50 320,62"/><path d="M200,20 C220,30 240,26 252,14 C240,4 218,6 200,20 Z" stroke="rgba(232,200,96,.5)"/></svg>';
+  var DUST='<span class="st" style="left:18%;top:26%;width:3px;height:3px"></span><span class="st" style="left:64%;top:18%;width:2px;height:2px;animation-delay:.6s"></span><span class="st" style="left:82%;top:52%;width:3px;height:3px;animation-delay:1.2s"></span><span class="st" style="left:38%;top:64%;width:2px;height:2px;animation-delay:1.8s"></span><span class="st" style="left:55%;top:40%;width:2.5px;height:2.5px;animation-delay:.9s"></span><span class="st" style="left:26%;top:78%;width:2px;height:2px;animation-delay:1.5s"></span>';
+  var HEXES='<svg class="hexes"><defs><pattern id="hxp" width="30" height="26" patternUnits="userSpaceOnUse"><path d="M15 1 L28 8.5 L28 21 L15 28 L2 21 L2 8.5 Z" fill="none" stroke="rgba(212,175,55,.15)" stroke-width="1"/></pattern></defs><rect width="100%" height="100%" fill="url(#hxp)"/></svg>';
+  var SKINS=[
+    {id:'classic',name:'Классика · сайт',desc:'стекло + золотой слиток-кромка — как сейчас',cls:'sk-classic',extra:'<div class="edge"></div>'},
+    {id:'carbon',name:'Карбон · 01',desc:'плетение углеволокна',cls:'sk-carbon',extra:'<div class="gloss"></div>'},
+    {id:'ingot',name:'Слиток · 02',desc:'матовое тело, ярче фаска',cls:'sk-ingot',extra:'<div class="edge"></div>'},
+    {id:'data',name:'Датавиз · 07',desc:'золотой график-герой',cls:'sk-data',extra:'<div class="dspark">'+sparkSVG('skd')+'</div>'},
+    {id:'foil',name:'Фольга · 09',desc:'бегущий блик тиснения',cls:'sk-foil',extra:'<div class="foil"></div>'},
+    {id:'neon',name:'Неон · 16',desc:'контур мягко дышит',cls:'sk-neon',extra:''},
+    {id:'holo',name:'Голография · 19',desc:'иридесцентный перелив',cls:'sk-holo',extra:'<div class="irid"></div>'},
+    {id:'marble',name:'Мрамор ★',desc:'яркие переливающиеся жилы + слиток-рамка',cls:'sk-marble',extra:'<div class="edge"></div>'+VEINS},
+    {id:'dust',name:'Звёздная пыль',desc:'мерцающие золотые искры',cls:'sk-dust',extra:DUST}
+  ];
+  // ── ПОВЕДЕНИЯ ──
+  var BEHAV=[
+    {id:'none',name:'Статично',desc:'без интерактива — дефолт сайта',demo:'',dcls:''},
+    {id:'flip',name:'Флип · 22',desc:'клик — переворот на детали',demo:'',dcls:'demo-flip'},
+    {id:'spark',name:'Спарклайн · 26',desc:'график вырастает на hover',demo:'<div class="dsp">'+sparkSVG('bhd')+'</div>',dcls:'demo-sparkb'},
+    {id:'exp',name:'Раскрытие · 30',desc:'детали выезжают на hover',demo:'<div class="more">＋ приход · расход</div>',dcls:'demo-exp'},
+    {id:'pulse',name:'Дыхание · 44',desc:'рамка мягко пульсирует',demo:'',dcls:'demo-pulse'},
+    {id:'tilt',name:'Наклон-3D ★',desc:'наклон в объёме за мышью',demo:'',dcls:'demo-tilt'},
+    {id:'lev',name:'Левитация',desc:'взлетает над страницей на hover',demo:'',dcls:'demo-lev'}
+  ];
+
+  var state={skin:'classic',bh:'none'};
+
+  // рендер пикеров
+  document.getElementById('skins').innerHTML=SKINS.map(function(s){
+    return '<div class="opt" data-skin="'+s.id+'"><span class="check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#1a1408" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12 5 5L20 6"/></svg></span>'
+      +'<div class="demo '+s.cls+'">'+s.extra+miniKPI+'</div><div class="oname">'+s.name+'</div><div class="odesc">'+s.desc+'</div></div>';
+  }).join('');
+  document.getElementById('behaviors').innerHTML=BEHAV.map(function(b){
+    return '<div class="opt" data-bh="'+b.id+'"><span class="check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#1a1408" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12 5 5L20 6"/></svg></span>'
+      +'<div class="demo bh '+b.dcls+'"><div class="demobg"></div>'+b.demo+miniKPI+'</div><div class="oname">'+b.name+'</div><div class="odesc">'+b.desc+'</div></div>';
+  }).join('');
+
+  // ── сборка большого превью ──
+  var card=document.getElementById('card');
+  var teardown=[];
+  function buildCard(){
+    teardown.forEach(function(fn){fn();});teardown=[];
+    var sk=SKINS.find(function(x){return x.id===state.skin;});
+    var bh=BEHAV.find(function(x){return x.id===state.bh;});
+    card.className='';card.classList.add(sk.cls);
+    card.style.transform='';card.style.borderRadius='';
+    var goldEdge=sk.extra?sk.extra.replace('class="edge"','class="edge" style="inset:0;padding:1.4px"'):'';
+    // тело
+    var front='<div class="khead"><div><div class="klabel">Портфель</div><div class="knum" id="knum">8 400 000 ₽</div><div class="ksub">моё: 5 200 000 ₽</div></div><div class="cic">'+IC.replace('15','18').replace('15','18')+'</div></div>';
+    var more='<div class="cmore"><div class="cexprow"><span>Приход за месяц</span><b style="color:#6ee7a8">+420 000</b></div><div class="cexprow"><span>Расход</span><b style="color:#f8a3a3">−397 500</b></div></div>';
+    card.innerHTML='<div class="cglow"></div><div class="csweep"></div>'+sk.extra+'<div class="cbody">'+front+(bh.id==='exp'?more:'')+'</div>';
+
+    // применяем поведение
+    if(bh.id==='spot'){card.classList.add('spot');var mv=function(e){var r=card.getBoundingClientRect();card.style.setProperty('--mx',(e.clientX-r.left)+'px');card.style.setProperty('--my',(e.clientY-r.top)+'px');};card.addEventListener('mousemove',mv);teardown.push(function(){card.removeEventListener('mousemove',mv);});}
+    if(bh.id==='tilt'){var mv2=function(e){var r=card.getBoundingClientRect();var px=(e.clientX-r.left)/r.width,py=(e.clientY-r.top)/r.height;card.style.transform='perspective(800px) rotateX('+((py-.5)*-11)+'deg) rotateY('+((px-.5)*13)+'deg) translateY(-3px)';};var lv=function(){card.style.transform='';};card.addEventListener('mousemove',mv2);card.addEventListener('mouseleave',lv);teardown.push(function(){card.removeEventListener('mousemove',mv2);card.removeEventListener('mouseleave',lv);});}
+    if(bh.id==='flip'){card.style.cursor='pointer';var backHTML='<div class="cbody" id="cback" style="position:absolute;inset:22px;display:none;flex-direction:column;justify-content:center;gap:9px"><div class="klabel">Разбивка</div><div class="cexprow" style="border:none"><span>Отопление</span><b>3.2М</b></div><div class="cexprow"><span>Вентиляция</span><b>2.1М</b></div><div class="cexprow"><span>Кондиц.</span><b>3.1М</b></div></div>';
+      card.insertAdjacentHTML('beforeend',backHTML);var flipped=false;var fb=card.querySelector('#cback');var fr=card.querySelector('.cbody');
+      var ck=function(){flipped=!flipped;card.style.transition='transform .5s cubic-bezier(.5,0,.2,1.25)';card.style.transform=flipped?'rotateY(180deg)':'';setTimeout(function(){fr.style.display=flipped?'none':'';fb.style.display=flipped?'flex':'none';fb.style.transform='rotateY(180deg)';},flipped?250:250);};
+      card.addEventListener('click',ck);teardown.push(function(){card.removeEventListener('click',ck);card.style.transition='';});}
+    if(bh.id==='magnet'){var ic=card.querySelector('.cic');var mv3=function(e){var ir=ic.getBoundingClientRect();ic.style.transform='translate('+(e.clientX-(ir.left+19))*.3+'px,'+(e.clientY-(ir.top+19))*.3+'px)';};var lv3=function(){ic.style.transform='';};card.addEventListener('mousemove',mv3);card.addEventListener('mouseleave',lv3);teardown.push(function(){card.removeEventListener('mousemove',mv3);card.removeEventListener('mouseleave',lv3);});}
+    if(bh.id==='shim')card.classList.add('shim');
+    if(bh.id==='exp')card.classList.add('exp');
+    if(bh.id==='pulse')card.classList.add('pulse');
+    if(bh.id==='morph')card.classList.add('morph');
+    if(bh.id==='scan'){card.classList.add('scan');card.insertAdjacentHTML('beforeend','<div class="cscan"></div>');}
+    if(bh.id==='liquid'){card.classList.add('liquid');card.insertAdjacentHTML('beforeend','<div class="cfill"></div>');}
+    if(bh.id==='count'){var kn2=card.querySelector('#knum');var enC=function(){var t0=null;var stepC=function(t){if(!t0)t0=t;var p=Math.min((t-t0)/900,1),e2=1-Math.pow(1-p,3);kn2.textContent=Math.round(8400000*e2).toLocaleString('ru-RU')+' ₽';if(p<1)requestAnimationFrame(stepC);};requestAnimationFrame(stepC);};card.addEventListener('mouseenter',enC);teardown.push(function(){card.removeEventListener('mouseenter',enC);});}
+    if(bh.id==='ripple'){var rpF=function(e){var r=card.getBoundingClientRect();var d=document.createElement('span');d.className='rip';d.style.left=(e.clientX-r.left)+'px';d.style.top=(e.clientY-r.top)+'px';card.appendChild(d);setTimeout(function(){d.remove();},650);};card.addEventListener('click',rpF);teardown.push(function(){card.removeEventListener('click',rpF);});}
+    if(bh.id==='sparks'){var spF=function(e){var r=card.getBoundingClientRect();for(var k=0;k<14;k++){(function(){var s=document.createElement('span');var ang=Math.random()*6.28,dist=40+Math.random()*70;s.style.cssText='position:absolute;z-index:3;width:4px;height:4px;border-radius:50%;background:#ffe9a8;pointer-events:none;left:'+(e.clientX-r.left)+'px;top:'+(e.clientY-r.top)+'px;transition:transform .6s ease-out,opacity .6s;';card.appendChild(s);requestAnimationFrame(function(){s.style.transform='translate('+Math.cos(ang)*dist+'px,'+Math.sin(ang)*dist+'px)';s.style.opacity='0';});setTimeout(function(){s.remove();},680);})();}};card.addEventListener('click',spF);teardown.push(function(){card.removeEventListener('click',spF);});}
+    if(bh.id==='lev')card.classList.add('lev');
+    if(bh.id==='inflate')card.classList.add('inflate');
+    if(bh.id==='hbeat')card.classList.add('hbeat');
+    if(bh.id==='type'){var kn3=card.querySelector('#knum');var tTxt='8 400 000 ₽';var tEn=function(){var i=0;kn3.textContent=' ';var iv=setInterval(function(){kn3.textContent=tTxt.slice(0,++i);if(i>=tTxt.length)clearInterval(iv);},55);};card.addEventListener('mouseenter',tEn);teardown.push(function(){card.removeEventListener('mouseenter',tEn);});}
+    if(bh.id==='compass'){var ic3=card.querySelector('.cic');var cmF=function(e){var r2=ic3.getBoundingClientRect();var ang2=Math.atan2(e.clientY-(r2.top+r2.height/2),e.clientX-(r2.left+r2.width/2))*180/Math.PI+90;ic3.style.transform='rotate('+ang2+'deg)';};var cmL=function(){ic3.style.transform='';};card.addEventListener('mousemove',cmF);card.addEventListener('mouseleave',cmL);teardown.push(function(){card.removeEventListener('mousemove',cmF);card.removeEventListener('mouseleave',cmL);});}
+    if(bh.id==='glitch'){var gF=function(){card.classList.add('glitching');setTimeout(function(){card.classList.remove('glitching');},620);};card.addEventListener('click',gF);teardown.push(function(){card.removeEventListener('click',gF);});}
+    if(bh.id==='flash'){var fF=function(){var d2=document.createElement('div');d2.className='cflash';card.appendChild(d2);setTimeout(function(){d2.remove();},620);};card.addEventListener('click',fF);teardown.push(function(){card.removeEventListener('click',fF);});}
+    if(bh.id==='pend'){var pF=function(){card.classList.remove('pend');void card.offsetWidth;card.classList.add('pend');setTimeout(function(){card.classList.remove('pend');},950);};card.addEventListener('click',pF);teardown.push(function(){card.removeEventListener('click',pF);});}
+    if(bh.id==='echo'){var eF=function(e){var r3=card.getBoundingClientRect();for(var k2=0;k2<3;k2++){(function(kk){setTimeout(function(){var d3=document.createElement('span');d3.className='cring';d3.style.left=(e.clientX-r3.left)+'px';d3.style.top=(e.clientY-r3.top)+'px';card.appendChild(d3);setTimeout(function(){d3.remove();},950);},kk*180);})(k2);}};card.addEventListener('click',eF);teardown.push(function(){card.removeEventListener('click',eF);});}
+    if(bh.id==='spark'){card.classList.add('sparkb');card.insertAdjacentHTML('beforeend','<div class="cspark">'+sparkSVG('csp')+'</div>');}
+
+    // сводка
+    document.getElementById('sum-skin').textContent=sk.name;
+    document.getElementById('sum-bh').textContent=bh.name;
+    // выделение выбранных плиток
+    document.querySelectorAll('[data-skin]').forEach(function(o){o.classList.toggle('on',o.dataset.skin===state.skin);});
+    document.querySelectorAll('[data-bh]').forEach(function(o){o.classList.toggle('on',o.dataset.bh===state.bh);});
+  }
+
+  document.querySelectorAll('[data-skin]').forEach(function(o){o.addEventListener('click',function(){state.skin=o.dataset.skin;buildCard();});});
+  document.querySelectorAll('[data-bh]').forEach(function(o){o.addEventListener('click',function(){state.bh=o.dataset.bh;buildCard();});});
+
+  // ── галочки одобрения (независимы от превью-выбора) ──
+  var APK='kp_builder_approved',approved;
+  try{approved=JSON.parse(localStorage.getItem(APK))||null;}catch(e){approved=null;}
+  if(!approved||!approved.skins)approved={skins:['classic','carbon','ingot','data','foil','neon','holo','marble','dust'],behaviors:['flip','spark','exp','pulse','tilt','lev']};
+  function addApprove(sel,type,attr){
+    document.querySelectorAll(sel).forEach(function(o){
+      var id=o.dataset[attr];
+      var b=document.createElement('button');b.className='appr';b.type='button';b.title='Одобрить';b.textContent='✓';
+      function paint(){var on=approved[type].indexOf(id)>-1;b.classList.toggle('on',on);o.classList.toggle('ap',on);}
+      b.addEventListener('click',function(e){e.stopPropagation();var i=approved[type].indexOf(id);if(i>-1)approved[type].splice(i,1);else approved[type].push(id);localStorage.setItem(APK,JSON.stringify(approved));paint();});
+      o.appendChild(b);paint();
+    });
+  }
+  addApprove('[data-skin]','skins','skin');
+  addApprove('[data-bh]','behaviors','bh');
+  document.getElementById('reset').addEventListener('click',function(){state={skin:'classic',bh:'none'};buildCard();});
+  document.getElementById('apply').addEventListener('click',function(){var b=document.getElementById('apply');b.textContent='Тема сохранена ✓';try{localStorage.setItem('kp_card_theme',JSON.stringify(state));}catch(e){}setTimeout(function(){b.textContent='Сделать моей темой';},1400);});
+
+  try{var saved=JSON.parse(localStorage.getItem('kp_card_theme'));if(saved&&saved.skin&&SKINS.some(function(s){return s.id===saved.skin;})&&BEHAV.some(function(b){return b.id===saved.bh;}))state=saved;else state={skin:'classic',bh:'none'};}catch(e){state={skin:'classic',bh:'none'};}
+  buildCard();
+  // демо-циклы: печать в плитке
+  setInterval(function(){document.querySelectorAll('.demo-type .n').forEach(function(n){var txt='8,4М ₽';var i=0;var iv=setInterval(function(){n.textContent=txt.slice(0,++i);if(i>=txt.length)clearInterval(iv);},90);});},2800);
+</script>
+</body>
+</html>

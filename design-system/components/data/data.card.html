@@ -1,0 +1,56 @@
+<!-- @dsCard group="Components" viewport="700x440" name="Data — Table · Charts" subtitle="Ledger table, sparklines, categorical bars" -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../../styles.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>
+  body { margin: 0; padding: 22px; background: var(--surface-base); }
+  .grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; align-items: start; }
+  .cap { font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: var(--ls-eyebrow); color: var(--text-subtle); font-weight: 600; margin: 0 0 12px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { Table, Sparkline, BarChart, Card, Badge, ProgressBar } = window.KlimatProDesignSystem_a56ef7;
+const rub = (n) => new Intl.NumberFormat("ru-RU").format(n);
+const rows = [
+  { id:1, name:"Корпус B · ОВиК", stage:"В работе", color:"#d4af37", trend:[4,6,5,8,7,11], value:1850000 },
+  { id:2, name:"ТЦ «Меридиан»", stage:"Проект", color:"#93c5fd", trend:[2,3,3,5,6,6], value:3200000 },
+  { id:3, name:"Склад K2", stage:"Сдан", color:"#2dd4bf", trend:[6,7,9,8,10,10], value:980000 },
+  { id:4, name:"БЦ «Высота»", stage:"Согл.", color:"#f3d77b", trend:[3,4,4,6,5,7], value:2640000 },
+];
+function Demo() {
+  return (
+    <div className="grid">
+      <Card padding={18}>
+        <p className="cap">Table · проекты</p>
+        <Table density="compact" columns={[
+          { key:"name", label:"Проект" },
+          { key:"stage", label:"Стадия", render:(v,r)=><Badge color={r.color} dot size="sm">{v}</Badge> },
+          { key:"trend", label:"Тренд", render:(v,r)=><Sparkline data={v} color={r.color==="#d4af37"?"var(--accent)":r.color} width={70} height={24} /> },
+          { key:"value", label:"Сумма", align:"right", render:(v)=>rub(v)+" ₽" },
+        ]} rows={rows} onRowClick={()=>{}} />
+      </Card>
+      <Card padding={18}>
+        <p className="cap">BarChart · приход по месяцам</p>
+        <BarChart height={150} format={(n)=>n} data={[
+          {label:"Фев",value:720},{label:"Мар",value:690},{label:"Апр",value:880},{label:"Май",value:940},{label:"Июн",value:1240},
+        ]} />
+        <div style={{marginTop:18,display:"flex",alignItems:"center",gap:12}}>
+          <Sparkline data={[5,7,6,9,8,12,11,14]} width={120} height={32} />
+          <span style={{fontSize:12,color:"var(--text-muted)"}}>inline sparkline</span>
+        </div>
+      </Card>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<Demo/>);
+</script>
+</body>
+</html>

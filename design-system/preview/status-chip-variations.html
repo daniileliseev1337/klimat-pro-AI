@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>КЛИМАТ-ПРО · Статус-чип и слоганы</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&display=swap" />
+<style>
+  :root{
+    --gold:#d4af37;--gold-bright:#e8c860;--gold-soft:#c9a431;
+    --t1:#fafaf7;--t2:#a8a8a3;--t3:#6b6b67;--t4:#404040;
+    --bd:rgba(255,255,255,.08);--bd2:rgba(255,255,255,.12);--gbd:rgba(212,175,55,.3);
+    --good:#6ee7a8;--warn:#f3d77b;--bad:#f8a3a3;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;min-height:100vh;font-family:'Geist',system-ui,sans-serif;color:var(--t1);
+    background:#0a0a0a;-webkit-font-smoothing:antialiased;}
+  #bg{position:fixed;inset:0;z-index:0;pointer-events:none;}
+  .wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:40px 22px 90px;}
+  .pagehd h1{margin:0 0 6px;font-size:20px;font-weight:700;letter-spacing:-.02em;}
+  .pagehd p{margin:0;font-size:13px;color:var(--t2);max-width:760px;line-height:1.5;}
+
+  .sechd{display:flex;align-items:baseline;gap:10px;margin:38px 0 14px;}
+  .sechd h2{margin:0;font-size:16px;font-weight:700;}
+  .sechd span{font-size:12px;color:var(--t3);}
+
+  .frame{margin-bottom:18px;}
+  .flabel{display:flex;align-items:baseline;gap:11px;margin-bottom:10px;padding-left:2px;flex-wrap:wrap;}
+  .fnum{font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--gold-bright);
+    background:rgba(212,175,55,.12);border:1px solid var(--gbd);border-radius:999px;padding:3px 10px;}
+  .fname{font-size:13.5px;font-weight:600;color:var(--t1);}
+  .fdesc{font-size:12px;color:var(--t3);}
+  .stripe{border:1px solid var(--bd);border-radius:14px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+    background:radial-gradient(700px 240px at 78% -30%,rgba(212,175,55,.07),transparent 60%),#0c0c0b;}
+
+  .chip{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:999px;font:600 12.5px 'Geist';
+    background:rgba(255,255,255,.04);border:1px solid var(--bd2);color:var(--t2);white-space:nowrap;}
+  .chip b{color:var(--gold-bright);font-weight:700;}
+  .chip.g{background:rgba(110,231,168,.08);border-color:rgba(110,231,168,.28);color:#bdf0d3;}
+  .chip.w{background:rgba(243,215,123,.08);border-color:rgba(243,215,123,.3);color:#f3d77b;}
+  .d{width:7px;height:7px;border-radius:999px;flex-shrink:0;}
+  .d.g{background:var(--good);box-shadow:0 0 8px var(--good);}
+  .d.w{background:var(--warn);box-shadow:0 0 8px var(--warn);}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+  .d.live{animation:pulse 2s ease-in-out infinite;}
+
+  .lead{display:flex;align-items:center;gap:10px;min-width:0;}
+  .ic{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;flex-shrink:0;background:rgba(212,175,55,.1);border:1px solid var(--gbd);color:var(--gold);}
+  .name{font-size:13.5px;font-weight:600;color:var(--t1);}
+  .sub2{font-size:11.5px;color:var(--t3);margin-top:1px;}
+
+  /* слоганы */
+  .brandname{margin:0;font-weight:700;letter-spacing:-.02em;font-size:22px;}
+  @keyframes shim{0%{background-position:0 0}100%{background-position:220% 0}}
+  .shimmer{background:linear-gradient(100deg,#a9821f,#d4af37 40%,#fff6d5 52%,#e8c860 62%,#a9821f 82%);
+    background-size:220% auto;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shim 5.5s linear infinite;}
+  .pro{position:relative;display:inline-flex;align-items:center;font-weight:800;letter-spacing:.14em;
+    color:#f7e6a8;background:#161310;border-radius:6px;padding:2px 7px 2px 8px;font-size:12px;line-height:1;margin-left:8px;vertical-align:2px;}
+  .pro::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.2px;pointer-events:none;
+    background:linear-gradient(120deg,#8c6c18,#fff6d5 42%,#e8c860 58%,#8c6c18);
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;
+    mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;}
+  .tag-tech{font-size:12.5px;color:var(--gold-soft);font-weight:500;}
+  .tag-warm{font-size:12.5px;color:var(--t2);font-style:italic;}
+  .hair{height:1px;width:100%;background:linear-gradient(90deg,rgba(212,175,55,.5),transparent);margin:7px 0 6px;}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div class="wrap">
+  <div class="pagehd">
+    <h1>Статус-чип · функция + оба слогана бренда</h1>
+    <p>Два открытых вопроса из мастхеда: (1) какую задачу должен решать «горящий зелёным» чип — 5 кандидатов на правильную функцию; (2) вернул оба слогана бренда — рабочий «климат, рассчитанный профессионально» и тёплый «Заботимся о тех, кто внутри».</p>
+  </div>
+
+  <!-- Слоганы -->
+  <div class="sechd"><h2>Оба слогана — предложенная пара</h2><span>можно детальнее отдельным раундом, если нужно ещё варианты</span></div>
+  <div class="frame">
+    <div class="stripe" style="justify-content:flex-start;">
+      <div>
+        <h1 class="brandname"><span class="shimmer">КЛИМАТ</span><span class="pro">PRO</span></h1>
+        <div class="hair" style="max-width:260px;"></div>
+        <div class="tag-tech">климат, рассчитанный профессионально</div>
+        <div class="tag-warm" style="margin-top:3px;">Заботимся о тех, кто внутри</div>
+      </div>
+    </div>
+    <div class="flabel" style="margin-top:10px;"><span class="fdesc">Рабочий слоган — сразу под золотым правилом (функциональное позиционирование для B2B-контекста шапки). Тёплый — курсивом чуть ниже, вторым тоном: эмоциональная подпись бренда, не конкурирует за внимание с первым.</span></div>
+  </div>
+
+  <!-- Статус-чип -->
+  <div class="sechd"><h2>Статус-чип — 5 вариантов функции</h2><span>тот самый зелёный «живой» индикатор из M2/M4 — какую задачу он решает</span></div>
+
+  <div class="frame" data-screen-label="Статус-чип S1">
+    <div class="flabel"><span class="fnum">S1</span><span class="fname">Телеметрия объектов</span><span class="fdesc">— буквально «климат»: сколько обслуживаемых систем клиентов сейчас на связи и в норме</span></div>
+    <div class="stripe">
+      <div class="lead"><div class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2 2M16.4 16.4l2 2M5.6 18.4l2-2M16.4 7.6l2-2"/><circle cx="12" cy="12" r="4"/></svg></div><div><div class="name">Мониторинг объектов</div><div class="sub2">данные с термостатов/контроллеров на объектах клиентов</div></div></div>
+      <span class="chip g"><span class="d g live"></span>14 из 14 объектов на связи</span>
+    </div>
+  </div>
+
+  <div class="frame" data-screen-label="Статус-чип S2">
+    <div class="flabel"><span class="fnum">S2</span><span class="fname">Риск по проектам</span><span class="fdesc">— зелёный = нет просроченных задач и дедлайнов; жёлтый/красный — то, что реально требует внимания сегодня</span></div>
+    <div class="stripe">
+      <div class="lead"><div class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="m9 15 2 2 4-4"/></svg></div><div><div class="name">Здоровье проектов</div><div class="sub2">просрочки, риски по срокам монтажа/сдачи</div></div></div>
+      <span class="chip g"><span class="d g"></span>Все проекты в графике</span>
+    </div>
+  </div>
+
+  <div class="frame" data-screen-label="Статус-чип S3">
+    <div class="flabel"><span class="fnum">S3</span><span class="fname">Синхронизация</span><span class="fdesc">— доверие к данным: приложение синхронизировано и работает офлайн-safe. Практичный, но менее «климатический» смысл</span></div>
+    <div class="stripe">
+      <div class="lead"><div class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg></div><div><div class="name">Синхронизация данных</div><div class="sub2">последняя успешная синхронизация с сервером</div></div></div>
+      <span class="chip g"><span class="d g"></span>Синхронизировано · 2 мин назад</span>
+    </div>
+  </div>
+
+  <div class="frame" data-screen-label="Статус-чип S4">
+    <div class="flabel"><span class="fnum">S4</span><span class="fname">Финансовый пульс дня</span><span class="fdesc">— зелёный, если баланс дня по кассе положительный; главное число, а не просто факт «онлайн»</span></div>
+    <div class="stripe">
+      <div class="lead"><div class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg></div><div><div class="name">Касса дня</div><div class="sub2">приход минус расход за сегодня</div></div></div>
+      <span class="chip g"><span class="d g"></span>Касса дня: <b style="color:#bdf0d3">+42 000 ₽</b></span>
+    </div>
+  </div>
+
+  <div class="frame" data-screen-label="Статус-чип S5">
+    <div class="flabel"><span class="fnum">S5</span><span class="fname">Доступность (личный статус)</span><span class="fdesc">— это личный рабочий центр одного специалиста: показывает, на связи ли он сейчас для клиентов/партнёров</span></div>
+    <div class="stripe">
+      <div class="lead"><div class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></div><div><div class="name">Моя доступность</div><div class="sub2">рабочий статус — виден в шапке всегда</div></div></div>
+      <span class="chip g"><span class="d g live"></span>На связи до 19:00</span>
+    </div>
+  </div>
+
+  <div class="sechd"><h2>Моя рекомендация</h2><span></span></div>
+  <div class="frame">
+    <div class="stripe" style="display:block;">
+      <p style="margin:0;font-size:13px;color:var(--t2);line-height:1.6;max-width:760px;">
+      <b style="color:var(--t1);">S2 «Риск по проектам»</b> для рабочего мастхеда (M4-контекст — там уже стоят задачи/счета рядом, риск по срокам логично замыкает тройку) и
+      <b style="color:var(--t1);">S1 «Телеметрия объектов»</b> для стеклянного мастхеда (M2 — более premium/hero-контекст, а «14 объектов на связи» прямо подтверждает обещание бренда «климат» в моменте открытия приложения).
+      S4 и S5 — сильные кандидаты про личный кабинет отдельно (не в шапке).</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function(){
+    var c=document.getElementById('bg'),x=c.getContext('2d'),W,H,DPR=Math.min(devicePixelRatio||1,2),nd=[];
+    var blobs=[{x:.14,y:.1,r:340,a:.12,sx:7e-5,sy:5e-5,p:0},{x:.86,y:.3,r:300,a:.1,sx:5e-5,sy:8e-5,p:2.1}];
+    function rs(){W=innerWidth;H=innerHeight;c.width=W*DPR|0;c.height=H*DPR|0;c.style.width=W+'px';c.style.height=H+'px';x.setTransform(DPR,0,0,DPR,0,0);nd=[];var n=Math.min(Math.round(W*H/38000),34);for(var i=0;i<n;i++)nd.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.14,vy:(Math.random()-.5)*.14,r:Math.random()*1.2+.5});}
+    addEventListener('resize',rs);rs();
+    function f(t){x.clearRect(0,0,W,H);x.fillStyle='#0a0a0a';x.fillRect(0,0,W,H);x.globalCompositeOperation='lighter';
+      blobs.forEach(function(b){var cx=(b.x+Math.sin(t*b.sx+b.p)*.05)*W,cy=(b.y+Math.cos(t*b.sy+b.p)*.05)*H;var g=x.createRadialGradient(cx,cy,0,cx,cy,b.r);g.addColorStop(0,'rgba(212,175,55,'+b.a+')');g.addColorStop(1,'rgba(212,175,55,0)');x.fillStyle=g;x.beginPath();x.arc(cx,cy,b.r,0,6.2832);x.fill();});
+      for(var i=0;i<nd.length;i++){var n=nd[i];n.x+=n.vx;n.y+=n.vy;if(n.x<0||n.x>W)n.vx*=-1;if(n.y<0||n.y>H)n.vy*=-1;}
+      for(var q=0;q<nd.length;q++){x.beginPath();x.arc(nd[q].x,nd[q].y,nd[q].r,0,6.2832);x.fillStyle='rgba(240,216,120,.45)';x.fill();}
+      x.globalCompositeOperation='source-over';requestAnimationFrame(f);}
+    requestAnimationFrame(f);
+  })();
+</script>
+</body>
+</html>

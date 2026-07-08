@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>КЛИМАТ Pro — карточки: смелые направления</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&family=Geist+Mono:wght@400..600&display=swap" />
+<style>
+  :root{--gold:#d4af37;--gold-bright:#e8c860;--gold-soft:#c9a431;--gold-glow:rgba(212,175,55,.4);
+    --border-subtle:rgba(255,255,255,.06);--border-gold:rgba(212,175,55,.3);
+    --text-primary:#fafaf7;--text-secondary:#a8a8a3;--text-tertiary:#6b6b67;}
+  *{box-sizing:border-box;}
+  body{margin:0;min-height:100vh;color:var(--text-primary);font-family:'Geist',system-ui,sans-serif;-webkit-font-smoothing:antialiased;
+    background:radial-gradient(1100px 700px at 82% -8%,rgba(212,175,55,.14),transparent 60%),radial-gradient(820px 600px at 3% 108%,rgba(212,175,55,.08),transparent 60%),#0a0a0a;}
+  .wrap{max-width:1200px;margin:0 auto;padding:26px 26px 72px;}
+  .head{display:flex;align-items:center;gap:11px;}
+  .badge{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;background:radial-gradient(120% 120% at 30% 20%,rgba(232,200,96,.18),rgba(212,175,55,.04));border:1px solid rgba(212,175,55,.4);}
+  .wm{font-size:16px;font-weight:700;letter-spacing:.02em;background:linear-gradient(100deg,#a9821f,#d4af37 45%,#ead27a 58%,#c9a431 78%,#a9821f);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .wm b{font-weight:400;color:var(--text-secondary);-webkit-text-fill-color:var(--text-secondary);}
+  h1{font-size:22px;font-weight:600;letter-spacing:-.022em;margin:24px 0 4px;}
+  .lede{font-size:13.5px;color:var(--text-secondary);max-width:730px;line-height:1.55;margin:0 0 24px;}
+  .note{font-size:12px;color:var(--text-tertiary);margin:0 0 24px;padding:9px 13px;border-left:2px solid var(--border-gold);background:rgba(212,175,55,.05);border-radius:0 8px 8px 0;}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+  @media (max-width:940px){.grid{grid-template-columns:repeat(2,1fr);}}
+  @media (max-width:600px){.grid{grid-template-columns:1fr;}}
+  .dir{display:flex;flex-direction:column;gap:10px;}
+  .num{font-family:'Geist Mono',monospace;font-size:11px;color:var(--gold);border:1px solid var(--border-gold);border-radius:999px;padding:2px 9px;align-self:flex-start;}
+  .dname{font-size:13px;font-weight:600;}
+  .ddesc{font-size:11.5px;color:var(--text-tertiary);line-height:1.45;}
+
+  .card{position:relative;border-radius:16px;padding:20px;min-height:156px;overflow:hidden;transition:transform .18s cubic-bezier(.2,.7,.3,1),box-shadow .18s,border-color .18s;box-shadow:0 14px 34px rgba(0,0,0,.5);}
+  .card:hover{transform:translateY(-4px);}
+  .klabel{font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.09em;position:relative;z-index:4;}
+  .knum{font-size:25px;font-weight:700;color:#f7f8f8;margin-top:9px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;position:relative;z-index:4;}
+  .ksub{font-size:11.5px;color:var(--text-tertiary);margin-top:8px;position:relative;z-index:4;}
+  .mono{font-family:'Geist Mono',ui-monospace,monospace;}
+  @keyframes kp-ingot{from{background-position:0% 50%;}to{background-position:260% 50%;}}
+
+  /* 1 КАРБОН — плетение углеволокна + золотая нить + глянец */
+  .c-carbon{background:repeating-linear-gradient(45deg,#1c1c1c 0 4px,#141414 4px 8px),repeating-linear-gradient(-45deg,rgba(255,255,255,.04) 0 4px,transparent 4px 8px);border:1px solid rgba(212,175,55,.4);}
+  .c-carbon::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:1;background:linear-gradient(160deg,rgba(255,255,255,.1),transparent 42%);}
+
+  /* 2 СЛИТОК — толстая яркая золотая фаска */
+  .c-ingot{background:linear-gradient(150deg,#17150f,#0f0e0b);}
+  .c-ingot::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:2.6px;pointer-events:none;z-index:3;background:linear-gradient(135deg,#8c6c18,#fff6d5 30%,#e8c860 46%,#a9821f 64%,#fff1c4 82%,#8c6c18);background-size:220% 220%;-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:kp-ingot 6s ease-in-out infinite alternate;}
+
+  /* 3 ГРАНЬ — тонкая золотая полоса + призрачная цифра */
+  .c-edge{background:linear-gradient(150deg,#161514,#0e0e0d);border:1px solid var(--border-subtle);}
+  .c-edge::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;z-index:3;background:linear-gradient(90deg,#a9821f,#fff6d5 45%,#e8c860 60%,#a9821f);}
+  .ghost{position:absolute;right:10px;bottom:-20px;font-size:82px;font-weight:800;color:rgba(212,175,55,.07);z-index:0;letter-spacing:-.05em;}
+
+  /* 4 ГРАВЮРА — брашированный металл + гравированный знак */
+  .c-etch{background:repeating-linear-gradient(135deg,rgba(255,255,255,.016) 0 2px,transparent 2px 5px),linear-gradient(150deg,#1a1712,#100e0a);border:1px solid rgba(212,175,55,.18);box-shadow:inset 0 1px 0 rgba(246,231,168,.08),0 14px 34px rgba(0,0,0,.5);}
+  .c-etch .engrave{position:absolute;right:-8px;bottom:-12px;opacity:.5;z-index:0;filter:drop-shadow(0 1px 0 rgba(0,0,0,.7)) drop-shadow(0 -1px 0 rgba(255,246,213,.14));}
+
+  /* 5 ГИЛЬОШЕ — гильоширование (как циферблат/банкнота) + двойная рамка */
+  .c-guil{background:repeating-radial-gradient(circle at 72% 28%,rgba(212,175,55,.06) 0 1px,transparent 1px 7px),repeating-radial-gradient(circle at 18% 92%,rgba(212,175,55,.045) 0 1px,transparent 1px 9px),#0e0d0b;border:1px solid rgba(212,175,55,.4);}
+  .c-guil::before{content:"";position:absolute;inset:5px;border-radius:11px;border:1px solid rgba(212,175,55,.22);z-index:3;pointer-events:none;}
+
+  /* 6 ТЕРМИНАЛ — приборный ридаут: моно, LED, скан-линии */
+  .c-term{background:linear-gradient(180deg,#0d0f0d,#0a0b0a);border:1px solid rgba(212,175,55,.2);}
+  .c-term::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:1;opacity:.5;background:repeating-linear-gradient(0deg,rgba(255,255,255,.022) 0 1px,transparent 1px 3px);}
+  .led{width:8px;height:8px;border-radius:50%;background:var(--gold-bright);box-shadow:0 0 9px var(--gold);display:inline-block;animation:pulse 1.6s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+  .termtop{font-size:11px;color:var(--text-tertiary);letter-spacing:.12em;display:flex;align-items:center;gap:8px;position:relative;z-index:4;}
+
+  /* 7 ДАТАВИЗ — цифра + золотой график-герой снизу */
+  .c-data{background:linear-gradient(150deg,#141413,#0d0d0c);border:1px solid rgba(212,175,55,.2);}
+  .c-data .spark{position:absolute;left:0;right:0;bottom:0;z-index:1;display:block;}
+
+  /* 8 ГЕЙДЖ — золотое кольцо-прогресс */
+  .c-gauge{background:linear-gradient(150deg,#151413,#0d0d0c);border:1px solid rgba(212,175,55,.2);}
+  .ring{position:relative;width:78px;height:78px;border-radius:50%;flex-shrink:0;background:conic-gradient(var(--gold-bright) 0 62%,rgba(255,255,255,.07) 62% 100%);}
+  .ring span{position:absolute;inset:9px;border-radius:50%;background:#0f0e0d;display:grid;place-items:center;font-size:16px;font-weight:700;color:#f7f8f8;}
+
+  /* 9 ФОЛЬГА — оникс + бегущий золотой фольга-блик */
+  .c-foil{background:#0b0b0a;border:1px solid rgba(212,175,55,.24);}
+  .c-foil::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:1;mix-blend-mode:screen;background:linear-gradient(115deg,transparent 32%,rgba(212,175,55,.18) 46%,rgba(255,246,213,.34) 50%,rgba(212,175,55,.18) 54%,transparent 68%);background-size:300% 300%;animation:foil 5.5s linear infinite;}
+  @keyframes foil{0%{background-position:0% 0%}100%{background-position:300% 300%}}
+
+  /* 10 ЛАТУНЬ — тёплая латунная пластина, брашированная */
+  .c-brass{background:repeating-linear-gradient(90deg,rgba(0,0,0,.14) 0 1px,transparent 1px 3px),linear-gradient(150deg,#2b2312,#191308);border:1px solid rgba(212,175,55,.45);box-shadow:inset 0 1px 0 rgba(255,246,213,.16),0 14px 34px rgba(0,0,0,.5);}
+  .c-brass .knum{color:#fff3d0;} .c-brass .klabel{color:#c9a877;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div class="badge"><svg width="22" height="22" viewBox="0 0 48 48" fill="none"><defs><linearGradient id="g" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse"><stop stop-color="#c9a431"/><stop offset=".46" stop-color="#fff6d5"/><stop offset=".56" stop-color="#e8c860"/><stop offset="1" stop-color="#a9821f"/></linearGradient></defs><g stroke="url(#g)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M13 17h13a3.4 3.4 0 1 0-3.4-3.4"/><path d="M13 24h19a3.4 3.4 0 1 1-3.4 3.4"/><path d="M13 31h10a3.4 3.4 0 1 0-3.4 3.4"/></g></svg></div>
+    <div class="wm">КЛИМАТ<b> Pro</b></div>
+  </div>
+
+  <h1>Карточки — смелые направления</h1>
+  <p class="lede">Десять по-настоящему разных подходов: не рамки-твики, а разные материалы и раскладки — карбон, гильоше, приборный терминал, датавиз, гейдж, фольга, латунь. Одни данные (KPI «Портфель»), чтобы честно сравнить.</p>
+  <p class="note">Логотип тут — статичная заглушка (не отвлекать). Ту белую рамку и скорость живого лого чиню отдельно — как выберем карточки, доведу лого до ума в следующем шаге.</p>
+
+  <div class="grid" id="grid"></div>
+</div>
+
+<script>
+  var IC='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d4af37" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:relative;z-index:4"><path d="M4 7h16v13H4zM9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>';
+  function kpi(){return '<div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div class="klabel">Портфель</div><div class="knum">8 400 000 ₽</div><div class="ksub">моё: 5 200 000 ₽</div></div><div style="width:34px;height:34px;border-radius:9px;display:grid;place-items:center;background:#d4af371a;border:1px solid #d4af3733">'+IC+'</div></div>';}
+  var ENG='<svg class="engrave" width="118" height="118" viewBox="0 0 48 48" fill="none" stroke="#d4af37" stroke-opacity=".5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17h13a3.4 3.4 0 1 0-3.4-3.4"/><path d="M9 24h19a3.4 3.4 0 1 1-3.4 3.4"/><path d="M9 31h10a3.4 3.4 0 1 0-3.4 3.4"/></svg>';
+  var SPARK='<svg class="spark" width="100%" height="62" viewBox="0 0 300 62" preserveAspectRatio="none"><defs><linearGradient id="sf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(212,175,55,.35)"/><stop offset="1" stop-color="rgba(212,175,55,0)"/></linearGradient></defs><polygon points="0,52 0,40 40,44 80,30 120,36 160,20 200,26 240,12 300,18 300,62 0,62" fill="url(#sf)"/><polyline points="0,40 40,44 80,30 120,36 160,20 200,26 240,12 300,18" fill="none" stroke="#e8c860" stroke-width="2"/></svg>';
+
+  var TERM='<div class="termtop"><span class="led"></span> PORTFOLIO · RUB · LIVE</div><div class="knum mono" style="margin-top:12px">8 400 000</div><div class="ksub mono">OWN 5 200 000 · ▲ 8.4%</div>';
+  var GAUGE='<div style="display:flex;align-items:center;gap:16px"><div class="ring"><span>62%</span></div><div><div class="klabel">Собрано по портфелю</div><div class="knum" style="font-size:20px;margin-top:6px">5.2 / 8.4 млн ₽</div><div class="ksub">ждём: 1.24 млн ₽</div></div></div>';
+
+  var V=[
+    {c:'c-carbon',n:'Карбон',d:'Плетение углеволокна + золотая нить и глянцевый блик. Технологично, «премиум-гаджет».',b:kpi()},
+    {c:'c-ingot',n:'Слиток',d:'Толстая яркая золотая фаска на матовом теле. Максимум «дорогого металла».',b:kpi()},
+    {c:'c-edge',n:'Грань',d:'Тонкая золотая полоса сверху + призрачная цифра фоном. Редакторски, строго.',b:'<div class="ghost">₽</div>'+kpi()},
+    {c:'c-etch',n:'Гравюра',d:'Брашированный металл + гравированный знак-водяной. Как шильдик/циферблат.',b:ENG+kpi()},
+    {c:'c-guil',n:'Гильоше',d:'Гильоширование (узор циферблата/банкноты) + двойная золотая рамка. Ювелирно.',b:kpi()},
+    {c:'c-term',n:'Терминал',d:'Приборный ридаут: моношрифт, живой LED, скан-линии. Инженерная «приборка».',b:TERM},
+    {c:'c-data',n:'Датавиз',d:'Цифра + золотой график-герой во всю ширину снизу. Как биржевой терминал.',b:kpi()+SPARK},
+    {c:'c-gauge',n:'Гейдж',d:'Золотое кольцо-прогресс как фокус. Идеально для «собрано / план».',b:GAUGE},
+    {c:'c-foil',n:'Фольга',d:'Оникс + бегущий золотой фольга-блик по диагонали. Люкс, «горячее тиснение».',b:kpi()},
+    {c:'c-brass',n:'Латунь',d:'Тёплая латунная брашированная пластина. Не жёлтая — благородная бронза.',b:kpi()}
+  ];
+  document.getElementById('grid').innerHTML=V.map(function(v,i){
+    var nn=('0'+(i+1)).slice(-2);
+    return '<div class="dir"><span class="num">'+nn+'</span><div class="card '+v.c+'">'+v.b+'</div><div><div class="dname">'+v.n+'</div><div class="ddesc">'+v.d+'</div></div></div>';
+  }).join('');
+  var _s=document.createElement('script');_s.src='select.js';document.body.appendChild(_s);
+</script>
+</body>
+</html>

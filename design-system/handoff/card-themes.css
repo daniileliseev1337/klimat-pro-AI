@@ -1,0 +1,78 @@
+/* ============================================================================
+   КЛИМАТ-ПРО · Темы карточек — финальный набор (скин × поведение)
+   Подключать ПОСЛЕ основного index.css. Тему применяет
+   KPCardThemes.apply(el, {skin, behavior}) из card-themes.js — он добавляет
+   классы .kp-themed .kp-skin-<id> .kp-bh-<id> и внедряет слои-подложки.
+
+   Скины:      classic carbon ingot data foil neon holo marble dust
+   Поведения:  none flip spark exp pulse tilt lev
+   ========================================================================== */
+
+.kp-themed{position:relative;overflow:hidden;isolation:isolate;border-radius:16px;}
+.kp-themed>.kp-body{position:relative;z-index:4;}
+
+/* ── общий слой золотой «слиток»-кромки (classic / ingot / marble) ── */
+.kp-themed .kp-edge{position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:3;
+  -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;
+  background-size:240% 240%;animation:kp-ingot 6s ease-in-out infinite alternate;}
+@keyframes kp-ingot{from{background-position:0% 50%}to{background-position:100% 50%}}
+
+/* ── СКИНЫ ── */
+.kp-skin-classic{background:linear-gradient(135deg,rgba(30,30,27,.58),rgba(18,18,16,.42));backdrop-filter:blur(11px) saturate(1.55);-webkit-backdrop-filter:blur(11px) saturate(1.55);border:1px solid rgba(255,255,255,.06);}
+.kp-skin-classic .kp-edge{padding:1.4px;opacity:.8;background-image:linear-gradient(135deg,#c9a431,#d4af37 22%,#fff6d5 46%,#e8c860 56%,#d4af37 72%,#c9a431);}
+
+.kp-skin-carbon{background:repeating-linear-gradient(45deg,#1c1c1c 0 4px,#141414 4px 8px),repeating-linear-gradient(-45deg,rgba(255,255,255,.04) 0 4px,transparent 4px 8px);border:1px solid rgba(212,175,55,.35);}
+.kp-skin-carbon .kp-gloss{position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(160deg,rgba(255,255,255,.1),transparent 42%);}
+
+.kp-skin-ingot{background:linear-gradient(150deg,#17150f,#0f0e0b);border:1px solid transparent;}
+.kp-skin-ingot .kp-edge{padding:1.2px;opacity:.95;background-image:linear-gradient(135deg,#8c6c18,#fff6d5 32%,#e8c860 48%,#a9821f 66%,#fff1c4 84%,#8c6c18);}
+
+.kp-skin-data{background:linear-gradient(150deg,#141413,#0c0c0b);border:1px solid rgba(212,175,55,.22);}
+.kp-skin-data .kp-dspark{position:absolute;left:0;right:0;bottom:0;height:40%;z-index:1;pointer-events:none;}
+.kp-skin-data .kp-dspark svg{display:block;width:100%;height:100%;}
+
+.kp-skin-foil{background:#0b0b0a;border:1px solid rgba(212,175,55,.24);}
+.kp-skin-foil .kp-foil{position:absolute;inset:0;z-index:1;pointer-events:none;mix-blend-mode:screen;background:linear-gradient(115deg,transparent 30%,rgba(212,175,55,.16) 44%,rgba(255,246,213,.4) 50%,rgba(212,175,55,.16) 56%,transparent 70%);background-size:250% 250%;animation:kp-foil 5.5s linear infinite;}
+@keyframes kp-foil{0%{background-position:0 0}100%{background-position:250% 250%}}
+
+.kp-skin-neon{background:#0c0c0b;border:1.5px solid rgba(232,200,96,.6);animation:kp-neon 3.2s ease-in-out infinite;}
+@keyframes kp-neon{0%,100%{box-shadow:0 0 10px rgba(212,175,55,.3),inset 0 0 10px rgba(212,175,55,.07);border-color:rgba(232,200,96,.5)}50%{box-shadow:0 0 22px rgba(232,200,96,.65),inset 0 0 18px rgba(212,175,55,.15);border-color:rgba(232,200,96,.95)}}
+
+.kp-skin-holo{background:#0b0b0a;border:1px solid rgba(212,175,55,.3);}
+.kp-skin-holo .kp-irid{position:absolute;inset:0;z-index:1;pointer-events:none;mix-blend-mode:screen;opacity:.26;background:conic-gradient(from 0deg at 35% 25%,#d4af37,#fff6d5,#b8901f,#ead27a,#e8c860,#d4af37);animation:kp-holo 7s linear infinite;}
+@keyframes kp-holo{to{filter:hue-rotate(300deg)}}
+
+.kp-skin-marble{background:linear-gradient(150deg,#111010,#0a0a09);border:1px solid transparent;}
+.kp-skin-marble .kp-edge{padding:1.2px;opacity:.95;background-image:linear-gradient(135deg,#8c6c18,#fff6d5 32%,#e8c860 48%,#a9821f 66%,#fff1c4 84%,#8c6c18);}
+.kp-skin-marble .kp-veins{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;}
+.kp-skin-marble .kp-veins path{stroke-dasharray:5 3;animation:kp-vein 6s linear infinite;filter:drop-shadow(0 0 2.5px rgba(232,200,96,.55));}
+@keyframes kp-vein{to{stroke-dashoffset:-96}}
+
+.kp-skin-dust{background:radial-gradient(120% 100% at 80% 0%,rgba(212,175,55,.07),transparent 55%),#0c0c0b;border:1px solid rgba(212,175,55,.26);}
+.kp-skin-dust .kp-st{position:absolute;border-radius:50%;background:#ffe9a8;z-index:1;animation:kp-tw 2.6s ease-in-out infinite;box-shadow:0 0 6px rgba(232,200,96,.7);}
+@keyframes kp-tw{0%,100%{opacity:.12}50%{opacity:.95}}
+
+/* ── ПОВЕДЕНИЯ ── */
+.kp-bh-pulse{animation:kp-pulse 3s ease-in-out infinite;}
+@keyframes kp-pulse{0%,100%{box-shadow:0 12px 30px rgba(0,0,0,.5)}50%{box-shadow:0 0 24px -4px rgba(212,175,55,.4),0 12px 30px rgba(0,0,0,.5)}}
+
+.kp-bh-lev{transition:transform .25s ease,box-shadow .25s;}
+.kp-bh-lev:hover{transform:translateY(-12px) scale(1.02);box-shadow:0 34px 70px rgba(0,0,0,.75),0 0 34px -8px rgba(212,175,55,.4);}
+
+.kp-bh-tilt{transition:transform .12s ease-out;transform-style:preserve-3d;} /* угол считает JS */
+
+.kp-bh-spark .kp-bspark{position:absolute;left:0;right:0;bottom:0;height:64px;z-index:1;opacity:0;transform:translateY(18px);transition:opacity .45s ease,transform .55s cubic-bezier(.3,1,.4,1);pointer-events:none;}
+.kp-bh-spark:hover .kp-bspark{opacity:1;transform:none;}
+.kp-bh-spark .kp-bspark svg{display:block;width:100%;height:100%;}
+
+/* контент для раскрытия кладётся в .kp-more внутри .kp-body */
+.kp-bh-exp .kp-more{max-height:0;overflow:hidden;opacity:0;transition:max-height .45s ease,opacity .35s,margin-top .45s;}
+.kp-bh-exp:hover .kp-more{max-height:96px;opacity:1;margin-top:12px;}
+
+/* флип: JS вешает .kp-flip-on по клику; обратная сторона — .kp-back */
+.kp-bh-flip{cursor:pointer;transition:transform .55s cubic-bezier(.5,0,.2,1.25);}
+.kp-bh-flip.kp-flip-on{transform:rotateY(180deg);}
+.kp-bh-flip .kp-back{position:absolute;inset:0;padding:20px;transform:rotateY(180deg);display:none;z-index:4;}
+.kp-bh-flip.kp-flip-on .kp-body{visibility:hidden;}
+.kp-bh-flip.kp-flip-on .kp-back{display:flex;flex-direction:column;justify-content:center;gap:8px;}

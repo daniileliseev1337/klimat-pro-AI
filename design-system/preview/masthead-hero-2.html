@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>КЛИМАТ-ПРО · Мастхед — заход 2: мастерство, не громкость</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&family=Geist+Mono:wght@400..600&display=swap" />
+<style>
+  :root{
+    --gold:#d4af37;--gold-bright:#e8c860;--gold-soft:#c9a431;
+    --t1:#fafaf7;--t2:#a8a8a3;--t3:#6b6b67;--t4:#454542;
+    --bd:rgba(255,255,255,.07);--bd2:rgba(255,255,255,.11);--gbd:rgba(212,175,55,.28);
+    --good:#6ee7a8;
+    --glass:linear-gradient(150deg,rgba(20,20,18,.46),rgba(9,9,8,.56) 55%,rgba(0,0,0,.62));
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;min-height:100vh;font-family:'Geist',system-ui,sans-serif;color:var(--t1);background:#0a0a0a;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;}
+  #bg{position:fixed;inset:0;z-index:0;pointer-events:none;}
+  .wrap{position:relative;z-index:1;max-width:1260px;margin:0 auto;padding:44px 28px 120px;}
+
+  .pagehd h1{margin:0 0 8px;font-size:22px;font-weight:700;letter-spacing:-.02em;}
+  .pagehd p{margin:0;font-size:13.5px;color:var(--t2);max-width:840px;line-height:1.6;}
+  .pagehd b{color:var(--t1);font-weight:600;}
+  .pagehd .gg{color:var(--gold-soft);}
+
+  .clabel{display:flex;align-items:baseline;gap:12px;margin:54px 0 16px;flex-wrap:wrap;}
+  .cnum{font:600 11px 'Geist Mono';letter-spacing:.16em;color:var(--gold-bright);background:rgba(212,175,55,.1);border:1px solid var(--gbd);border-radius:6px;padding:4px 9px;}
+  .cname{font-size:18px;font-weight:700;letter-spacing:-.01em;}
+  .cdesc{font-size:12.5px;color:var(--t3);max-width:600px;line-height:1.5;}
+
+  /* ── atoms (restrained) ── */
+  .wm{font-weight:700;letter-spacing:.005em;line-height:1;white-space:nowrap;}
+  .wm .k{color:#ead9a0;}
+  .wm .p{color:var(--t2);font-weight:400;}
+  .pro{position:relative;display:inline-flex;align-items:center;font-weight:800;letter-spacing:.14em;color:#f0dca0;background:#161310;border-radius:5px;padding:3px 7px 3px 8px;font-size:10.5px;line-height:1;flex-shrink:0;border:1px solid rgba(212,175,55,.35);}
+  .avatar{width:36px;height:36px;border-radius:999px;display:grid;place-items:center;flex-shrink:0;background:linear-gradient(150deg,#2a2410,#141210);border:1px solid var(--gbd);color:var(--gold-bright);font-weight:700;font-size:13px;cursor:pointer;}
+  .btn{display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border-radius:8px;font:700 12.5px 'Geist';cursor:pointer;white-space:nowrap;border:none;}
+  .btn.pri{color:#1a1408;background:linear-gradient(180deg,#e8c860,#c9a431);border:1px solid rgba(255,246,213,.32);}
+  .btn.ghost{color:var(--t1);background:rgba(255,255,255,.04);border:1px solid var(--bd2);}
+  .btn.ghost:hover{border-color:var(--gbd);}
+  .tabs{display:flex;gap:2px;}
+  .tab{position:relative;padding:13px 15px;font-size:13.5px;font-weight:600;color:var(--t3);cursor:pointer;transition:color .16s;white-space:nowrap;}
+  .tab:hover{color:var(--t1);}
+  .tab.on{color:var(--gold-bright);}
+  .tab.on::after{content:"";position:absolute;left:12px;right:12px;bottom:0;height:2px;border-radius:2px;background:var(--gold);}
+  .segtabs{display:inline-flex;gap:3px;padding:4px;border-radius:11px;background:rgba(0,0,0,.32);border:1px solid var(--bd);}
+  .segtab{padding:8px 15px;border-radius:8px;font:600 12.5px 'Geist';color:var(--t3);cursor:pointer;white-space:nowrap;transition:color .16s;}
+  .segtab:hover{color:var(--t1);}
+  .segtab.on{color:var(--gold-bright);background:rgba(212,175,55,.12);box-shadow:inset 0 0 0 1px rgba(212,175,55,.3);}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  .d{width:7px;height:7px;border-radius:999px;background:var(--good);box-shadow:0 0 8px var(--good);flex-shrink:0;}
+  .d.live{animation:pulse 2.4s ease-in-out infinite;}
+
+  /* mono readout */
+  .rd{display:flex;flex-direction:column;gap:6px;text-align:right;}
+  .rd .e{font:600 10px 'Geist Mono';letter-spacing:.13em;color:var(--t3);text-transform:uppercase;}
+  .rd .v{font:500 18px 'Geist Mono';color:var(--t1);letter-spacing:-.01em;line-height:1;}
+  .rd .v .u{color:var(--gold-soft);margin-left:3px;}
+  .rd-sep{width:1px;align-self:stretch;background:linear-gradient(180deg,transparent,rgba(255,255,255,.1),transparent);}
+
+  /* restrained glass surface — no perpetual sheen */
+  .glass{position:relative;isolation:isolate;background:var(--glass);backdrop-filter:blur(7px) saturate(1.6) url(#lgwarp);-webkit-backdrop-filter:blur(7px) saturate(1.6);border:1px solid var(--bd);box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 22px 60px rgba(0,0,0,.5);}
+  .glass::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;z-index:3;background:linear-gradient(150deg,rgba(212,175,55,.55),rgba(212,175,55,0) 40%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;}
+  .glass>*{position:relative;z-index:4;}
+
+  /* ═══ A · С ВОЗВРАЩЕНИЕМ — personal ═══ */
+  #pA{border-radius:20px;overflow:hidden;}
+  .a-top{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:18px 26px;border-bottom:1px solid var(--bd);}
+  .a-brand{display:flex;align-items:center;gap:12px;min-width:0;}
+  .a-top-r{display:flex;align-items:center;gap:18px;}
+  .a-hero{padding:26px 26px 28px;}
+  .a-eyebrow{font:600 11px 'Geist Mono';letter-spacing:.16em;text-transform:uppercase;color:var(--gold-soft);margin-bottom:13px;}
+  .a-h{font-size:38px;font-weight:400;letter-spacing:-.024em;line-height:1.04;color:var(--t1);}
+  .a-h b{font-weight:600;}
+  .a-sub{font-size:14.5px;color:var(--t2);margin-top:14px;line-height:1.5;max-width:640px;}
+  .a-sub .hi{color:var(--gold-bright);font-weight:600;}
+  .a-nav{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 22px 0 20px;border-top:1px solid var(--bd);background:rgba(0,0,0,.2);}
+
+  /* ═══ B · ГИЛЬОШЕ — engraved ornament ═══ */
+  #pB{position:relative;border-radius:18px;overflow:hidden;background:#0c0c0b;border:1px solid rgba(212,175,55,.24);box-shadow:0 22px 60px rgba(0,0,0,.5);}
+  .b-guilloche{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.9;
+    background:
+      repeating-radial-gradient(circle at 26% 50%, rgba(212,175,55,.05) 0 1px, transparent 1px 9px),
+      repeating-radial-gradient(circle at 74% 50%, rgba(212,175,55,.045) 0 1px, transparent 1px 11px),
+      repeating-linear-gradient(46deg, rgba(212,175,55,.03) 0 1px, transparent 1px 8px),
+      repeating-linear-gradient(-46deg, rgba(212,175,55,.03) 0 1px, transparent 1px 8px);
+    -webkit-mask:radial-gradient(120% 140% at 50% 50%, #000 30%, transparent 82%);mask:radial-gradient(120% 140% at 50% 50%, #000 30%, transparent 82%);}
+  .b-motif{position:absolute;top:50%;right:2%;transform:translateY(-50%);z-index:1;opacity:.16;pointer-events:none;}
+  .b-frame{position:absolute;inset:9px;border:1px solid rgba(212,175,55,.2);border-radius:12px;z-index:2;pointer-events:none;}
+  .b-frame::before{content:"";position:absolute;inset:3px;border:1px solid rgba(255,255,255,.05);border-radius:9px;}
+  .b-in{position:relative;z-index:4;padding:26px 32px;display:flex;align-items:center;justify-content:space-between;gap:26px;flex-wrap:wrap;}
+  .b-brand{display:flex;align-items:center;gap:18px;min-width:0;}
+  .b-wm{font-weight:700;letter-spacing:.02em;line-height:1;white-space:nowrap;color:#e7cf8f;text-shadow:0 1px 0 rgba(0,0,0,.6),0 -1px 0 rgba(246,231,168,.2);}
+  .b-wm .p{color:#8a8378;font-weight:400;text-shadow:none;}
+  .b-slog{margin-top:11px;display:flex;flex-direction:column;gap:4px;}
+  .b-tech{font:600 11px 'Geist Mono';letter-spacing:.1em;text-transform:uppercase;color:var(--gold-soft);}
+  .b-warm{font-size:13px;color:var(--t3);font-style:italic;}
+  .b-right{display:flex;align-items:center;gap:12px;}
+  .b-hair{width:1px;height:38px;background:linear-gradient(180deg,transparent,rgba(212,175,55,.4),transparent);}
+
+  /* ═══ C · ПРИБОРНАЯ ПАНЕЛЬ — Swiss top-plate ═══ */
+  #pC{position:relative;border-radius:14px;overflow:hidden;background:linear-gradient(160deg,#101010,#0a0a09);border:1px solid rgba(212,175,55,.22);box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 22px 60px rgba(0,0,0,.5);}
+  #pC::after{content:"";position:absolute;inset:5px;border:1px solid rgba(255,255,255,.055);border-radius:10px;pointer-events:none;z-index:5;}
+  .c-top{position:relative;z-index:4;display:flex;align-items:center;justify-content:space-between;gap:24px;padding:20px 26px;}
+  .c-brand{display:flex;align-items:center;gap:12px;min-width:0;}
+  .c-reads{display:flex;align-items:center;gap:22px;}
+  .c-live{display:inline-flex;align-items:center;gap:7px;font:600 10px 'Geist Mono';letter-spacing:.13em;text-transform:uppercase;color:#bdf0d3;}
+  .c-nav{position:relative;z-index:4;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 22px 0 20px;border-top:1px solid var(--bd);}
+  @media (max-width:860px){.c-reads{display:none;}.a-top-r .rd{display:none;}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <filter id="lgwarp" x="-40%" y="-40%" width="180%" height="180%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.008 0.010" numOctaves="2" seed="12" result="t"></feTurbulence>
+    <feGaussianBlur in="t" stdDeviation="1.3" result="s"></feGaussianBlur>
+    <feDisplacementMap in="SourceGraphic" in2="s" scale="34" xChannelSelector="R" yChannelSelector="G"></feDisplacementMap>
+  </filter>
+</defs></svg>
+<canvas id="bg"></canvas>
+
+<div class="wrap">
+  <div class="pagehd">
+    <h1>Заход 2 — по мастерству, не по громкости</h1>
+    <p>Понял, что было не так. Прошлый заход шумел золотом — вечный перелив, свечение, приклеенные цифры. Но система — <b>«noir швейцарских часов, одна антикварная позолота»</b>: <span class="gg">тихо, точно, цифрами, лично</span>. «Дорого» здесь = выдержка и крафт, а не больше золота. Три захода в эту сторону — обращение, гравюра, прибор.</p>
+  </div>
+
+  <!-- A -->
+  <div class="clabel" data-screen-label="С возвращением">
+    <span class="cnum">A</span><span class="cname">С возвращением</span>
+    <span class="cdesc">Продаёт голосом. Приложение обращается к владельцу лично и по делу — «С возвращением, Даниил» + фокус дня. Реклама через близость, а не через блеск. Стекло приглушено, золото — только на смысле.</span>
+  </div>
+  <div class="glass" id="pA">
+    <div class="a-top">
+      <div class="a-brand">
+        <span id="a-logo" style="display:inline-block;"></span>
+        <span class="wm" style="font-size:18px;"><span class="k">КЛИМАТ</span> <span class="p">Pro</span></span>
+        <span class="pro">PRO</span>
+      </div>
+      <div class="a-top-r">
+        <div class="rd"><div class="e">Свободный остаток</div><div class="v"><span data-count="842500"></span><span class="u">₽</span></div></div>
+        <div class="avatar">ДЕ</div>
+      </div>
+    </div>
+    <div class="a-hero">
+      <div class="a-eyebrow">Фокус дня · понедельник</div>
+      <div class="a-h">С возвращением, <b>Даниил</b></div>
+      <div class="a-sub">Сегодня важно: <span class="hi">закрыть счёт «Меридиан» до 16:00</span> и согласовать расчёт воздухообмена по объекту «Лесная 14».</div>
+    </div>
+    <div class="a-nav">
+      <div class="tabs"><div class="tab on">Дашборд</div><div class="tab">Проекты</div><div class="tab">Задачи</div><div class="tab">Финансы</div><div class="tab">Аналитика</div></div>
+      <button class="btn pri" style="margin:9px 0;">+ Новый проект</button>
+    </div>
+  </div>
+
+  <!-- B -->
+  <div class="clabel" data-screen-label="Гильоше">
+    <span class="cnum">B</span><span class="cname">Гильоше</span>
+    <span class="cdesc">Продаёт крафтом. Гравированная гильоше-подложка + фирменный знак «поток» навылет — как циферблат часов, купюра или сертификат. Богато, но монохромно и тихо: одна позолота, тонкая линия, двойная рамка.</span>
+  </div>
+  <div id="pB">
+    <div class="b-guilloche"></div>
+    <div class="b-motif">
+      <svg width="240" height="240" viewBox="0 0 48 48" fill="none" stroke="#e8c860" stroke-width="1.3" stroke-linecap="round">
+        <path d="M12 18h16a4 4 0 1 0-4-4"></path>
+        <path d="M12 24h22a4 4 0 1 1-4 4"></path>
+        <path d="M12 30h12a4 4 0 1 0-4 4"></path>
+      </svg>
+    </div>
+    <div class="b-frame"></div>
+    <div class="b-in">
+      <div class="b-brand">
+        <span id="b-logo" style="display:inline-block;"></span>
+        <div>
+          <span class="b-wm" style="font-size:34px;">КЛИМАТ <span class="p">Pro</span></span>
+          <div class="b-slog">
+            <div class="b-tech">климат, рассчитанный профессионально</div>
+            <div class="b-warm">Заботимся о тех, кто внутри</div>
+          </div>
+        </div>
+      </div>
+      <div class="b-right">
+        <div class="segtabs"><div class="segtab on">Дашборд</div><div class="segtab">Проекты</div><div class="segtab">Задачи</div><div class="segtab">Финансы</div></div>
+        <div class="b-hair"></div>
+        <div class="avatar">ДЕ</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- C -->
+  <div class="clabel" data-screen-label="Приборная панель">
+    <span class="cnum">C</span><span class="cname">Приборная панель</span>
+    <span class="cdesc">Продаёт точностью. Верхняя плита прибора: строгая гравированная фаска, знак и марка компактно, а справа — приборные показания моноширинным, табличными цифрами (они «набегают» при загрузке, как биржевой тикер). Ноль лишнего.</span>
+  </div>
+  <div id="pC">
+    <div class="c-top">
+      <div class="c-brand">
+        <span id="c-logo" style="display:inline-block;"></span>
+        <span class="wm" style="font-size:17px;"><span class="k">КЛИМАТ</span> <span class="p">Pro</span></span>
+        <span class="pro">PRO</span>
+      </div>
+      <div class="c-reads">
+        <div class="rd"><div class="e">Свободный остаток</div><div class="v"><span data-count="842500"></span><span class="u">₽</span></div></div>
+        <div class="rd-sep"></div>
+        <div class="rd"><div class="e">Дебиторка</div><div class="v"><span data-count="318200"></span><span class="u">₽</span></div></div>
+        <div class="rd-sep"></div>
+        <div class="rd"><div class="e">Активных</div><div class="v"><span data-count="12"></span></div></div>
+        <div class="rd-sep"></div>
+        <div class="c-live"><span class="d live"></span>Синхр · 2 мин</div>
+      </div>
+    </div>
+    <div class="c-nav">
+      <div class="tabs"><div class="tab on">Дашборд</div><div class="tab">Проекты</div><div class="tab">Задачи</div><div class="tab">Финансы</div><div class="tab">Аналитика</div></div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button class="btn ghost" style="margin:9px 0;">⌘K&nbsp;&nbsp;Поиск</button>
+        <div class="avatar">ДЕ</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="logo-mark.js"></script>
+<script>
+  if(window.KPLogo){
+    KPLogo.mount(document.getElementById('a-logo'),{height:34,wordmark:false});
+    KPLogo.mount(document.getElementById('b-logo'),{height:56,wordmark:false});
+    KPLogo.mount(document.getElementById('c-logo'),{height:30,wordmark:false});
+  }
+  // ── ticker count-up (once, on load) ──
+  function fmtRu(n){return Math.round(n).toLocaleString('ru-RU').replace(/\u00A0/g,'\u2009');}
+  (function(){
+    var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+    document.querySelectorAll('[data-count]').forEach(function(el){
+      var t=+el.getAttribute('data-count');
+      el.textContent=fmtRu(t);           // always show final value (rAF-independent)
+      if(reduce)return;
+      var dur=1050,s=performance.now();
+      function step(now){var p=Math.min(1,(now-s)/dur),e=1-Math.pow(1-p,3);el.textContent=fmtRu(t*e);if(p<1)requestAnimationFrame(step);else el.textContent=fmtRu(t);}
+      requestAnimationFrame(step);
+    });
+  })();
+  // ── calm living background ──
+  (function(){
+    var c=document.getElementById('bg'),x=c.getContext('2d'),W,H,DPR=Math.min(devicePixelRatio||1,2),nd=[];
+    var blobs=[{x:.16,y:.12,r:360,a:.1,sx:6e-5,sy:4e-5,p:0},{x:.84,y:.82,r:340,a:.08,sx:5e-5,sy:6e-5,p:2.4}];
+    function rs(){W=innerWidth;H=innerHeight;c.width=W*DPR|0;c.height=H*DPR|0;c.style.width=W+'px';c.style.height=H+'px';x.setTransform(DPR,0,0,DPR,0,0);nd=[];var n=Math.min(Math.round(W*H/48000),26);for(var i=0;i<n;i++)nd.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.1,vy:(Math.random()-.5)*.1,r:Math.random()*1.1+.4});}
+    addEventListener('resize',rs);rs();
+    function f(t){x.clearRect(0,0,W,H);x.fillStyle='#0a0a0a';x.fillRect(0,0,W,H);x.globalCompositeOperation='lighter';
+      blobs.forEach(function(b){var cx=(b.x+Math.sin(t*b.sx+b.p)*.04)*W,cy=(b.y+Math.cos(t*b.sy+b.p)*.04)*H;var g=x.createRadialGradient(cx,cy,0,cx,cy,b.r);g.addColorStop(0,'rgba(212,175,55,'+b.a+')');g.addColorStop(1,'rgba(212,175,55,0)');x.fillStyle=g;x.beginPath();x.arc(cx,cy,b.r,0,6.2832);x.fill();});
+      for(var i=0;i<nd.length;i++){var n=nd[i];n.x+=n.vx;n.y+=n.vy;if(n.x<0||n.x>W)n.vx*=-1;if(n.y<0||n.y>H)n.vy*=-1;}
+      for(var q=0;q<nd.length;q++){x.beginPath();x.arc(nd[q].x,nd[q].y,nd[q].r,0,6.2832);x.fillStyle='rgba(240,216,120,.4)';x.fill();}
+      x.globalCompositeOperation='source-over';requestAnimationFrame(f);}
+    requestAnimationFrame(f);
+  })();
+</script>
+</body>
+</html>

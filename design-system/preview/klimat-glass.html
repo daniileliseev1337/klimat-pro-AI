@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>КЛИМАТ-ПРО — стекло: было / стало</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&display=swap" />
+<style>
+  :root{
+    --gold:#d4af37; --gold-bright:#e8c860; --gold-soft:#c9a431; --gold-glow:rgba(212,175,55,.40);
+    --border-subtle:rgba(255,255,255,.06); --border-gold:rgba(212,175,55,.30);
+    --text-primary:#fafaf7; --text-secondary:#a8a8a3; --text-tertiary:#6b6b67;
+    --glass-tint:linear-gradient(150deg, rgba(16,16,14,.50), rgba(8,8,7,.58) 52%, rgba(0,0,0,.66));
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;min-height:100vh;background:#0a0a0a;color:var(--text-primary);font-family:'Geist',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+  #bg{position:fixed;inset:0;z-index:-1;display:block;pointer-events:none;}
+  .wrap{max-width:1080px;margin:0 auto;padding:34px 26px 70px;position:relative;z-index:1;}
+
+  /* ── живой логотип (цикл) ── */
+  .brandrow{display:flex;align-items:center;gap:13px;margin-bottom:4px;}
+  @keyframes kp-breathe{0%,100%{box-shadow:0 0 18px -3px rgba(232,200,96,.45), inset 0 0 14px rgba(212,175,55,.16);}50%{box-shadow:0 0 42px 0 rgba(246,231,168,.78), inset 0 0 24px rgba(232,200,96,.32);}}
+  .logo-badge{position:relative;width:48px;height:48px;flex:0 0 auto;border-radius:14px;animation:kp-breathe 4.6s ease-in-out infinite;}
+  .logo-layer{position:absolute;inset:0;display:grid;place-items:center;opacity:0;transition:opacity .7s cubic-bezier(.45,0,.55,1), transform .7s cubic-bezier(.5,0,.18,1.2), filter .7s;}
+  .brand-hair{height:1px;width:230px;max-width:58vw;margin:7px 0 5px;background:linear-gradient(90deg, rgba(212,175,55,.6), rgba(212,175,55,0));}
+  .tagline{font-size:10.5px;color:var(--gold-soft);font-weight:600;letter-spacing:.16em;text-transform:uppercase;}
+  .wm-gold{background:linear-gradient(100deg,#a9821f,#d4af37 45%,#ead27a 58%,#c9a431 78%,#a9821f);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .cap{color:var(--text-tertiary);font-size:12.5px;margin:2px 0 26px;}
+
+  /* mark animations (из styles.css дизайн-системы) */
+  @keyframes spin{to{transform:rotate(360deg);}} @keyframes flow{to{stroke-dashoffset:-64;}}
+  @keyframes fillk{0%,100%{stroke-dasharray:30 52;}50%{stroke-dasharray:52 30;}} @keyframes glow{0%,100%{opacity:.45;}50%{opacity:1;}}
+  @keyframes breathe{0%,100%{transform:scale(.94);}50%{transform:scale(1);}}
+  .j-spin{transform-origin:24px 24px;animation:spin 18s linear infinite;} .j-flow{stroke-dasharray:10 8;animation:flow 2.4s linear infinite;}
+  .j-fill{animation:fillk 4s cubic-bezier(.16,1,.3,1) infinite;} .j-glow{animation:glow 3s ease-in-out infinite;}
+  .j-breathe{transform-origin:24px 25px;animation:breathe 3.4s ease-in-out infinite;}
+
+  /* ── колонки ── */
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start;}
+  @media (max-width:820px){.cols{grid-template-columns:1fr;}}
+  .colhead{display:flex;align-items:center;gap:9px;margin-bottom:13px;}
+  .tag{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:4px 10px;border-radius:999px;}
+  .tag-old{color:var(--text-tertiary);background:rgba(255,255,255,.05);border:1px solid var(--border-subtle);}
+  .tag-new{color:var(--gold-bright);background:rgba(212,175,55,.12);border:1px solid var(--border-gold);}
+  .stack{display:flex;flex-direction:column;gap:16px;}
+
+  .eyebrow{font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.08em;margin:0;}
+  .val{font-size:23px;font-weight:700;color:#f7f8f8;margin-top:7px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
+  .sub{font-size:11px;color:var(--text-tertiary);margin-top:6px;}
+  .ic{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;flex-shrink:0;background:#d4af371a;border:1px solid #d4af3733;color:#d4af37;}
+  .row{display:flex;justify-content:space-between;align-items:flex-start;}
+  .li{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:13px;}
+  .li:last-child{border-bottom:none;}
+  @keyframes kp-ingot{from{background-position:0% 50%;}to{background-position:260% 50%;}}
+
+  /* ═══ БЫЛО ═══ */
+  .card-old{position:relative;border-radius:16px;padding:18px;
+    background:linear-gradient(135deg, rgba(30,30,27,.58), rgba(18,18,16,.42));
+    backdrop-filter:blur(11px) saturate(1.55);-webkit-backdrop-filter:blur(11px) saturate(1.55);
+    border:1px solid var(--border-subtle);transition:transform .18s cubic-bezier(.2,.7,.3,1), box-shadow .18s, border-color .18s;}
+  .card-old::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.4px;pointer-events:none;z-index:3;
+    background:linear-gradient(135deg, var(--gold-soft) 0%, var(--gold) 22%, #fff6d5 46%, var(--gold-bright) 56%, var(--gold) 72%, var(--gold-soft) 100%);
+    background-size:260% 260%;-webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;
+    opacity:.8;animation:kp-ingot 6s ease-in-out infinite alternate;}
+  .card-old:hover{transform:translateY(-3px);border-color:var(--border-gold);box-shadow:0 16px 40px rgba(0,0,0,.5), 0 0 26px -8px var(--gold-glow);}
+
+  /* ═══ СТАЛО — жидкое стекло с краевой линзой ═══ */
+  .card-new{position:relative;isolation:isolate;border-radius:20px;padding:18px;
+    background:var(--glass-tint);
+    backdrop-filter:blur(5px) saturate(1.8) brightness(1.02) url(#lg-warp);-webkit-backdrop-filter:blur(5px) saturate(1.8) brightness(1.02);
+    border:1px solid transparent;
+    box-shadow:inset 0 1px 1px rgba(255,255,255,.5), inset 0 -1px 1px rgba(0,0,0,.4), 0 12px 34px rgba(0,0,0,.55);
+    transition:transform .18s cubic-bezier(.2,.7,.3,1), box-shadow .18s;}
+  /* краевая линза — гнёт фон по кромке (главный iOS-эффект) */
+  .card-new .lens{position:absolute;inset:0;border-radius:inherit;padding:16px;pointer-events:none;z-index:1;
+    backdrop-filter:blur(0.5px) url(#lg-rim);-webkit-backdrop-filter:blur(0.5px);
+    -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;}
+  /* яркая золотая фаска-кромка */
+  .card-new::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.5px;pointer-events:none;z-index:3;
+    background:linear-gradient(135deg, #a9821f 0%, #e8c860 22%, #fff6d5 46%, #ffe9a8 56%, #e8c860 72%, #a9821f 100%);
+    background-size:260% 260%;-webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;
+    opacity:.95;animation:kp-ingot 6s ease-in-out infinite alternate;}
+  .card-new::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .25s;z-index:2;
+    background:radial-gradient(340px circle at var(--mx,50%) var(--my,50%), rgba(212,175,55,.14), transparent 60%);}
+  .card-new .body{position:relative;z-index:4;}
+  .card-new:hover{transform:translateY(-3px);box-shadow:inset 0 1px 1px rgba(255,255,255,.5), inset 0 -1px 1px rgba(0,0,0,.4), 0 16px 46px rgba(0,0,0,.6), 0 0 30px -6px var(--gold-glow);}
+  .card-new:hover::after{opacity:1;}
+  .card-new:hover::before{opacity:1;}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute;width:0;height:0" aria-hidden="true"><defs>
+  <filter id="lg-warp" x="-40%" y="-40%" width="180%" height="180%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.008 0.010" numOctaves="2" seed="12" result="t"></feTurbulence>
+    <feGaussianBlur in="t" stdDeviation="1.3" result="s"></feGaussianBlur>
+    <feDisplacementMap in="SourceGraphic" in2="s" scale="64" xChannelSelector="R" yChannelSelector="G"></feDisplacementMap>
+  </filter>
+  <filter id="lg-rim" x="-60%" y="-60%" width="220%" height="220%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.010 0.013" numOctaves="2" seed="7" result="t"></feTurbulence>
+    <feGaussianBlur in="t" stdDeviation="1.1" result="s"></feGaussianBlur>
+    <feDisplacementMap in="SourceGraphic" in2="s" scale="130" xChannelSelector="R" yChannelSelector="G"></feDisplacementMap>
+  </filter>
+</defs></svg>
+
+<canvas id="bg" aria-hidden="true"></canvas>
+
+<div class="wrap">
+  <div class="brandrow">
+    <div class="logo-badge" id="logo"></div>
+    <div>
+      <div style="display:flex;align-items:baseline;gap:8px;">
+        <span class="wm-gold" style="font-size:23px;font-weight:700;letter-spacing:.02em;">КЛИМАТ</span>
+        <span style="font-size:15px;font-weight:400;color:var(--text-secondary);">Pro</span>
+      </div>
+      <div class="brand-hair"></div>
+      <div class="tagline">Заботимся о тех, кто внутри</div>
+    </div>
+  </div>
+  <p class="cap">Одна и та же карточка — слева текущий сайт, справа новое жидкое стекло с краевой линзой. Наведи курсор.</p>
+
+  <div class="cols">
+    <div>
+      <div class="colhead"><span class="tag tag-old">Было</span><span style="color:var(--text-tertiary);font-size:12px;">текущий сайт</span></div>
+      <div class="stack">
+        <div class="card-old">
+          <div class="row"><div><p class="eyebrow">Портфель</p><div class="val">8 400 000 ₽</div><div class="sub">моё: 5 200 000 ₽</div></div>
+            <div class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16v13H4zM9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg></div>
+          </div>
+        </div>
+        <div class="card-old">
+          <p class="eyebrow" style="margin-bottom:10px;">Требует внимания</p>
+          <div class="li"><span style="color:#f8a3a3;">Коттедж Ивановых — отопление</span><span style="color:var(--text-tertiary);">12 июн</span></div>
+          <div class="li"><span style="color:#f8a3a3;">ТЦ «Галактика» — дымоудаление</span><span style="color:var(--text-tertiary);">20 июн</span></div>
+          <div class="li"><span>Согласовать расчёт воздухообмена</span><span style="color:var(--gold-bright);">сегодня</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="colhead"><span class="tag tag-new">Стало</span><span style="color:var(--gold-soft);font-size:12px;">жидкое стекло + линза</span></div>
+      <div class="stack">
+        <div class="card-new">
+          <span class="lens"></span>
+          <div class="body"><div class="row"><div><p class="eyebrow">Портфель</p><div class="val">8 400 000 ₽</div><div class="sub">моё: 5 200 000 ₽</div></div>
+            <div class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16v13H4zM9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg></div>
+          </div></div>
+        </div>
+        <div class="card-new">
+          <span class="lens"></span>
+          <div class="body"><p class="eyebrow" style="margin-bottom:10px;">Требует внимания</p>
+          <div class="li"><span style="color:#f8a3a3;">Коттедж Ивановых — отопление</span><span style="color:var(--text-tertiary);">12 июн</span></div>
+          <div class="li"><span style="color:#f8a3a3;">ТЦ «Галактика» — дымоудаление</span><span style="color:var(--text-tertiary);">20 июн</span></div>
+          <div class="li"><span>Согласовать расчёт воздухообмена</span><span style="color:var(--gold-bright);">сегодня</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── живой логотип: цикл 5 марок с золотым переливом ──
+  (function(){
+    function grad(id){return '<linearGradient id="'+id+'" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="48" y2="48">'
+      +'<stop offset="0" stop-color="#a9821f"/><stop offset="0.42" stop-color="#d4af37"/><stop offset="0.5" stop-color="#fff6d5"/><stop offset="0.58" stop-color="#e8c860"/><stop offset="1" stop-color="#a9821f"/>'
+      +'<animateTransform attributeName="gradientTransform" type="translate" values="-48 -48;48 48;-48 -48" dur="4s" repeatCount="indefinite"/></linearGradient>';}
+    var tile=function(g){return '<rect x="2" y="2" width="44" height="44" rx="13" fill="#0d0d0c" stroke="url(#'+g+')" stroke-width="1.5"/>';};
+    var MARKS={
+      apert:function(s){return '<defs>'+grad(s)+'</defs>'+tile(s)+'<g class="j-spin" stroke="url(#'+s+')" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><polygon points="31,24 27.5,30.06 20.5,30.06 17,24 20.5,17.94 27.5,17.94" stroke-width="1.4" opacity="0.55"/><line x1="31" y1="24" x2="31" y2="36.12"/><line x1="27.5" y1="30.06" x2="17" y2="36.12"/><line x1="20.5" y1="30.06" x2="10" y2="24"/><line x1="17" y1="24" x2="17" y2="11.88"/><line x1="20.5" y1="17.94" x2="31" y2="11.88"/><line x1="27.5" y1="17.94" x2="38" y2="24"/></g>';},
+      gauge:function(s){return '<defs>'+grad(s)+'</defs>'+tile(s)+'<circle cx="24" cy="24" r="13" fill="none" stroke="#d4af37" stroke-opacity="0.18" stroke-width="3" stroke-linecap="round" stroke-dasharray="61.3 20.4" transform="rotate(135 24 24)"/><circle class="j-fill" cx="24" cy="24" r="13" fill="none" stroke="url(#'+s+')" stroke-width="3" stroke-linecap="round" stroke-dasharray="44 38" transform="rotate(135 24 24)"/><circle cx="24" cy="24" r="3.1" fill="url(#'+s+')"/><line x1="24" y1="24" x2="32.5" y2="15.5" stroke="url(#'+s+')" stroke-width="2" stroke-linecap="round"/>';},
+      hex:function(s){return '<defs>'+grad(s)+'</defs>'+tile(s)+'<polygon points="24,7 38.7,15.5 38.7,32.5 24,41 9.3,32.5 9.3,15.5" fill="none" stroke="url(#'+s+')" stroke-width="2" stroke-linejoin="round"/><g stroke="url(#'+s+')" stroke-width="2.4" stroke-linecap="round"><line class="j-glow" x1="19" y1="20" x2="29" y2="20"/><line class="j-glow" style="animation-delay:-1s" x1="16.5" y1="24" x2="31.5" y2="24"/><line class="j-glow" style="animation-delay:-2s" x1="19" y1="28" x2="29" y2="28"/></g>';},
+      drop:function(s){return '<defs>'+grad(s)+'</defs>'+tile(s)+'<path class="j-breathe" d="M24 10C24 10 33 21 33 28a9 9 0 1 1-18 0C15 21 24 10 24 10Z" fill="url(#'+s+')" fill-opacity="0.15" stroke="url(#'+s+')" stroke-width="2" stroke-linejoin="round"/><path class="j-breathe" d="M19.5 27.5a4.5 4.5 0 0 0 3.4 5.4" fill="none" stroke="#fff6d5" stroke-opacity="0.7" stroke-width="1.6" stroke-linecap="round"/>';},
+      flow:function(s){return '<defs>'+grad(s)+'</defs>'+tile(s)+'<g stroke="url(#'+s+')" stroke-width="2.4" stroke-linecap="round" fill="none"><path class="j-flow" d="M12 18h16a4 4 0 1 0-4-4"/><path class="j-flow" style="animation-delay:-0.8s" d="M12 24h22a4 4 0 1 1-4 4"/><path class="j-flow" style="animation-delay:-1.6s" d="M12 30h12a4 4 0 1 0-4 4"/></g>';}
+    };
+    var order=['apert','gauge','hex','drop','flow'], box=document.getElementById('logo');
+    order.forEach(function(k,idx){var d=document.createElement('div');d.className='logo-layer';d.innerHTML='<svg width="44" height="44" viewBox="0 0 48 48" fill="none">'+MARKS[k]('lg'+idx)+'</svg>';box.appendChild(d);});
+    var layers=box.querySelectorAll('.logo-layer'), i=0;
+    function show(){layers.forEach(function(l,li){l.style.opacity=li===i?'1':'0';l.style.transform=li===i?'none':'scale(.7)';l.style.filter=li===i?'none':'blur(6px)';});i=(i+1)%layers.length;}
+    show();setInterval(show,2600);
+  })();
+
+  // ── живой золотой фон ──
+  (function(){
+    var canvas=document.getElementById('bg');if(!canvas)return;var ctx=canvas.getContext('2d');
+    var W=innerWidth,H=innerHeight,DPR=Math.min(devicePixelRatio||1,2),nodes=[],sparks=[],tgtX=.5,tgtY=.5,easeX=.5,easeY=.5;
+    addEventListener('pointermove',function(e){if(W){tgtX=e.clientX/W;tgtY=e.clientY/H;}},{passive:true});
+    var blobs=[{x:.16,y:.2,r:360,a:.16,sx:7e-5,sy:5e-5,p:0},{x:.82,y:.3,r:320,a:.13,sx:5e-5,sy:8e-5,p:2.1},{x:.55,y:.85,r:400,a:.12,sx:6e-5,sy:4e-5,p:4}];
+    function build(){nodes=[];var n=Math.min(Math.round(W*H/24000),52);for(var i=0;i<n;i++)nodes.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.18,vy:(Math.random()-.5)*.18,r:Math.random()*1.4+.6});sparks=[];var m=Math.min(Math.round(W*H/15000),76);for(var j=0;j<m;j++)sparks.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.3+.3,base:Math.random()*.5+.2,tw:Math.random()*6.28,sp:Math.random()*.8+.3,dy:-(Math.random()*.25+.05)});}
+    function resize(){W=innerWidth;H=innerHeight;canvas.width=W*DPR|0;canvas.height=H*DPR|0;canvas.style.width=W+'px';canvas.style.height=H+'px';ctx.setTransform(DPR,0,0,DPR,0,0);build();}
+    addEventListener('resize',resize);resize();
+    function frame(t){ctx.clearRect(0,0,W,H);var bgm=ctx.createLinearGradient(0,0,0,H);bgm.addColorStop(0,'#0a0a0a');bgm.addColorStop(1,'#0c0b08');ctx.fillStyle=bgm;ctx.fillRect(0,0,W,H);ctx.globalCompositeOperation='lighter';easeX+=(tgtX-easeX)*.085;easeY+=(tgtY-easeY)*.085;var pX=easeX-.5,pY=easeY-.5;
+      for(var bi=0;bi<blobs.length;bi++){var b=blobs[bi],depth=120+bi*70;var cx=(b.x+Math.sin(t*b.sx+b.p)*.06)*W+pX*depth;var cy=(b.y+Math.cos(t*b.sy+b.p)*.06)*H+pY*depth;var g=ctx.createRadialGradient(cx,cy,0,cx,cy,b.r);g.addColorStop(0,'rgba(212,175,55,'+b.a+')');g.addColorStop(.5,'rgba(240,216,120,'+b.a*.5+')');g.addColorStop(1,'rgba(212,175,55,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,b.r,0,6.2832);ctx.fill();}
+      for(var k=0;k<nodes.length;k++){var nd=nodes[k];nd.x+=nd.vx;nd.y+=nd.vy;if(nd.x<0||nd.x>W)nd.vx*=-1;if(nd.y<0||nd.y>H)nd.vy*=-1;}
+      ctx.lineWidth=1;for(var a=0;a<nodes.length;a++)for(var c=a+1;c<nodes.length;c++){var dx=nodes[a].x-nodes[c].x,dy=nodes[a].y-nodes[c].y,d=Math.sqrt(dx*dx+dy*dy);if(d<150){var al=(1-d/150)*.16;var pulse=.5+.5*Math.sin(t*.0015+(a+c));ctx.strokeStyle='rgba(212,175,55,'+al*(.5+pulse*.5)+')';ctx.beginPath();ctx.moveTo(nodes[a].x,nodes[a].y);ctx.lineTo(nodes[c].x,nodes[c].y);ctx.stroke();}}
+      for(var q=0;q<nodes.length;q++){ctx.beginPath();ctx.arc(nodes[q].x,nodes[q].y,nodes[q].r,0,6.2832);ctx.fillStyle='rgba(240,216,120,0.55)';ctx.fill();}
+      for(var sp2=0;sp2<sparks.length;sp2++){var sp=sparks[sp2];sp.y+=sp.dy;if(sp.y<0){sp.y=H;sp.x=Math.random()*W;}var tw=sp.base+Math.sin(t*.001*sp.sp+sp.tw)*.35;if(tw<0)tw=0;ctx.beginPath();ctx.arc(sp.x,sp.y,sp.r,0,6.2832);ctx.fillStyle='rgba(245,230,170,'+tw+')';ctx.fill();}
+      ctx.globalCompositeOperation='source-over';requestAnimationFrame(frame);}
+    requestAnimationFrame(frame);
+  })();
+
+  document.querySelectorAll('.card-new').forEach(function(el){el.addEventListener('mousemove',function(e){var r=el.getBoundingClientRect();el.style.setProperty('--mx',(e.clientX-r.left)+'px');el.style.setProperty('--my',(e.clientY-r.top)+'px');});});
+</script>
+</body>
+</html>

@@ -1,0 +1,281 @@
+<!-- @dsCard group="Klimat Pro" viewport="1320x880" name="Klimat Pro — рабочий центр" subtitle="Дашборд · Финансы · Задачи — кликабельная сборка приложения" -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Klimat Pro — рабочий центр</title>
+<link rel="stylesheet" href="../../styles.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>
+  html, body { height: 100%; }
+  body { margin: 0; overflow: hidden; }
+  #bg { position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(1200px 700px at 78% -8%, rgba(212,175,55,0.10), transparent 60%),
+      radial-gradient(900px 600px at 8% 108%, rgba(212,175,55,0.06), transparent 60%),
+      #0a0a0a; }
+  #bg::after { content: ""; position: absolute; inset: 0;
+    background-image: radial-gradient(rgba(255,255,255,0.022) 1px, transparent 1px);
+    background-size: 3px 3px; opacity: 0.6; }
+  .app-scroll { overflow-y: auto; overflow-x: hidden; }
+  @keyframes kpFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .kp-fade { animation: kpFade var(--dur-slow) var(--ease-rise); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute;width:0;height:0" aria-hidden="true"><defs>
+  <filter id="lg-warp" x="-40%" y="-40%" width="180%" height="180%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.008 0.010" numOctaves="2" seed="12" result="t"></feTurbulence><feGaussianBlur in="t" stdDeviation="1.3" result="s"></feGaussianBlur><feDisplacementMap in="SourceGraphic" in2="s" scale="46" xChannelSelector="R" yChannelSelector="G"></feDisplacementMap></filter>
+  <filter id="lg-rim" x="-60%" y="-60%" width="220%" height="220%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.010 0.012" numOctaves="2" seed="7" result="t"></feTurbulence><feGaussianBlur in="t" stdDeviation="1.1" result="s"></feGaussianBlur><feDisplacementMap in="SourceGraphic" in2="s" scale="96" xChannelSelector="R" yChannelSelector="G"></feDisplacementMap></filter>
+</defs></svg>
+<div id="bg"></div>
+<div id="root" style="position:relative;z-index:1;height:100vh"></div>
+
+<script src="LogoMark.jsx"></script>
+<script src="icons.jsx" type="text/babel"></script>
+<script src="data.jsx" type="text/babel"></script>
+<script src="Charts.jsx" type="text/babel"></script>
+<script src="Dashboard.jsx" type="text/babel"></script>
+<script src="Finances.jsx" type="text/babel"></script>
+<script src="Tasks.jsx" type="text/babel"></script>
+<script src="Projects.jsx" type="text/babel"></script>
+<script src="Analytics.jsx" type="text/babel"></script>
+
+<script type="text/babel" data-presets="react">
+const { Button, Card, Badge, Avatar, IconButton, Input, Select, Checkbox, Modal, Toast } = window.KlimatProDesignSystem_a56ef7;
+const I = window.Icons, D = window.KP_DATA;
+const Kbd = ({ children }) => <kbd style={{ font: "inherit", fontSize: 11, fontWeight: 700, fontFamily: "var(--font-mono)", padding: "2px 6px", borderRadius: "var(--radius-sm)", background: "linear-gradient(180deg, var(--gold-a20), var(--gold-a12))", border: "1px solid var(--gold-a30)", color: "var(--accent-hover)" }}>{children}</kbd>;
+
+const NAV = [
+  { id: "dashboard", label: "Дашборд", icon: "Gauge" },
+  { id: "projects", label: "Проекты", icon: "Folder", count: 14 },
+  { id: "finances", label: "Финансы", icon: "Wallet" },
+  { id: "analytics", label: "Аналитика", icon: "Chart" },
+  { id: "tasks", label: "Задачи", icon: "Check2", count: 6 },
+];
+const SCREENS = { dashboard: window.Dashboard, projects: window.Projects, finances: window.Finances, analytics: window.Analytics, tasks: window.Tasks };
+
+function LogoWordmark() {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
+      <window.LogoMark size={36} radius={11} />
+      <div style={{ lineHeight: 1 }}>
+        <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: "0.02em", background: "linear-gradient(120deg,#a9821f,#ead27a,#c9a431)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>КЛИМАТ<span style={{ fontWeight: 400, color: "var(--text-muted)", WebkitTextFillColor: "var(--text-muted)" }}> Pro</span></div>
+        <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.18em", color: "var(--text-subtle)", marginTop: 3 }}>рабочий центр</div>
+      </div>
+    </div>
+  );
+}
+
+function Sidebar({ active, setActive }) {
+  return (
+    <aside style={{ width: 234, flexShrink: 0, height: "100vh", padding: "22px 16px", display: "flex", flexDirection: "column", borderRight: "1px solid var(--border-subtle)", background: "rgba(16,16,15,0.5)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }}>
+      <div style={{ padding: "0 8px 22px" }}><LogoWordmark /></div>
+      <nav style={{ display: "flex", flexDirection: "column", gap: 3, flex: 1 }}>
+        <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--text-subtle)", fontWeight: 600, padding: "6px 10px 8px" }}>Разделы</div>
+        {NAV.map((n) => {
+          const Ic = I[n.icon]; const on = active === n.id;
+          return (
+            <button key={n.id} onClick={() => setActive(n.id)} style={{
+              display: "flex", alignItems: "center", gap: 11, padding: "9px 11px", borderRadius: "var(--radius-md)",
+              border: "1px solid", borderColor: on ? "var(--border-gold-subtle)" : "transparent",
+              background: on ? "var(--accent-fill)" : "transparent", cursor: "pointer", textAlign: "left",
+              color: on ? "var(--accent-hover)" : "var(--text-muted)", fontSize: 13.5, fontWeight: on ? 600 : 500,
+              fontFamily: "var(--font-sans)", transition: "all var(--dur-fast)",
+            }}
+              onMouseEnter={(e) => { if (!on) { e.currentTarget.style.background = "var(--w-04)"; e.currentTarget.style.color = "var(--text-strong)"; } }}
+              onMouseLeave={(e) => { if (!on) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-muted)"; } }}>
+              <Ic size={17} />
+              <span style={{ flex: 1 }}>{n.label}</span>
+              {n.count != null && <span style={{ fontSize: 11, fontWeight: 600, padding: "1px 7px", borderRadius: 999, background: on ? "var(--accent-fill-strong)" : "var(--w-08)", color: on ? "var(--accent-hover)" : "var(--text-subtle)" }}>{n.count}</span>}
+            </button>
+          );
+        })}
+      </nav>
+      <div style={{ paddingTop: 14, borderTop: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", gap: 10 }}>
+        <Avatar name={D.user.name} size="md" />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text-strong)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{D.user.name}</div>
+          <div style={{ fontSize: 11, color: "var(--text-subtle)" }}>{D.user.role}</div>
+        </div>
+        <IconButton size="sm"><I.Settings size={16} /></IconButton>
+      </div>
+    </aside>
+  );
+}
+
+function Topbar({ active, onSearch, onBell, onCreate }) {
+  const title = (NAV.find((n) => n.id === active) || {}).label || "";
+  const today = new Date().toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long" });
+  return (
+    <header style={{ display: "flex", alignItems: "center", gap: 16, padding: "20px 28px 18px", position: "sticky", top: 0, zIndex: 5 }}>
+      <div style={{ flex: 1 }}>
+        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 600, letterSpacing: "-0.02em", color: "var(--text-strong)" }}>{title}</h1>
+        <div style={{ fontSize: 12.5, color: "var(--text-subtle)", marginTop: 3, textTransform: "capitalize" }}>{today}</div>
+      </div>
+      <button onClick={onSearch} style={{
+        display: "flex", alignItems: "center", gap: 9, padding: "8px 12px", minWidth: 230,
+        background: "var(--black-800)", border: "1px solid var(--border-default)", borderRadius: "var(--radius-md)",
+        color: "var(--text-subtle)", fontSize: 13, cursor: "pointer", fontFamily: "var(--font-sans)",
+      }}>
+        <I.Search size={16} /><span style={{ flex: 1, textAlign: "left" }}>Поиск…</span>
+        <span style={{ display: "inline-flex", gap: 3 }}><Kbd>⌘</Kbd><Kbd>K</Kbd></span>
+      </button>
+      <IconButton onClick={onBell}><I.Bell size={18} /></IconButton>
+      <Button icon={<I.Plus size={15} />} onClick={onCreate}>Создать</Button>
+    </header>
+  );
+}
+
+function CommandPalette({ open, onClose, setActive, onAction }) {
+  const [q, setQ] = React.useState("");
+  const items = [
+    ...NAV.map((n) => ({ ...n, kind: "Раздел" })),
+    { id: "new-project", label: "Новый проект", icon: "Folder", kind: "Действие" },
+    { id: "new-invoice", label: "Выставить счёт", icon: "Wallet", kind: "Действие" },
+    { id: "new-task", label: "Добавить задачу", icon: "Check2", kind: "Действие" },
+  ];
+  const shown = items.filter((it) => it.label.toLowerCase().includes(q.toLowerCase()));
+  React.useEffect(() => { if (open) setQ(""); }, [open]);
+  if (!open) return null;
+  return (
+    <Modal open={open} onClose={onClose} width={540} title={null}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, paddingBottom: 12, borderBottom: "1px solid var(--border-subtle)" }}>
+        <I.Search size={18} style={{ color: "var(--text-subtle)" }} />
+        <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Команда или переход…" style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "var(--text-body)", fontSize: 15, fontFamily: "var(--font-sans)" }} />
+        <Kbd>ESC</Kbd>
+      </div>
+      <div style={{ marginTop: 10, maxHeight: 340, overflowY: "auto" }}>
+        {shown.map((it) => {
+          const Ic = I[it.icon];
+          return (
+            <button key={it.id} onClick={() => { if (SCREENS[it.id]) setActive(it.id); else onAction?.(it.id); onClose(); }} style={{
+              width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "10px 11px", borderRadius: "var(--radius-md)",
+              background: "transparent", border: "none", cursor: "pointer", textAlign: "left", color: "var(--text-body)", fontSize: 13.5, fontFamily: "var(--font-sans)",
+            }}
+              onMouseEnter={(e) => e.currentTarget.style.background = "var(--w-06)"}
+              onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+              <Ic size={17} style={{ color: "var(--accent)" }} />
+              <span style={{ flex: 1 }}>{it.label}</span>
+              <span style={{ fontSize: 11, color: "var(--text-subtle)" }}>{it.kind}</span>
+            </button>
+          );
+        })}
+        {!shown.length && <div style={{ padding: 24, textAlign: "center", color: "var(--text-subtle)", fontSize: 13 }}>Ничего не найдено</div>}
+      </div>
+    </Modal>
+  );
+}
+
+function Placeholder({ name }) {
+  return (
+    <Card padding={48} hover={false} style={{ textAlign: "center" }}>
+      <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text-strong)" }}>«{name}» — раздел в макете</div>
+      <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 8, maxWidth: 420, marginInline: "auto", lineHeight: 1.6 }}>
+        Этот экран не входит в демонстрационную сборку. В UI-ките показаны Дашборд, Финансы и Задачи — на них собрана библиотека компонентов.
+      </div>
+    </Card>
+  );
+}
+
+function Login({ onEnter }) {
+  return (
+    <div style={{ height: "100vh", display: "grid", placeItems: "center" }}>
+      <Card gold padding={36} hover={false} spotlight={false} style={{ width: 380 }} className="kp-fade">
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 22 }}><LogoWordmark /></div>
+        <div style={{ fontSize: 19, fontWeight: 600, color: "var(--text-strong)", textAlign: "center", letterSpacing: "-0.02em" }}>Вход в рабочий центр</div>
+        <div style={{ fontSize: 13, color: "var(--text-muted)", textAlign: "center", marginTop: 6, marginBottom: 24 }}>Личный кабинет инженера</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+          <Input placeholder="Email" defaultValue="d.eliseev@klimat.pro" />
+          <Input type="password" placeholder="Пароль" defaultValue="••••••••••" />
+          <Button full size="lg" onClick={onEnter} style={{ marginTop: 6 }}>Войти</Button>
+        </div>
+        <div style={{ fontSize: 12, color: "var(--text-subtle)", textAlign: "center", marginTop: 16 }}>Забыли пароль?</div>
+      </Card>
+    </div>
+  );
+}
+
+function InvoiceModal({ open, onClose, onDone }) {
+  const D = window.KP_DATA;
+  const [client, setClient] = React.useState("");
+  const [project, setProject] = React.useState(D.projects[0].name);
+  const [amount, setAmount] = React.useState("");
+  const [vat, setVat] = React.useState(true);
+  const [recurring, setRecurring] = React.useState(false);
+  React.useEffect(() => { if (open) { setClient(""); setAmount(""); setVat(true); setRecurring(false); } }, [open]);
+  const total = Number(amount.replace(/\D/g, "")) || 0;
+  const withVat = vat ? Math.round(total * 1.2) : total;
+  const rub = (n) => new Intl.NumberFormat("ru-RU").format(n);
+  return (
+    <Modal open={open} onClose={onClose} width={500} title="Выставить счёт"
+      actions={<><Button variant="ghost" onClick={onClose}>Отмена</Button><Button onClick={() => { onDone?.("Счёт на " + rub(withVat) + " \u20bd создан"); onClose(); }}>Выставить счёт</Button></>}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-subtle)", fontWeight: 600 }}>Клиент</span>
+          <Input placeholder="Название организации" value={client} onChange={(e) => setClient(e.target.value)} />
+        </label>
+        <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-subtle)", fontWeight: 600 }}>Проект</span>
+          <Select value={project} onChange={(e) => setProject(e.target.value)}>
+            {D.projects.map((p) => <option key={p.id} value={p.name}>{p.name}</option>)}
+          </Select>
+        </label>
+        <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-subtle)", fontWeight: 600 }}>Сумма, ₽</span>
+          <Input placeholder="0" value={amount} onChange={(e) => setAmount(e.target.value)} />
+        </label>
+        <div style={{ display: "flex", gap: 22, paddingTop: 2 }}>
+          <Checkbox checked={vat} onChange={setVat} label="Учитывать НДС 20%" />
+          <Checkbox checked={recurring} onChange={setRecurring} label="Ежемесячно" />
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", background: "var(--black-800)", borderRadius: "var(--radius-md)", border: "1px solid var(--border-gold-subtle)" }}>
+          <span style={{ fontSize: 13, color: "var(--text-muted)" }}>К оплате{vat ? " с НДС" : ""}</span>
+          <span style={{ fontSize: 22, fontWeight: 600, color: "var(--accent-hover)", fontVariantNumeric: "tabular-nums" }}>{rub(withVat)} ₽</span>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function App() {
+  const [authed, setAuthed] = React.useState(false);
+  const [active, setActive] = React.useState("dashboard");
+  const [cmd, setCmd] = React.useState(false);
+  const [invoice, setInvoice] = React.useState(false);
+  const [toast, setToast] = React.useState(null);
+  const fire = (msg) => { setToast(msg); window.clearTimeout(fire._t); fire._t = window.setTimeout(() => setToast(null), 2600); };
+
+  React.useEffect(() => {
+    const h = (e) => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setCmd((v) => !v); } if (e.key === "Escape") setCmd(false); };
+    window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
+  }, []);
+
+  if (!authed) return <Login onEnter={() => { setAuthed(true); fire("С возвращением, Даниил"); }} />;
+
+  const Screen = SCREENS[active];
+  return (
+    <div style={{ display: "flex", height: "100vh" }}>
+      <Sidebar active={active} setActive={setActive} />
+      <div className="app-scroll" style={{ flex: 1, height: "100vh" }}>
+        <Topbar active={active} onSearch={() => setCmd(true)} onBell={() => fire("Нет новых уведомлений")} onCreate={() => setInvoice(true)} />
+        <main style={{ padding: "4px 28px 36px" }}>
+          <div key={active} className="kp-fade">
+            {Screen ? <Screen onToast={fire} /> : <Placeholder name={(NAV.find((n) => n.id === active) || {}).label} />}
+          </div>
+        </main>
+      </div>
+      <CommandPalette open={cmd} onClose={() => setCmd(false)} setActive={setActive} onAction={(id) => { if (id === "new-invoice") setInvoice(true); else if (id === "new-task") setActive("tasks"); else if (id === "new-project") { setActive("projects"); fire("Черновик проекта создан"); } }} />
+      <InvoiceModal open={invoice} onClose={() => setInvoice(false)} onDone={fire} />
+      {toast && <Toast tone="gold" onClose={() => setToast(null)}>{toast}</Toast>}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

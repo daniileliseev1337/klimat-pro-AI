@@ -1,0 +1,11 @@
+/* ============================================================================
+   FONTS — Geist (sans) + Geist Mono
+   ----------------------------------------------------------------------------
+   Geist is the product's native family (Vercel). Both Geist and Geist Mono are
+   served here from Google Fonts. Geist carries the interface; Geist Mono is
+   reserved for figures that must lock to a fixed grid (account numbers, diffs,
+   keyboard shortcuts). Tabular numerals are enabled globally in typography.css
+   because this is a finance tool — columns of rubles must align to the digit.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap');

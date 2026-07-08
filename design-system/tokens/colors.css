@@ -1,0 +1,128 @@
+/* ============================================================================
+   COLOR TOKENS — Noir & Gold
+   ----------------------------------------------------------------------------
+   A deliberately restrained palette: material black surfaces, one antique-gold
+   accent, warm near-white ink. No neon, no second hue competing for attention.
+   The gold is the only thing in the system allowed to feel "lit". Everything
+   else recedes so that numbers, names and status read instantly.
+
+   Layered three ways:
+     1. Raw scale      — the physical pigments (--black-*, --ink-*, --gold-*)
+     2. Semantic alias — what a surface/border/text IS (--surface-card, --text-body)
+     3. State          — muted signal colors (success / warning / danger / info)
+   Components should reach for the SEMANTIC names, not the raw scale.
+   ========================================================================== */
+
+:root {
+  /* ── RAW · black surfaces ─────────────────────────────────────────────
+     Not pure #000 — a material black, ~3% warmth, so the screen reads as an
+     object rather than a powered-off panel. Each step is barely lifted. */
+  --black-900: #0a0a0a;   /* base canvas                                   */
+  --black-800: #101010;   /* sunken wells, inset fields                    */
+  --black-700: #141414;   /* card / elevated surface                       */
+  --black-600: #1c1c1a;   /* modal / popover, faint warm tint              */
+  --black-500: #242420;   /* highest float, menus                          */
+
+  /* ── RAW · warm ink ───────────────────────────────────────────────────
+     Warm whites that sit beside gold without going cold/blue. */
+  --ink-100: #fafaf7;     /* primary text, warm white                      */
+  --ink-300: #a8a8a3;     /* secondary text                                */
+  --ink-500: #6b6b67;     /* tertiary / captions                           */
+  --ink-700: #404040;     /* disabled / quaternary                         */
+
+  /* ── RAW · antique gold ───────────────────────────────────────────────
+     A noble, slightly patinated metal — never a flat yellow. */
+  --gold-700: #a9821f;    /* deep edge of gradients                        */
+  --gold-600: #c9a431;    /* borders, soft accents                         */
+  --gold-500: #d4af37;    /* THE accent — primary gold                     */
+  --gold-400: #e8c860;    /* hover / brighter                              */
+  --gold-300: #ead27a;    /* gradient highlight                            */
+  --gold-100: #fff6d5;    /* specular glint inside metallic edges          */
+
+  /* ── RAW · alpha overlays (on black) ──────────────────────────────────
+     White- and gold-tinted films for borders, fills and glows. */
+  --w-04: rgba(255, 255, 255, 0.04);
+  --w-06: rgba(255, 255, 255, 0.06);
+  --w-08: rgba(255, 255, 255, 0.08);
+  --w-10: rgba(255, 255, 255, 0.10);
+  --w-16: rgba(255, 255, 255, 0.16);
+
+  --gold-a06: rgba(212, 175, 55, 0.06);
+  --gold-a12: rgba(212, 175, 55, 0.12);
+  --gold-a20: rgba(212, 175, 55, 0.20);
+  --gold-a30: rgba(212, 175, 55, 0.30);
+  --gold-a40: rgba(212, 175, 55, 0.40);
+
+  /* ── SEMANTIC · surfaces ──────────────────────────────────────────── */
+  --surface-base:     var(--black-900);
+  --surface-sunken:   var(--black-800);
+  --surface-card:     var(--black-700);
+  --surface-popover:  var(--black-600);
+  --surface-float:    var(--black-500);
+  --surface-glass:    rgba(255, 255, 255, 0.025);
+
+  /* ── SEMANTIC · text ──────────────────────────────────────────────── */
+  --text-strong:    var(--ink-100);
+  --text-body:      var(--ink-100);
+  --text-muted:     var(--ink-300);
+  --text-subtle:    var(--ink-500);
+  --text-disabled:  var(--ink-700);
+  --text-on-gold:   #0a0a0a;   /* black ink on a gold fill — the inverse pair */
+
+  /* ── SEMANTIC · accent ────────────────────────────────────────────── */
+  --accent:          var(--gold-500);
+  --accent-hover:    var(--gold-400);
+  --accent-quiet:    var(--gold-600);
+  --accent-fill:         var(--gold-a12);
+  --accent-fill-subtle:  var(--gold-a06);
+  --accent-fill-strong:  var(--gold-a20);
+  --accent-glow:         var(--gold-a40);
+
+  /* ── SEMANTIC · borders ───────────────────────────────────────────── */
+  --border-subtle:  var(--w-06);
+  --border-default: var(--w-10);
+  --border-strong:  var(--w-16);
+  --border-gold-subtle: var(--gold-a20);
+  --border-gold:        var(--gold-a30);
+
+  /* ── SEMANTIC · liquid glass ──────────────────────────────────────────
+     Tints + speculars for the .liquid-glass material. Neutral reads cool-
+     clear; gold warms the pane from within. The speculars paint the lit
+     bevel that gives the pane its 3-D "thick glass" edge. */
+  --glass-tint-neutral:  linear-gradient(150deg, rgba(16,16,14,0.46), rgba(8,8,7,0.55) 52%, rgba(0,0,0,0.64));
+  --glass-tint-gold:     linear-gradient(150deg, rgba(58,46,16,0.44), rgba(18,15,6,0.54) 52%, rgba(0,0,0,0.62));
+  --glass-specular:      linear-gradient(135deg, rgba(255,255,255,0.9), transparent 30%, transparent 66%, rgba(255,255,255,0.32)); /* @kind color */
+  --glass-specular-gold: linear-gradient(135deg, #fff2c8, rgba(226,186,74,0.55) 20%, transparent 42%, transparent 58%, rgba(226,186,74,0.65) 80%, #ffe9a8); /* @kind color */
+
+  /* ── STATE · muted signals ────────────────────────────────────────────
+     Soft, desaturated — they inform without shouting over the noir. */
+  --success:        #6ee7a8;
+  --success-fill:   rgba(110, 231, 168, 0.10);
+  --success-border: rgba(110, 231, 168, 0.25);
+
+  --warning:        #f3d77b;
+  --warning-fill:   rgba(243, 215, 123, 0.10);
+  --warning-border: rgba(243, 215, 123, 0.25);
+
+  --danger:         #f8a3a3;
+  --danger-fill:    rgba(248, 163, 163, 0.10);
+  --danger-border:  rgba(248, 163, 163, 0.25);
+
+  --info:           #93c5fd;
+  --info-fill:      rgba(147, 197, 253, 0.10);
+  --info-border:    rgba(147, 197, 253, 0.25);
+
+  /* Teal "delivered" accent used on project pipelines + data viz */
+  --teal:           #2dd4bf;
+
+  /* ── DATA-VIZ sequence ────────────────────────────────────────────────
+     Ordered so adjacent pie/bar segments never collide. Gold leads. */
+  --viz-1: #d4af37;
+  --viz-2: #6ee7a8;
+  --viz-3: #93c5fd;
+  --viz-4: #f8a3a3;
+  --viz-5: #8b5cf6;
+  --viz-6: #ec4899;
+  --viz-7: #f59e0b;
+  --viz-8: #2dd4bf;
+}

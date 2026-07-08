@@ -1,0 +1,251 @@
+<!-- @dsCard group="Brand" viewport="1000x600" name="Логотип — живой цикл Л·К·Л·К" subtitle="5 тематических знаков перемежаются словесным знаком «КЛИМАТ Pro»" -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Klimat Pro — живой логотип</title>
+<link rel="stylesheet" href="../../styles.css" />
+<style>
+  body { margin: 0; padding: 38px 36px 48px; min-height: 100vh; color: var(--text-body); background:
+    radial-gradient(1100px 600px at 80% -10%, rgba(212,175,55,0.08), transparent 60%),
+    radial-gradient(800px 500px at 5% 110%, rgba(212,175,55,0.05), transparent 60%), #0a0a0a; }
+  .eyebrow { font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--accent); font-weight: 600; }
+  h1 { font-size: 25px; font-weight: 600; letter-spacing: -0.022em; color: var(--text-strong); margin: 8px 0 4px; }
+  .lede { font-size: 13.5px; color: var(--text-muted); max-width: 640px; line-height: 1.55; }
+
+  .stage { display: flex; align-items: center; gap: 40px; margin-top: 30px; flex-wrap: wrap; }
+  .hero { position: relative; width: 264px; height: 150px; flex-shrink: 0; --t: 700ms; --te: cubic-bezier(0.45,0,0.55,1); perspective: 900px; }
+  .hero .layer { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity var(--t) var(--te), transform var(--t) var(--te), filter var(--t) var(--te); }
+  .hero svg { filter: drop-shadow(0 10px 26px rgba(0,0,0,0.55)); }
+  .capsule { position: absolute; top: 50%; left: 50%; width: 132px; height: 132px; border-radius: 34px;
+    transform: translate(-50%,-50%); background: #0d0d0c; border: none; display: none; z-index: 1;
+    box-shadow: 0 0 40px -6px var(--accent-glow), inset 0 0 20px -8px rgba(212,175,55,0.45), var(--shadow-md);
+    transition: width var(--t) var(--te), height var(--t) var(--te), border-radius var(--t) var(--te); }
+  .capsule::before { content:''; position:absolute; inset:0; border-radius:inherit; padding:2px; pointer-events:none;
+    background: linear-gradient(115deg, #8c6c18 0%, #b8901f 18%, #fff6d5 32%, #e8c860 42%, #a9821f 60%, #fff1c4 76%, #b8901f 90%, #8c6c18 100%);
+    background-size: 280% 100%;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude;
+    filter: drop-shadow(0 0 5px rgba(212,175,55,0.55)); animation: ringsheen 4s linear infinite; }
+  @keyframes ringsheen { 0% { background-position: 0% 0; } 100% { background-position: 280% 0; } }
+  .hero.morph .capsule { display: block; }
+  .hero.morph .layer { transition: opacity var(--t) ease; }
+
+  .read { min-width: 230px; }
+  .read .kind { font-size: 11px; text-transform: uppercase; letter-spacing: 0.16em; font-weight: 700; }
+  .read .kind.l { color: var(--text-subtle); }
+  .read .kind.k { color: var(--accent); }
+  .read .title { font-size: 22px; font-weight: 600; color: var(--text-strong); letter-spacing: -0.02em; margin-top: 6px; }
+  .read .meta { font-size: 12.5px; color: var(--text-muted); margin-top: 8px; line-height: 1.5; max-width: 320px; }
+
+  .rhythm { display: flex; align-items: center; gap: 7px; margin-top: 20px; }
+  .rhythm .b { font-family: var(--font-mono); font-size: 12px; font-weight: 600; width: 26px; height: 26px;
+    display: grid; place-items: center; border-radius: 7px; border: 1px solid var(--border-subtle); color: var(--text-subtle); }
+  .rhythm .b.k { color: var(--accent); border-color: var(--border-gold-subtle); background: var(--accent-fill-subtle); }
+  .rhythm .b.live { box-shadow: var(--glow-gold-sm); border-color: var(--border-gold); color: var(--text-strong); }
+
+  .section { font-size: 10px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--text-subtle); font-weight: 600; margin: 40px 0 14px; }
+  .set { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-start; }
+  .chip { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .chip.kco svg { filter: drop-shadow(0 0 14px rgba(212,175,55,0.25)); }
+  .chip .cn { font-size: 11px; color: var(--text-muted); }
+  .chip .tag { font-family: var(--font-mono); font-size: 10px; color: var(--accent); opacity: 0.7; }
+  .div { width: 1px; align-self: stretch; background: var(--border-subtle); margin: 0 6px; }
+
+  .panel { display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-end; margin-top: 26px; padding: 16px 22px;
+    border-radius: var(--radius-lg); background: var(--surface-glass); border: 1px solid var(--border-subtle); }
+  .ctl { display: flex; flex-direction: column; gap: 9px; }
+  .ctl label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-subtle); font-weight: 600; }
+  .ctl label b { color: var(--accent); font-family: var(--font-mono); font-weight: 600; text-transform: none; letter-spacing: 0; margin-left: 4px; }
+  .ctl input[type=range] { width: 210px; accent-color: var(--accent); cursor: pointer; }
+  .seg { display: flex; flex-wrap: wrap; gap: 4px; max-width: 340px; background: var(--w-04); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 4px; }
+  .seg button { font: inherit; font-size: 12px; padding: 6px 13px; border: none; border-radius: 6px; background: transparent; color: var(--text-subtle); cursor: pointer; transition: background var(--dur-fast), color var(--dur-fast); }
+  .seg button.on { background: var(--accent); color: var(--text-on-gold); font-weight: 600; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes flow { to { stroke-dashoffset: -64; } }
+  @keyframes fill { 0%,100% { stroke-dasharray: 30 52; } 50% { stroke-dasharray: 52 30; } }
+  @keyframes glow { 0%,100% { opacity: 0.45; } 50% { opacity: 1; } }
+  @keyframes breathe { 0%,100% { transform: scale(0.95); } 50% { transform: scale(1); } }
+  .j-spin { transform-origin: 24px 24px; animation: spin 18s linear infinite; }
+  .j-flow { stroke-dasharray: 10 8; animation: flow 2.4s linear infinite; }
+  .j-fill { animation: fill 4s var(--ease-out) infinite; }
+  .j-glow { animation: glow 3s ease-in-out infinite; }
+  .j-breathe { transform-origin: 24px 25px; animation: breathe 3.4s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce){ .j-spin,.j-flow,.j-fill,.j-glow,.j-breathe{animation:none} }
+</style>
+</head>
+<body>
+  <div class="eyebrow">Klimat Pro · Identity</div>
+  <h1>Живой логотип — ритм Л · К · Л · К</h1>
+  <p class="lede">Пять тематических знаков (Л) сменяют друг друга, и между каждым появляется словесный знак (К) — «КЛИМАТ&nbsp;Pro». Получается фирменный пульс: Л‑К‑Л‑К‑Л‑К. Золото переливается на всех. Ниже — живой цикл и сам набор.</p>
+
+  <div class="stage">
+    <div class="hero morph" id="hero"></div>
+    <div class="read">
+      <div class="kind l" id="kind">—</div>
+      <div class="title" id="title">—</div>
+      <div class="meta" id="meta">—</div>
+      <div class="rhythm" id="rhythm"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="ctl"><label>Задержка кадра <b id="vHold">4.0с</b></label><input id="hold" type="range" min="800" max="6000" step="100" value="4000"></div>
+    <div class="ctl"><label>Плавность перехода <b id="vTrans">2.00с</b></label><input id="trans" type="range" min="150" max="3000" step="50" value="2000"></div>
+    <div class="ctl"><label>Стиль перехода</label><div class="seg" id="style"><button data-s="morph" class="on">Морф</button><button data-s="liquid">Перелив</button><button data-s="bubble">Пузырь</button><button data-s="dissolve">Раствор</button><button data-s="rise">Подъём</button><button data-s="scale">Масштаб</button><button data-s="flip">Поворот</button><button data-s="slide">Сдвиг</button><button data-s="depth">Глубина</button><button data-s="blur">Фокус</button></div></div>
+  </div>
+
+  <div class="section">Пять тематических знаков · Л</div>
+  <div class="set" id="setL"></div>
+
+  <div class="section">Словесный знак компании · К</div>
+  <div class="set" id="setK"></div>
+
+<script>
+function grad(id, dur, w, h) {
+  w = w || 48; h = (h == null ? 48 : h);
+  const vals = h === 0 ? `-${w+12} 0;${w+12} 0;-${w+12} 0` : `-${w} -${h};${w} ${h};-${w} -${h}`;
+  return `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${w}" y2="${h}">
+    <stop offset="0" stop-color="#a9821f"/><stop offset="0.42" stop-color="#d4af37"/>
+    <stop offset="0.5" stop-color="#fff6d5"/><stop offset="0.58" stop-color="#e8c860"/><stop offset="1" stop-color="#a9821f"/>
+    <animateTransform attributeName="gradientTransform" type="translate" values="${vals}" dur="${dur||4}s" repeatCount="indefinite"/>
+  </linearGradient>`;
+}
+const tile = (g) => `<rect x="2" y="2" width="44" height="44" rx="13" fill="#0d0d0c" stroke="url(#${g})" stroke-width="1.5"/>`;
+
+const MARKS = {
+  apert: { kind:"Л", title:"Диафрагма", ar:1, vb:"0 0 48 48", meta:"Ирисовая заслонка вентиляции — точная радиальная геометрия, медленно вращается.",
+    inner:(s)=>`<defs>${grad('g'+s)}</defs>${tile('g'+s)}
+      <g class="j-spin" stroke="url(#g${s})" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none">
+      <polygon points="31,24 27.5,30.06 20.5,30.06 17,24 20.5,17.94 27.5,17.94" stroke-width="1.4" opacity="0.55"/>
+      <line x1="31" y1="24" x2="31" y2="36.12"/><line x1="27.5" y1="30.06" x2="17" y2="36.12"/>
+      <line x1="20.5" y1="30.06" x2="10" y2="24"/><line x1="17" y1="24" x2="17" y2="11.88"/>
+      <line x1="20.5" y1="17.94" x2="31" y2="11.88"/><line x1="27.5" y1="17.94" x2="38" y2="24"/></g>` },
+
+  gauge: { kind:"Л", title:"Контур", ar:1, vb:"0 0 48 48", meta:"Прибор климат-контроля и KPI — шкала плавно набирает значение.",
+    inner:(s)=>`<defs>${grad('g'+s)}</defs>${tile('g'+s)}
+      <circle cx="24" cy="24" r="13" fill="none" stroke="#d4af37" stroke-opacity="0.18" stroke-width="3" stroke-linecap="round" stroke-dasharray="61.3 20.4" transform="rotate(135 24 24)"/>
+      <circle class="j-fill" cx="24" cy="24" r="13" fill="none" stroke="url(#g${s})" stroke-width="3" stroke-linecap="round" stroke-dasharray="44 38" transform="rotate(135 24 24)"/>
+      <circle cx="24" cy="24" r="3.1" fill="url(#g${s})"/><line x1="24" y1="24" x2="32.5" y2="15.5" stroke="url(#g${s})" stroke-width="2" stroke-linecap="round"/>` },
+
+  hex: { kind:"Л", title:"Печать", ar:1, vb:"0 0 48 48", meta:"Инженерный медальон-сертификат: грань вентрешётки в тиснёном шестиграннике.",
+    inner:(s)=>`<defs>${grad('g'+s,5)}</defs>${tile('g'+s)}
+      <polygon points="24,7 38.7,15.5 38.7,32.5 24,41 9.3,32.5 9.3,15.5" fill="none" stroke="url(#g${s})" stroke-width="2" stroke-linejoin="round"/>
+      <polygon points="24,11 35.2,17.5 35.2,30.5 24,37 12.8,30.5 12.8,17.5" fill="none" stroke="#d4af37" stroke-opacity="0.3" stroke-width="1"/>
+      <g stroke="url(#g${s})" stroke-width="2.4" stroke-linecap="round">
+      <line class="j-glow" x1="19" y1="20" x2="29" y2="20"/><line class="j-glow" style="animation-delay:-1s" x1="16.5" y1="24" x2="31.5" y2="24"/>
+      <line class="j-glow" style="animation-delay:-2s" x1="19" y1="28" x2="29" y2="28"/></g>` },
+
+  drop: { kind:"Л", title:"Микроклимат", ar:1, vb:"0 0 48 48", meta:"Капля — влажность и микроклимат. Чистая форма, мягко «дышит».",
+    inner:(s)=>`<defs>${grad('g'+s,4.2)}</defs>${tile('g'+s)}
+      <path class="j-breathe" d="M24 10C24 10 33 21 33 28a9 9 0 1 1-18 0C15 21 24 10 24 10Z" fill="url(#g${s})" fill-opacity="0.15" stroke="url(#g${s})" stroke-width="2" stroke-linejoin="round"/>
+      <path class="j-breathe" d="M19.5 27.5a4.5 4.5 0 0 0 3.4 5.4" fill="none" stroke="#fff6d5" stroke-opacity="0.7" stroke-width="1.6" stroke-linecap="round"/>` },
+
+  flow: { kind:"Л", title:"Поток", ar:1, vb:"0 0 48 48", meta:"Воздушные струи проходят сквозь знак — отрисовано по сетке, течёт.",
+    inner:(s)=>`<defs>${grad('g'+s)}</defs>${tile('g'+s)}
+      <g stroke="url(#g${s})" stroke-width="2.4" stroke-linecap="round" fill="none">
+      <path class="j-flow" d="M12 18h16a4 4 0 1 0-4-4"/>
+      <path class="j-flow" style="animation-delay:-0.8s" d="M12 24h22a4 4 0 1 1-4 4"/>
+      <path class="j-flow" style="animation-delay:-1.6s" d="M12 30h12a4 4 0 1 0-4 4"/></g>` },
+
+  co: { kind:"К", title:"КЛИМАТ Pro", ar:150/84, vb:"0 0 150 84", meta:"Словесный знак — сам логотип «КЛИМАТ Pro». Появляется между тематическими и держит бренд.",
+    inner:(s)=>`<defs>${grad('g'+s,5,150,0)}</defs>
+      <rect x="3" y="22" width="144" height="40" rx="14" fill="#0d0d0c" stroke="url(#g${s})" stroke-width="1.5"/>
+      <text x="75" y="48" text-anchor="middle" font-family="Geist, system-ui, sans-serif" font-weight="700" font-size="20" letter-spacing="0.4" fill="url(#g${s})" style="font-feature-settings:'ss01' 1">КЛИМАТ<tspan font-weight="400" fill="#a8a8a3" dx="3">Pro</tspan></text>` },
+};
+
+function svg(key, s, h) {
+  const m = MARKS[key]; const w = Math.round(h * m.ar);
+  return `<svg width="${w}" height="${h}" viewBox="${m.vb}" fill="none">${m.inner(s)}</svg>`;
+}
+
+const ORDER_L = ['apert','gauge','hex','drop','flow'];
+
+document.getElementById('setL').innerHTML = ORDER_L.map((k,i)=>
+  `<div class="chip">${svg(k,'L'+i,64)}<div class="cn">${MARKS[k].title}</div><div class="tag">Л${i+1}</div></div>`
+).join('<div class="div"></div>');
+
+document.getElementById('setK').innerHTML =
+  `<div class="chip kco">${svg('co','Kbig',58)}<div class="cn">Словесный знак «КЛИМАТ Pro»</div><div class="tag">К</div></div>`;
+
+const heroKeys = ['apert','gauge','hex','drop','flow','co'];
+const dimOf = (k)=> k==='co' ? {w:248,h:78,r:24} : {w:132,h:132,r:34};
+const capsule = document.createElement('div'); capsule.className='capsule';
+let layers = {};
+function buildLayers(withTile){
+  hero.innerHTML=''; hero.appendChild(capsule);
+  heroKeys.forEach(k=>{
+    const el=document.createElement('div'); el.className='layer'; el.dataset.k=k;
+    el.innerHTML = withTile ? svg(k,'H_'+k, k==='co'?150:132, true) : svg(k,'A_'+k, k==='co'?70:118, false);
+    hero.appendChild(el);
+  });
+  layers={}; hero.querySelectorAll('.layer').forEach(el=>layers[el.dataset.k]=el);
+}
+
+const SEQ = ['apert','co','gauge','co','hex','co','drop','co','flow','co'];
+const kindEl=document.getElementById('kind'), titleEl=document.getElementById('title'), metaEl=document.getElementById('meta');
+document.getElementById('rhythm').innerHTML = SEQ.map((k,i)=>
+  `<div class="b ${k==='co'?'k':''}" data-i="${i}">${k==='co'?'К':'Л'}</div>`).join('');
+const beats=[...document.querySelectorAll('#rhythm .b')];
+
+const hero = document.getElementById('hero');
+let i=0, holdMs=4000, transMs=2000, style='morph', timer=null; // утверждено: Морф 4.0с/2.0с
+const STYLES = {
+  morph:    { t:'none',             f:'none',       e:'cubic-bezier(0.5,0,0.18,1.22)' },
+  liquid:   { t:'none',             f:'blur(18px)', e:'cubic-bezier(0.65,0,0.35,1)' },
+  dissolve: { t:'none',             f:'none',       e:'cubic-bezier(0.45,0,0.55,1)' },
+  rise:     { t:'translateY(16px)', f:'none',       e:'cubic-bezier(0.22,1,0.36,1)' },
+  scale:    { t:'scale(0.86)',      f:'none',       e:'cubic-bezier(0.34,1.3,0.64,1)' },
+  bubble:   { t:'scale(0.5)',       f:'blur(14px)', e:'cubic-bezier(0.45,1.65,0.55,1)' },
+  flip:     { t:'rotateY(82deg)',   f:'none',       e:'cubic-bezier(0.4,0,0.2,1)' },
+  slide:    { t:'translateX(48px)', f:'none',       e:'cubic-bezier(0.22,1,0.36,1)' },
+  depth:    { t:'scale(0.32)',      f:'none',       e:'cubic-bezier(0.16,1,0.3,1)' },
+  blur:     { t:'scale(1.06)',      f:'blur(11px)', e:'cubic-bezier(0.4,0,0.2,1)' },
+};
+hero.style.setProperty('--t', transMs+'ms');
+hero.style.setProperty('--te', STYLES[style].e);
+buildLayers(false);
+
+function tick(){
+  const key=SEQ[i], st=STYLES[style];
+  if(style==='morph'){
+    const out = transMs*0.5, inn = transMs*0.62, delay = transMs*0.32;
+    Object.values(layers).forEach(el=>{
+      el.style.transition = `opacity ${out}ms cubic-bezier(0.5,0,0.75,0.4), transform ${out}ms ease-in, filter ${out}ms ease-in`;
+      el.style.opacity='0'; el.style.transform='scale(0.66)'; el.style.filter='blur(7px)'; el.style.zIndex='1';
+    });
+    const inc=layers[key];
+    inc.style.transition = `opacity ${inn}ms ease-out ${delay}ms, transform ${transMs*0.7}ms var(--te) ${delay*0.7}ms, filter ${inn}ms ease-out ${delay}ms`;
+    inc.style.opacity='1'; inc.style.transform='scale(1)'; inc.style.filter='none'; inc.style.zIndex='2';
+    const d=dimOf(key); capsule.style.width=d.w+'px'; capsule.style.height=d.h+'px'; capsule.style.borderRadius=d.r+'px';
+  } else {
+    Object.values(layers).forEach(el=>{ el.style.opacity='0'; el.style.transform=st.t; el.style.filter=st.f; el.style.zIndex='1'; });
+    layers[key].style.opacity='1'; layers[key].style.transform='none'; layers[key].style.filter='none'; layers[key].style.zIndex='2';
+  }
+  const m=MARKS[key];
+  kindEl.textContent = key==='co' ? 'Знак компании · К' : 'Тематический · Л';
+  kindEl.className = 'kind '+(key==='co'?'k':'l');
+  titleEl.textContent = m.title;
+  metaEl.textContent = m.meta;
+  beats.forEach((b,bi)=>b.classList.toggle('live', bi===i));
+  i=(i+1)%SEQ.length;
+}
+function restart(){ clearInterval(timer); timer=setInterval(tick, holdMs); }
+tick(); restart();
+
+const holdEl=document.getElementById('hold'), transEl=document.getElementById('trans');
+holdEl.oninput=e=>{ holdMs=+e.target.value; document.getElementById('vHold').textContent=(holdMs/1000).toFixed(1)+'с'; restart(); };
+transEl.oninput=e=>{ transMs=+e.target.value; document.getElementById('vTrans').textContent=(transMs/1000).toFixed(2)+'с'; hero.style.setProperty('--t', transMs+'ms'); };
+document.querySelectorAll('#style button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#style button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
+  const wasMorph = style==='morph'; style=b.dataset.s; const isMorph = style==='morph';
+  hero.style.setProperty('--te', STYLES[style].e);
+  if(isMorph!==wasMorph){ hero.classList.toggle('morph', isMorph); buildLayers(!isMorph); i=(i-1+SEQ.length)%SEQ.length; tick(); }
+  else { Object.values(layers).forEach(el=>{ if(el.style.opacity!=='1'){ el.style.transform=STYLES[style].t; el.style.filter=STYLES[style].f; } }); }
+});
+</script>
+</body>
+</html>

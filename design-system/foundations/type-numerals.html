@@ -1,0 +1,25 @@
+<!-- @dsCard group="Type" viewport="700x190" name="Numerals — tabular finance figures" subtitle="Geist + Geist Mono, tnum — ruble columns align to the digit" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"/><link rel="stylesheet" href="../styles.css"/>
+<style>
+  body{margin:0;padding:22px 24px;background:var(--surface-base);color:var(--text-body);display:flex;gap:28px;align-items:center}
+  .kpi{font-size:44px;font-weight:600;letter-spacing:-.022em;color:var(--text-strong);font-variant-numeric:tabular-nums;line-height:1}
+  .cap{font-size:10px;text-transform:uppercase;letter-spacing:.10em;color:var(--text-subtle);font-weight:600;margin-bottom:8px}
+  table{border-collapse:collapse;font-variant-numeric:tabular-nums}
+  td{padding:3px 0 3px 18px;font-size:14px;text-align:right}
+  td.lbl{text-align:left;color:var(--text-muted);padding-left:0}
+  .mono{font-family:var(--font-mono);color:var(--accent-hover)}
+</style></head>
+<body>
+  <div>
+    <div class="cap">KPI · display</div>
+    <div class="kpi">842&nbsp;500&nbsp;<span style="font-size:24px;color:var(--text-subtle)">₽</span></div>
+  </div>
+  <div>
+    <div class="cap">Tabular column</div>
+    <table>
+      <tr><td class="lbl">Приход</td><td class="mono">+ 1 240 000</td></tr>
+      <tr><td class="lbl">Расход</td><td class="mono">− 397 500</td></tr>
+      <tr><td class="lbl">Остаток</td><td class="mono" style="color:var(--success)">842 500</td></tr>
+    </table>
+  </div>
+</body></html>

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>КЛИМАТ Pro — карточки 36–50 (интерактив)</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&family=Geist+Mono:wght@400..600&display=swap" />
+<style>
+  :root{--gold:#d4af37;--gold-bright:#e8c860;--gold-soft:#c9a431;--gold-glow:rgba(212,175,55,.4);
+    --border-subtle:rgba(255,255,255,.06);--border-gold:rgba(212,175,55,.3);
+    --text-primary:#fafaf7;--text-secondary:#a8a8a3;--text-tertiary:#6b6b67;}
+  *{box-sizing:border-box;}
+  body{margin:0;min-height:100vh;color:var(--text-primary);font-family:'Geist',system-ui,sans-serif;-webkit-font-smoothing:antialiased;
+    background:radial-gradient(1100px 700px at 82% -8%,rgba(212,175,55,.14),transparent 60%),radial-gradient(820px 600px at 3% 108%,rgba(212,175,55,.08),transparent 60%),#0a0a0a;}
+  .wrap{max-width:1200px;margin:0 auto;padding:26px 26px 72px;}
+  .head{display:flex;align-items:center;gap:11px;}
+  .badge{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;background:radial-gradient(120% 120% at 30% 20%,rgba(232,200,96,.18),rgba(212,175,55,.04));border:1px solid rgba(212,175,55,.4);}
+  .wm{font-size:16px;font-weight:700;letter-spacing:.02em;background:linear-gradient(100deg,#a9821f,#d4af37 45%,#ead27a 58%,#c9a431 78%,#a9821f);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .wm b{font-weight:400;color:var(--text-secondary);-webkit-text-fill-color:var(--text-secondary);}
+  h1{font-size:22px;font-weight:600;letter-spacing:-.022em;margin:24px 0 4px;}
+  .lede{font-size:13.5px;color:var(--text-secondary);max-width:730px;line-height:1.55;margin:0 0 24px;}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+  @media (max-width:940px){.grid{grid-template-columns:repeat(2,1fr);}}
+  @media (max-width:600px){.grid{grid-template-columns:1fr;}}
+  .dir{display:flex;flex-direction:column;gap:10px;}
+  .num{font-family:'Geist Mono',monospace;font-size:11px;color:var(--gold);border:1px solid var(--border-gold);border-radius:999px;padding:2px 9px;align-self:flex-start;}
+  .dname{font-size:13px;font-weight:600;}
+  .ddesc{font-size:11.5px;color:var(--text-tertiary);line-height:1.45;}
+  .ddesc em{color:var(--gold-soft);font-style:italic;}
+
+  .card{position:relative;border-radius:16px;padding:20px;min-height:156px;overflow:hidden;cursor:pointer;
+    transition:transform .18s cubic-bezier(.2,.7,.3,1),box-shadow .2s,border-color .2s;box-shadow:0 14px 34px rgba(0,0,0,.5);
+    background:linear-gradient(150deg,#151413,#0d0d0c);border:1px solid rgba(212,175,55,.2);}
+  .klabel{font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.09em;position:relative;z-index:4;}
+  .knum{font-size:25px;font-weight:700;color:#f7f8f8;margin-top:9px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;position:relative;z-index:4;}
+  .ksub{font-size:11.5px;color:var(--text-tertiary);margin-top:8px;position:relative;z-index:4;}
+  .mono{font-family:'Geist Mono',monospace;}
+  .khead{display:flex;justify-content:space-between;align-items:flex-start;}
+  .ic{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;background:#d4af371a;border:1px solid #d4af3733;position:relative;z-index:4;}
+  .hint{position:absolute;top:11px;right:12px;font-size:9px;font-family:'Geist Mono',monospace;color:var(--gold-soft);background:rgba(212,175,55,.1);border:1px solid rgba(212,175,55,.25);border-radius:6px;padding:2px 6px;z-index:5;opacity:.85;}
+
+  /* 36 Тикер */
+  .ticker{position:absolute;left:0;right:0;bottom:0;height:26px;background:rgba(212,175,55,.08);border-top:1px solid rgba(212,175,55,.2);overflow:hidden;z-index:2;display:flex;align-items:center;}
+  .ticker .run{display:inline-flex;gap:26px;white-space:nowrap;font-size:11px;font-family:'Geist Mono',monospace;color:var(--gold-soft);animation:run 12s linear infinite;padding-left:100%;}
+  @keyframes run{to{transform:translateX(-100%);}}
+
+  /* 37 Эквалайзер */
+  .eq{display:flex;align-items:flex-end;gap:3px;height:38px;position:relative;z-index:4;margin-top:10px;}
+  .eq i{width:5px;background:linear-gradient(#e8c860,#a9821f);border-radius:2px;animation:eq 1.1s ease-in-out infinite;}
+  @keyframes eq{0%,100%{height:20%}50%{height:100%}}
+
+  /* 40 Морф-форма */
+  .c-morph{transition:border-radius .5s cubic-bezier(.5,0,.2,1.3),transform .2s;}
+  .c-morph:hover{border-radius:40px 12px 40px 12px;}
+
+  /* 43 Волна-заливка */
+  .fill{position:absolute;left:0;right:0;bottom:0;height:0;z-index:0;background:linear-gradient(0deg,rgba(212,175,55,.22),rgba(212,175,55,.04));transition:height .7s cubic-bezier(.3,1,.4,1);}
+  .c-liquid:hover .fill{height:100%;}
+  .fill::before{content:"";position:absolute;top:-8px;left:0;right:0;height:12px;background:radial-gradient(circle at 20% 0,transparent 60%,rgba(212,175,55,.22) 61%) repeat-x;background-size:26px 12px;}
+
+  /* 44 Дышащая рамка */
+  .c-breath{animation:breath 3s ease-in-out infinite;}
+  @keyframes breath{0%,100%{border-color:rgba(212,175,55,.2);box-shadow:0 14px 34px rgba(0,0,0,.5);}50%{border-color:rgba(232,200,96,.75);box-shadow:0 0 22px -4px var(--gold-glow),0 14px 34px rgba(0,0,0,.5);}}
+
+  /* 47 Теплокарта-ячейки */
+  .heat{display:grid;grid-template-columns:repeat(8,1fr);gap:3px;margin-top:12px;position:relative;z-index:4;}
+  .heat i{aspect-ratio:1;border-radius:2px;background:rgba(212,175,55,.12);transition:background .15s,transform .15s;}
+  .heat i:hover{background:var(--gold-bright);transform:scale(1.25);}
+
+  /* 48 Одометр */
+  .odo{display:inline-flex;overflow:hidden;height:30px;position:relative;z-index:4;}
+  .odo .col{width:17px;overflow:hidden;height:30px;}
+  .odo .col b{display:block;font-weight:700;font-size:25px;line-height:30px;transition:transform 1s cubic-bezier(.3,1,.4,1);font-variant-numeric:tabular-nums;}
+
+  /* 49 Неон-трасса */
+  .trace{position:absolute;inset:0;z-index:2;pointer-events:none;}
+  .trace rect{fill:none;stroke:#e8c860;stroke-width:2;stroke-dasharray:640;stroke-dashoffset:640;filter:drop-shadow(0 0 4px var(--gold));}
+  .c-trace:hover .trace rect{animation:trace 1.4s ease forwards;}
+  @keyframes trace{to{stroke-dashoffset:0;}}
+
+  /* 50 Радиальное меню */
+  .radial b{position:absolute;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#1a160c;border:1px solid var(--border-gold);color:var(--gold-bright);z-index:5;
+    left:20px;bottom:20px;transition:transform .35s cubic-bezier(.4,1.4,.5,1),opacity .3s;opacity:0;}
+  .c-radial:hover .radial b{opacity:1;}
+  .c-radial:hover .radial b:nth-child(1){transform:translate(0,-52px);}
+  .c-radial:hover .radial b:nth-child(2){transform:translate(46px,-26px);}
+  .c-radial:hover .radial b:nth-child(3){transform:translate(76px,18px);}
+  .fab{position:absolute;left:20px;bottom:20px;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(#e8c860,#a9821f);color:#1a1408;font-weight:700;z-index:6;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div class="badge"><svg width="22" height="22" viewBox="0 0 48 48" fill="none"><defs><linearGradient id="g" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse"><stop stop-color="#c9a431"/><stop offset=".46" stop-color="#fff6d5"/><stop offset=".56" stop-color="#e8c860"/><stop offset="1" stop-color="#a9821f"/></linearGradient></defs><g stroke="url(#g)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M13 17h13a3.4 3.4 0 1 0-3.4-3.4"/><path d="M13 24h19a3.4 3.4 0 1 1-3.4 3.4"/><path d="M13 31h10a3.4 3.4 0 1 0-3.4 3.4"/></g></svg></div>
+    <div class="wm">КЛИМАТ<b> Pro</b></div>
+  </div>
+  <h1>Карточки 36–50 — максимум интерактива</h1>
+  <p class="lede">Финальная волна: бегущая строка, эквалайзер, одометр, волна-заливка, неон-трасса, перетаскивание, теплокарта, радиальное меню. Наводи, кликай, тяни.</p>
+  <div class="grid" id="grid"></div>
+</div>
+
+<script>
+  var IC='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d4af37" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16v13H4zM9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>';
+  function icon(){return '<div class="ic">'+IC+'</div>';}
+  function kpi(){return '<div class="khead"><div><div class="klabel">Портфель</div><div class="knum">8 400 000 ₽</div><div class="ksub">моё: 5 200 000 ₽</div></div>'+icon()+'</div>';}
+  function eqBars(){var s='';for(var i=0;i<16;i++)s+='<i style="animation-delay:-'+(Math.random()*1.1).toFixed(2)+'s"></i>';return s;}
+  function heatCells(){var s='';for(var i=0;i<32;i++)s+='<i></i>';return s;}
+
+  var V=[
+    {n:'36 · Тикер',t:'живая бегущая строка снизу',cls:'',html:kpi()+'<div class="ticker"><div class="run">ОТОПЛЕНИЕ +3.2М · ВЕНТИЛЯЦИЯ +2.1М · КОНДИЦ. +3.1М · ДЕБИТОРКА 1.24М · ▲ 8.4% · </div></div>',fx:''},
+    {n:'37 · Эквалайзер',t:'золотые столбики «дышат»',cls:'',html:'<div class="khead"><div class="klabel">Портфель</div>'+icon()+'</div><div class="knum" style="margin-top:6px">8 400 000 ₽</div><div class="eq">'+eqBars()+'</div>',fx:''},
+    {n:'38 · Ползунок',t:'тяни — «моё» пересчитывается',cls:'',html:'<div class="klabel">Портфель · моя доля</div><div class="knum" data-my>5 200 000 ₽</div><input type="range" min="0" max="100" value="62" data-slider style="width:100%;margin-top:14px;accent-color:#e8c860;position:relative;z-index:4">',fx:'slider'},
+    {n:'39 · Статус-LED',t:'живой индикатор «онлайн»',cls:'',html:'<div class="khead"><div><div class="klabel">Портфель · LIVE</div><div class="knum">8 400 000 ₽</div></div>'+icon()+'</div><div class="ksub mono" style="display:flex;align-items:center;gap:7px"><span style="width:8px;height:8px;border-radius:50%;background:#6ee7a8;box-shadow:0 0 8px #6ee7a8;animation:eq 1.4s ease-in-out infinite"></span>синхронизировано · 12:04</div>',fx:''},
+    {n:'40 · Морф',t:'форма меняется на hover',cls:'c-morph',html:kpi(),fx:''},
+    {n:'41 · Печать',t:'значение печатается по буквам',cls:'',html:'<div class="klabel">Портфель</div><div class="knum" data-type="8 400 000 ₽">&nbsp;</div><div class="ksub">моё: 5 200 000 ₽</div>',fx:'type'},
+    {n:'42 · Параллакс',t:'слои плывут за курсором',cls:'',html:'<div data-par="0.02" style="position:absolute;right:20px;top:16px;font-size:70px;font-weight:800;color:rgba(212,175,55,.06);z-index:0">₽</div><div data-par="0.06" style="position:relative;z-index:4">'+kpi()+'</div>',fx:'parallax'},
+    {n:'43 · Заливка',t:'жидкость поднимается на hover',cls:'c-liquid',html:'<div class="fill"></div>'+kpi(),fx:''},
+    {n:'44 · Дыхание',t:'рамка мягко пульсирует',cls:'c-breath',html:kpi(),fx:''},
+    {n:'45 · Стопка',t:'приподнимает «стопку» карт',cls:'',html:'<div style="position:absolute;inset:8px 8px auto 8px;height:20px;border-radius:12px;background:rgba(212,175,55,.14);z-index:0;transition:transform .3s" data-stack></div>'+kpi(),fx:'stack'},
+    {n:'46 · Скан',t:'золотая линия сканирует',cls:'',html:kpi()+'<div data-scan style="position:absolute;left:0;right:0;top:0;height:2px;background:linear-gradient(90deg,transparent,#e8c860,transparent);box-shadow:0 0 12px #e8c860;z-index:3"></div>',fx:'scan'},
+    {n:'47 · Теплокарта',t:'ячейки греются под курсором',cls:'',html:'<div class="klabel">Активность за месяц</div><div class="knum" style="font-size:20px;margin-top:6px">8 400 000 ₽</div><div class="heat">'+heatCells()+'</div>',fx:''},
+    {n:'48 · Одометр',t:'разряды прокручиваются',cls:'',html:'<div class="klabel">Портфель</div><div class="odo" data-odo style="margin-top:8px" aria-label="8400000"></div><div class="ksub">моё: 5 200 000 ₽</div>',fx:'odo'},
+    {n:'49 · Неон-трасса',t:'контур прочерчивается на hover',cls:'c-trace',html:'<svg class="trace"><rect x="1" y="1" width="99%" height="98%" rx="15"/></svg>'+kpi(),fx:''},
+    {n:'50 · Радиал-меню',t:'кнопки разлетаются на hover',cls:'c-radial',html:kpi()+'<div class="radial"><b>+</b><b>₽</b><b>↗</b></div><div class="fab">⚡</div>',fx:''}
+  ];
+  document.getElementById('grid').innerHTML=V.map(function(v,i){
+    return '<div class="dir"><span class="num">'+(i+36)+'</span><div class="card '+v.cls+'" data-fx="'+v.fx+'">'+v.html+'</div><div><div class="dname">'+v.n+'</div><div class="ddesc"><em>'+v.t+'</em></div></div></div>';
+  }).join('');
+
+  document.querySelectorAll('.card').forEach(function(card){
+    var fx=card.dataset.fx;
+    if(fx==='slider'){var s=card.querySelector('[data-slider]'),my=card.querySelector('[data-my]');s.addEventListener('input',function(){my.textContent=Math.round(8400000*s.value/100).toLocaleString('ru-RU')+' ₽';});s.addEventListener('click',function(e){e.stopPropagation();});}
+    if(fx==='parallax'){card.addEventListener('mousemove',function(e){var r=card.getBoundingClientRect(),dx=(e.clientX-r.left-r.width/2),dy=(e.clientY-r.top-r.height/2);card.querySelectorAll('[data-par]').forEach(function(l){var k=+l.dataset.par;l.style.transform='translate('+(-dx*k)+'px,'+(-dy*k)+'px)';});});card.addEventListener('mouseleave',function(){card.querySelectorAll('[data-par]').forEach(function(l){l.style.transform='';});});}
+    if(fx==='stack'){var st=card.querySelector('[data-stack]');card.addEventListener('mouseenter',function(){st.style.transform='translateY(-6px) scaleX(.94)';});card.addEventListener('mouseleave',function(){st.style.transform='';});}
+    if(fx==='scan'){var ln=card.querySelector('[data-scan]');function scan(){ln.animate([{top:'0%'},{top:'100%'}],{duration:1600,easing:'ease-in-out'});}card.addEventListener('mouseenter',scan);}
+    if(fx==='type'){var nn=card.querySelector('[data-type]'),txt=nn.dataset.type;var io2=new IntersectionObserver(function(es){es.forEach(function(en){if(en.isIntersecting){var i=0;nn.textContent='';var iv=setInterval(function(){nn.textContent=txt.slice(0,++i);if(i>=txt.length)clearInterval(iv);},70);io2.unobserve(en.target);}});},{threshold:.5});io2.observe(card);}
+    if(fx==='odo'){var wrap=card.querySelector('[data-odo]'),digits='8400000'.split('');wrap.innerHTML=digits.map(function(d){return '<div class="col"><b data-d="'+d+'">0123456789</b></div>';}).join('').replace(/(<\/div>)(<div)/g,'$1<span style="width:6px"></span>$2');
+      var io3=new IntersectionObserver(function(es){es.forEach(function(en){if(en.isIntersecting){card.querySelectorAll('[data-d]').forEach(function(b,idx){setTimeout(function(){b.style.transform='translateY(-'+(+b.dataset.d*30)+'px)';},idx*90);});io3.unobserve(en.target);}});},{threshold:.5});io3.observe(card);
+      var suf=document.createElement('span');suf.className='knum';suf.style.cssText='font-size:25px;margin:0 0 0 4px';suf.textContent='₽';wrap.appendChild(suf);}
+  });
+  var _s=document.createElement('script');_s.src='select.js';document.body.appendChild(_s);
+</script>
+</body>
+</html>

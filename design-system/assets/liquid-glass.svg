@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute;width:0;height:0;pointer-events:none" aria-hidden="true">
+  <!-- Liquid-glass refraction filters. Drop this whole <svg> block once per
+       page that uses .liquid-glass / .glass. lg-warp = the pane's body warp;
+       lg-rim = the stronger edge-lens ring. Tune `scale` for more/less bend. -->
+  <defs>
+    <filter id="lg-warp" x="-40%" y="-40%" width="180%" height="180%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.008 0.010" numOctaves="2" seed="12" result="t"></feTurbulence>
+      <feGaussianBlur in="t" stdDeviation="1.3" result="s"></feGaussianBlur>
+      <feDisplacementMap in="SourceGraphic" in2="s" scale="46" xChannelSelector="R" yChannelSelector="G"></feDisplacementMap>
+    </filter>
+    <filter id="lg-rim" x="-60%" y="-60%" width="220%" height="220%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.010 0.013" numOctaves="2" seed="7" result="t"></feTurbulence>
+      <feGaussianBlur in="t" stdDeviation="1.1" result="s"></feGaussianBlur>
+      <feDisplacementMap in="SourceGraphic" in2="s" scale="96" xChannelSelector="R" yChannelSelector="G"></feDisplacementMap>
+    </filter>
+  </defs>
+</svg>

@@ -1,0 +1,96 @@
+<!-- @dsCard group="Material" viewport="1180x900" name="Жидкое стекло — материал" subtitle="Преломляющее стекло: лаборатория, 4 тира, золото ×2, движение, применение" -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Klimat Pro — Жидкое стекло</title>
+<link rel="stylesheet" href="../styles.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--surface-base); color: var(--text-body); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+
+  /* ── living background — rich enough that the glass has something to bend ── */
+  #bg { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;
+    background:
+      radial-gradient(1200px 760px at 80% -6%, rgba(212,175,55,0.15), transparent 60%),
+      radial-gradient(1000px 700px at 4% 106%, rgba(212,175,55,0.08), transparent 60%),
+      #0a0a0a; }
+  #bg .grid { position: absolute; inset: 0;
+    background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+    -webkit-mask: radial-gradient(circle at 50% 42%, #000, transparent 88%); mask: radial-gradient(circle at 50% 42%, #000, transparent 88%); }
+  #bg .grain { position: absolute; inset: 0; opacity: 0.55;
+    background-image: radial-gradient(rgba(255,255,255,0.02) 1px, transparent 1px); background-size: 3px 3px; }
+  .blob { position: absolute; border-radius: 50%; filter: blur(56px); opacity: 0.3; }
+  .bigfig { position: absolute; font-weight: 800; letter-spacing: -0.04em; color: #fff; opacity: 0.035; white-space: nowrap; }
+
+  /* ── liquid glass material (var-driven; mirrors tokens/.liquid-glass) ──── */
+  .lg { position: relative; isolation: isolate; border-radius: var(--r, 26px);
+    background: var(--tint, var(--glass-tint-neutral));
+    backdrop-filter: blur(var(--blur,6px)) saturate(var(--sat,1.7)) brightness(var(--bri,1.0)) var(--warp);
+    -webkit-backdrop-filter: blur(var(--blur,6px)) saturate(var(--sat,1.7)) brightness(var(--bri,1.0));
+    box-shadow: var(--glass-bevel), var(--shadow-lg);
+    transition: border-radius .55s var(--ease-out), transform .35s var(--ease-out), box-shadow .3s; }
+  .lg--gold-edge { box-shadow: var(--glass-bevel-gold), var(--shadow-lg), var(--glow-gold-sm); --spec: var(--glass-specular-gold); }
+  .lg--gold-tint { --tint: var(--glass-tint-gold); }
+  .lg-lens { position: absolute; inset: 0; border-radius: inherit; padding: var(--band,14px); pointer-events: none; z-index: 1;
+    backdrop-filter: blur(1px) var(--rim); -webkit-backdrop-filter: blur(1px);
+    transition: transform .18s var(--ease-out), padding .5s var(--ease-out); }
+  .lg-shine { position: absolute; inset: 0; border-radius: inherit; padding: 1.4px; pointer-events: none; z-index: 3;
+    background: var(--spec, var(--glass-specular)); }
+  .lg-blik { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 2; opacity: 0;
+    transition: opacity .25s; background: radial-gradient(110px circle at var(--mx,50%) var(--my,50%), rgba(255,255,255,0.20), rgba(255,255,255,0.05) 42%, transparent 66%); }
+  .lg.m-blik:hover .lg-blik { opacity: 1; }
+  .lg-body { position: relative; z-index: 4; }
+
+  /* parallax — tilt + lens shift from --px/--py */
+  .lg.m-par { transform: perspective(1000px) rotateX(calc(var(--py,0) * -5deg)) rotateY(calc(var(--px,0) * 7deg)); transition: transform .12s var(--ease-out); }
+  .lg.m-par .lg-lens { transform: translate(calc(var(--px,0) * -16px), calc(var(--py,0) * -16px)); }
+  /* morph — corners come alive + lens swells on hover */
+  .lg.m-morph:hover { border-radius: calc(var(--r,26px) + 18px) calc(var(--r,26px) - 6px) calc(var(--r,26px) + 12px) calc(var(--r,26px) - 4px) / calc(var(--r,26px) - 6px) calc(var(--r,26px) + 16px) calc(var(--r,26px) - 4px) calc(var(--r,26px) + 10px); }
+  .lg.m-morph:hover .lg-lens { padding: calc(var(--band,14px) + 7px); }
+
+  input[type=range] { -webkit-appearance: none; appearance: none; background: transparent; }
+  input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 999px; background: var(--w-10); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 15px; height: 15px; border-radius: 999px; background: var(--accent); margin-top: -5.5px; box-shadow: 0 1px 3px rgba(0,0,0,0.5); cursor: pointer; }
+
+  @keyframes lgFade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes lgRise { from { opacity: 0; transform: translateX(-50%) translateY(12px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+</style>
+</head>
+<body>
+<!-- refraction filters — one warp/rim pair per material tier + a live pair -->
+<svg width="0" height="0" style="position:absolute;width:0;height:0" aria-hidden="true"><defs>
+  <filter id="warp-sheer" x="-40%" y="-40%" width="180%" height="180%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.010 0.012" numOctaves="2" seed="4" result="t"/><feGaussianBlur in="t" stdDeviation="1.3" result="s"/><feDisplacementMap in="SourceGraphic" in2="s" scale="18" xChannelSelector="R" yChannelSelector="G"/></filter>
+  <filter id="rim-sheer" x="-60%" y="-60%" width="220%" height="220%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.012 0.014" numOctaves="2" seed="9" result="t"/><feGaussianBlur in="t" stdDeviation="1.1" result="s"/><feDisplacementMap in="SourceGraphic" in2="s" scale="45" xChannelSelector="R" yChannelSelector="G"/></filter>
+  <filter id="warp-frost" x="-40%" y="-40%" width="180%" height="180%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.009 0.011" numOctaves="2" seed="3" result="t"/><feGaussianBlur in="t" stdDeviation="1.4" result="s"/><feDisplacementMap in="SourceGraphic" in2="s" scale="26" xChannelSelector="R" yChannelSelector="G"/></filter>
+  <filter id="rim-frost" x="-60%" y="-60%" width="220%" height="220%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.011 0.013" numOctaves="2" seed="6" result="t"/><feGaussianBlur in="t" stdDeviation="1.2" result="s"/><feDisplacementMap in="SourceGraphic" in2="s" scale="60" xChannelSelector="R" yChannelSelector="G"/></filter>
+  <filter id="warp-gel" x="-40%" y="-40%" width="180%" height="180%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.008 0.010" numOctaves="2" seed="12" result="t"/><feGaussianBlur in="t" stdDeviation="1.3" result="s"/><feDisplacementMap in="SourceGraphic" in2="s" scale="58" xChannelSelector="R" yChannelSelector="G"/></filter>
+  <filter id="rim-gel" x="-60%" y="-60%" width="220%" height="220%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.010 0.012" numOctaves="2" seed="7" result="t"/><feGaussianBlur in="t" stdDeviation="1.1" result="s"/><feDisplacementMap in="SourceGraphic" in2="s" scale="118" xChannelSelector="R" yChannelSelector="G"/></filter>
+  <filter id="warp-crystal" x="-40%" y="-40%" width="180%" height="180%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.014 0.016" numOctaves="2" seed="21" result="t"/><feGaussianBlur in="t" stdDeviation="0.9" result="s"/><feDisplacementMap in="SourceGraphic" in2="s" scale="40" xChannelSelector="R" yChannelSelector="G"/></filter>
+  <filter id="rim-crystal" x="-60%" y="-60%" width="220%" height="220%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.016 0.018" numOctaves="2" seed="14" result="t"/><feGaussianBlur in="t" stdDeviation="0.8" result="s"/><feDisplacementMap in="SourceGraphic" in2="s" scale="95" xChannelSelector="R" yChannelSelector="G"/></filter>
+  <filter id="warp-live" x="-40%" y="-40%" width="180%" height="180%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.008 0.010" numOctaves="2" seed="12" result="t"/><feGaussianBlur in="t" stdDeviation="1.3" result="s"/><feDisplacementMap in="SourceGraphic" in2="s" scale="58" xChannelSelector="R" yChannelSelector="G"/></filter>
+  <filter id="rim-live" x="-60%" y="-60%" width="220%" height="220%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.010 0.012" numOctaves="2" seed="7" result="t"/><feGaussianBlur in="t" stdDeviation="1.1" result="s"/><feDisplacementMap in="SourceGraphic" in2="s" scale="118" xChannelSelector="R" yChannelSelector="G"/></filter>
+</defs></svg>
+
+<div id="bg">
+  <div class="grid"></div>
+  <div class="blob" style="width:420px;height:420px;background:#d4af37;left:6%;top:6%"></div>
+  <div class="blob" style="width:340px;height:340px;background:#6ee7a8;left:60%;top:22%"></div>
+  <div class="blob" style="width:300px;height:300px;background:#93c5fd;left:82%;top:60%"></div>
+  <div class="blob" style="width:320px;height:320px;background:#f8a3a3;left:24%;top:70%"></div>
+  <div class="bigfig" style="font-size:150px;left:3%;top:30%">842 500 ₽</div>
+  <div class="bigfig" style="font-size:120px;left:44%;top:78%">КЛИМАТ Pro</div>
+  <div class="grain"></div>
+</div>
+
+<div id="root" style="position:relative;z-index:1"></div>
+
+<script src="glass-lab/glass.jsx" type="text/babel"></script>
+<script src="glass-lab/lab.jsx" type="text/babel"></script>
+</body>
+</html>

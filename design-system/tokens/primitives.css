@@ -1,0 +1,123 @@
+/* ============================================================================
+   primitives.css — minimal global resets + the few brand utilities that are
+   genuinely global (page background, scrollbar, selection, glass + gold edge).
+   Everything else is a token; components compose tokens with inline styles.
+   This file is NOT where you add component CSS — keep it lean.
+   ========================================================================== */
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--surface-base);
+  color: var(--text-body);
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  line-height: var(--lh-normal);
+  letter-spacing: var(--ls-base);
+  font-feature-settings: var(--fnum-tabular);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+/* Forms must inherit Geist — iOS otherwise swaps to its system face */
+input, textarea, select, button {
+  font-family: inherit;
+  font-feature-settings: 'tnum' 1, 'cv11' 1;
+}
+
+/* Mono helper — fixed-grid figures (account numbers, diffs, shortcuts) */
+.font-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── thin gold scrollbar on dark ──────────────────────────────────────── */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--gold-a12); border-radius: var(--radius-xs); }
+::-webkit-scrollbar-thumb:hover { background: var(--gold-a30); }
+
+::selection { background: var(--accent-fill-strong); color: var(--text-strong); }
+
+/* ── Liquid glass — the signature material ───────────────────────────────
+   A frosted, saturated pane that REFRACTS the living background: an edge-lens
+   ring bends light at the rounded rim (feDisplacementMap on the backdrop) and
+   a specular bevel paints the lit 3-D edge. `.glass` is kept as an alias so
+   every existing surface upgrades in place.
+
+   Requires the SVG filter defs once per page (id="lg-warp" + id="lg-rim") —
+   copy the <svg> block from assets/liquid-glass.svg into the document. WITHOUT
+   them the material degrades gracefully to frost + bevel (still convincing).
+   Direct content should be inset by ≥ --glass-lens-band, or wrapped (the React
+   <Card> / <LiquidGlass> lift their body above the layers automatically). ── */
+.liquid-glass, .glass {
+  position: relative;
+  isolation: isolate;
+  border-radius: var(--radius-xl);
+  background: var(--glass-tint-neutral);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.7) brightness(1.0) url(#lg-warp);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.7) brightness(1.0);
+  box-shadow: var(--glass-bevel), var(--shadow-lg);
+}
+.liquid-glass::before, .glass::before {   /* edge-lens refraction ring */
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  border-radius: inherit; padding: var(--glass-lens-band); pointer-events: none;
+  backdrop-filter: blur(1px) url(#lg-rim);
+  -webkit-backdrop-filter: blur(1px);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+}
+.liquid-glass::after, .glass::after {     /* specular bevel / lit edge */
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  border-radius: inherit; padding: 1.4px; pointer-events: none;
+  background: var(--glass-specular);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+}
+
+/* Material tiers — swap blur / clarity for the surface's job. */
+.liquid-glass--sheer   { backdrop-filter: blur(var(--glass-blur-sheer)) saturate(1.5) brightness(1.0) url(#lg-warp); -webkit-backdrop-filter: blur(var(--glass-blur-sheer)) saturate(1.5) brightness(1.0); }
+.liquid-glass--frost   { backdrop-filter: blur(var(--glass-blur-frost)) saturate(1.4) brightness(0.94) url(#lg-warp); -webkit-backdrop-filter: blur(var(--glass-blur-frost)) saturate(1.4) brightness(0.94); }
+.liquid-glass--crystal { backdrop-filter: blur(2px) saturate(1.95) brightness(1.04) contrast(1.05) url(#lg-warp);     -webkit-backdrop-filter: blur(2px) saturate(1.95) brightness(1.04) contrast(1.05); }
+
+/* Gold treatments — (1) lit gold edge, (2) warm gold tint from within. */
+.liquid-glass--gold-edge          { box-shadow: var(--glass-bevel-gold), var(--shadow-lg), var(--glow-gold-sm); }
+.liquid-glass--gold-edge::after   { background: var(--glass-specular-gold); }
+.liquid-glass--gold-tint          { background: var(--glass-tint-gold); }
+
+/* Fallback where backdrop-filter is unsupported — stay legible, drop the glass. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .liquid-glass, .glass { background: rgba(20, 20, 18, 0.92); border: var(--border-hair) solid var(--border-default); }
+  .liquid-glass::before, .glass::before { display: none; }
+}
+
+/* ── Gold "ingot" edge — a metallic gradient border via mask-composite.
+      The signature premium frame. Falls back to a flat gold border where
+      mask-composite is unsupported (old Android WebView). ── */
+.gold-edge { position: relative; }
+.gold-edge::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit;
+  padding: var(--border-ingot); pointer-events: none; z-index: 3;
+  background: linear-gradient(135deg,
+    var(--gold-600) 0%, var(--gold-500) 22%, var(--gold-100) 46%,
+    var(--gold-400) 56%, var(--gold-500) 72%, var(--gold-600) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  opacity: 0.82;
+}
+@supports not ((-webkit-mask-composite: xor) or (mask-composite: exclude)) {
+  .gold-edge::before { display: none; }
+  .gold-edge { border: var(--border-hair) solid var(--border-gold); }
+}
+
+/* Reduced-motion: honor the OS setting, kill decorative animation */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>КЛИМАТ-ПРО · Мастхед — структура + слоганы</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&display=swap" />
+<style>
+  :root{
+    --gold:#d4af37;--gold-bright:#e8c860;--gold-soft:#c9a431;
+    --t1:#fafaf7;--t2:#a8a8a3;--t3:#6b6b67;--t4:#404040;
+    --bd:rgba(255,255,255,.08);--bd2:rgba(255,255,255,.12);--gbd:rgba(212,175,55,.3);--good:#6ee7a8;
+    --glass-tint:linear-gradient(150deg,rgba(16,16,14,.5),rgba(8,8,7,.58) 52%,rgba(0,0,0,.66));
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;min-height:100vh;font-family:'Geist',system-ui,sans-serif;color:var(--t1);background:#0a0a0a;-webkit-font-smoothing:antialiased;}
+  #bg{position:fixed;inset:0;z-index:0;pointer-events:none;}
+  .wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:40px 22px 90px;}
+  .pagehd h1{margin:0 0 6px;font-size:20px;font-weight:700;letter-spacing:-.02em;}
+  .pagehd p{margin:0;font-size:13px;color:var(--t2);max-width:760px;line-height:1.5;}
+  .locked{margin-top:10px;font-size:12px;color:var(--good);}
+  .sechd{display:flex;align-items:baseline;gap:10px;margin:36px 0 14px;}
+  .sechd h2{margin:0;font-size:16px;font-weight:700;}
+  .sechd span{font-size:12px;color:var(--t3);}
+  .frame{margin-bottom:20px;}
+  .flabel{display:flex;align-items:baseline;gap:11px;margin-bottom:10px;flex-wrap:wrap;}
+  .fnum{font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--gold-bright);background:rgba(212,175,55,.12);border:1px solid var(--gbd);border-radius:999px;padding:3px 10px;}
+  .fname{font-size:13.5px;font-weight:600;color:var(--t1);}
+  .fdesc{font-size:12px;color:var(--t3);}
+  .stripe{border:1px solid var(--bd);border-radius:14px;overflow:hidden;background:radial-gradient(700px 240px at 78% -30%,rgba(212,175,55,.07),transparent 60%),#0c0c0b;}
+
+  .pro{position:relative;display:inline-flex;align-items:center;font-weight:800;letter-spacing:.14em;color:#f7e6a8;background:#161310;border-radius:6px;padding:3px 8px 3px 9px;font-size:11px;line-height:1;}
+  .pro::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.2px;pointer-events:none;background:linear-gradient(120deg,#8c6c18,#fff6d5 42%,#e8c860 58%,#8c6c18);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;}
+  .tabs{display:flex;gap:2px;}
+  .tab{position:relative;padding:12px 14px;font-size:13px;font-weight:600;color:var(--t3);cursor:pointer;white-space:nowrap;}
+  .tab.on{color:var(--gold-bright);}
+  .tab.on::after{content:"";position:absolute;left:10px;right:10px;bottom:0;height:2px;border-radius:2px;background:linear-gradient(90deg,var(--gold),var(--gold-bright));box-shadow:0 0 10px rgba(212,175,55,.6);}
+  .segtabs{display:inline-flex;gap:3px;padding:4px;border-radius:11px;background:rgba(0,0,0,.32);border:1px solid var(--bd);}
+  .segtab{padding:8px 14px;border-radius:7px;font:600 12.5px 'Geist';color:var(--t3);cursor:pointer;white-space:nowrap;}
+  .segtab.on{color:var(--gold-bright);background:rgba(212,175,55,.14);box-shadow:inset 0 0 0 1px rgba(212,175,55,.32);}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;font:600 11.5px 'Geist';background:rgba(255,255,255,.04);border:1px solid var(--bd2);color:var(--t2);white-space:nowrap;}
+  .chip.sync{background:rgba(110,231,168,.08);border-color:rgba(110,231,168,.28);color:#bdf0d3;}
+  .d{width:6px;height:6px;border-radius:999px;background:var(--good);box-shadow:0 0 7px var(--good);flex-shrink:0;}
+  .btn.pri{padding:8px 14px;border-radius:8px;font:700 12px 'Geist';color:#1a1408;background:linear-gradient(180deg,#e8c860,#c9a431);border:1px solid rgba(255,246,213,.3);cursor:pointer;white-space:nowrap;}
+  .ico{display:grid;place-items:center;width:30px;height:30px;border-radius:8px;background:rgba(212,175,55,.1);border:1px solid var(--gbd);color:var(--gold);flex-shrink:0;}
+  .avatar{width:30px;height:30px;border-radius:999px;display:grid;place-items:center;background:linear-gradient(150deg,#2a2410,#141210);border:1px solid var(--gbd);color:var(--gold-bright);font-weight:700;font-size:11.5px;flex-shrink:0;}
+  .lg{position:relative;isolation:isolate;background:var(--glass-tint);backdrop-filter:blur(6px) saturate(1.8) url(#lgwarp);-webkit-backdrop-filter:blur(6px) saturate(1.8);box-shadow:inset 0 1px 1px rgba(255,255,255,.5),inset 0 -1px 1px rgba(0,0,0,.4),0 14px 40px rgba(0,0,0,.5);}
+  .lg::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.4px;pointer-events:none;z-index:3;background:linear-gradient(135deg,#a9821f,#e8c860 22%,#fff6d5 46%,#ffe9a8 56%,#e8c860 72%,#a9821f);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;opacity:.9;}
+  .lg .in{position:relative;z-index:4;}
+  .brand{display:flex;align-items:center;gap:10px;min-width:0;}
+  .plain-tag{font-size:12px;color:var(--t3);}
+
+  /* слоганы — 5 подходов */
+  .slog-stripe{padding:22px 24px;}
+  .brandname{margin:0;font-weight:700;letter-spacing:-.02em;font-size:21px;}
+  @keyframes shim{0%{background-position:0 0}100%{background-position:220% 0}}
+  .shimmer{background:linear-gradient(100deg,#a9821f,#d4af37 40%,#fff6d5 52%,#e8c860 62%,#a9821f 82%);background-size:220% auto;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shim 5.5s linear infinite;}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <filter id="lgwarp" x="-40%" y="-40%" width="180%" height="180%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.008 0.010" numOctaves="2" seed="12" result="t"></feTurbulence>
+    <feGaussianBlur in="t" stdDeviation="1.3" result="s"></feGaussianBlur>
+    <feDisplacementMap in="SourceGraphic" in2="s" scale="40" xChannelSelector="R" yChannelSelector="G"></feDisplacementMap>
+  </filter>
+</defs></svg>
+<canvas id="bg"></canvas>
+
+<div class="wrap">
+  <div class="pagehd">
+    <h1>Мастхед — добираем структуру и слоганы</h1>
+    <p>Разделил на 2 независимых решения, чтобы не путать одно с другим. Логотип, компакт-состояние и чип-ряд («6 задач · 2 счёта · Синхронизировано») — зафиксированы и используются как есть во всех примерах ниже.</p>
+    <div class="locked">✓ логотип · ✓ компакт-состояние · ✓ чип-ряд (S3 синхронизация)</div>
+  </div>
+
+  <!-- СТРУКТУРА -->
+  <div class="sechd"><h2>1 · Структура мастхеда</h2><span>где живут вкладки, где действие, стекло на всём блоке или нет</span></div>
+
+  <div class="frame" data-screen-label="Структура T1">
+    <div class="flabel"><span class="fnum">T1</span><span class="fname">Плоская редакция</span><span class="fdesc">— без стекла на всём блоке (стекло — только на карточках контента ниже); вкладки внизу, кнопка действия справа</span></div>
+    <div class="stripe">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;padding:15px 20px 12px;">
+        <div class="brand"><span id="t1" style="display:inline-block;"></span><span class="pro">PRO</span><span class="plain-tag">климат, рассчитанный профессионально</span></div>
+        <div style="display:flex;align-items:center;gap:8px;"><div class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/></svg></div><div class="avatar">ДЕ</div></div>
+      </div>
+      <div style="height:1px;background:linear-gradient(90deg,transparent,rgba(212,175,55,.45),transparent);"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 20px;">
+        <div class="tabs"><div class="tab on">Дашборд</div><div class="tab">Проекты</div><div class="tab">Задачи</div><div class="tab">Финансы</div><div class="tab">Аналитика</div></div>
+        <button class="btn pri">+ Новый проект</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="frame" data-screen-label="Структура T2">
+    <div class="flabel"><span class="fnum">T2</span><span class="fname">Весь блок в стекле</span><span class="fdesc">— двухъярусник целиком плавает как одна стеклянная панель с золотой кромкой; вкладки на затемнённом суб-баре</span></div>
+    <div class="stripe" style="background:radial-gradient(700px 260px at 25% -30%,rgba(212,175,55,.1),transparent 60%),#0b0b0a;padding:14px;">
+      <div class="lg" style="border-radius:16px;">
+        <div class="in" style="display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 18px;">
+          <div class="brand"><span id="t2" style="display:inline-block;"></span><span class="pro">PRO</span><span class="plain-tag">климат, рассчитанный профессионально</span></div>
+          <div style="display:flex;align-items:center;gap:8px;"><div class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg></div><div class="avatar">ДЕ</div></div>
+        </div>
+        <div class="in" style="border-top:1px solid rgba(255,255,255,.07);background:rgba(0,0,0,.22);padding:0 18px;display:flex;justify-content:space-between;align-items:center;">
+          <div class="tabs"><div class="tab on">Дашборд</div><div class="tab">Проекты</div><div class="tab">Задачи</div><div class="tab">Финансы</div><div class="tab">Аналитика</div></div>
+          <span class="chip sync" style="margin:10px 0;"><span class="d"></span>Синхронизировано · 2 мин</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="frame" data-screen-label="Структура T3">
+    <div class="flabel"><span class="fnum">T3</span><span class="fname">Сегмент-вкладки по центру</span><span class="fdesc">— бренд слева, ⌘K по центру-справа, вкладки-таблетки отдельной строкой по центру. App-tool ощущение</span></div>
+    <div class="stripe">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 20px 12px;">
+        <div class="brand"><span id="t3" style="display:inline-block;"></span><span class="pro">PRO</span></div>
+        <div style="display:flex;align-items:center;gap:8px;"><div class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/></svg></div><div class="avatar">ДЕ</div></div>
+      </div>
+      <div style="height:1px;background:linear-gradient(90deg,transparent,rgba(212,175,55,.45),transparent);"></div>
+      <div style="display:flex;justify-content:center;padding:11px;"><div class="segtabs"><div class="segtab on">Дашборд</div><div class="segtab">Проекты</div><div class="segtab">Задачи</div><div class="segtab">Финансы</div><div class="segtab">Аналитика</div></div></div>
+    </div>
+  </div>
+
+  <div class="frame" data-screen-label="Структура T4">
+    <div class="flabel"><span class="fnum">T4</span><span class="fname">Контекст в один ярус</span><span class="fdesc">— компактнее всех: бренд, вкладки и чип-ряд в ОДНОЙ строке (без второго яруса); экономит вертикаль под контент</span></div>
+    <div class="stripe">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 20px;flex-wrap:wrap;">
+        <div class="brand"><span id="t4" style="display:inline-block;"></span><span class="pro">PRO</span></div>
+        <div class="tabs"><div class="tab on">Дашборд</div><div class="tab">Проекты</div><div class="tab">Задачи</div><div class="tab">Финансы</div><div class="tab">Аналитика</div></div>
+        <div style="display:flex;align-items:center;gap:7px;"><span class="chip sync"><span class="d"></span>Синхронизировано</span><div class="avatar">ДЕ</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- СЛОГАНЫ -->
+  <div class="sechd"><h2>2 · Оформление слоганов</h2><span>рабочий «климат, рассчитанный профессионально» + тёплый «Заботимся о тех, кто внутри» — оценивай отдельно от структуры, фон нейтральный</span></div>
+
+  <div class="frame" data-screen-label="Слоган A">
+    <div class="flabel"><span class="fnum">A</span><span class="fname">Стопka, капс+курсив</span><span class="fdesc">— тех. сверху мелким капсом золотым, тёплый под курсивом приглушённым (что было)</span></div>
+    <div class="stripe slog-stripe">
+      <div class="brand">
+        <span id="sa" style="display:inline-block;"></span>
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <div style="font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--gold-soft);text-transform:uppercase;">климат, рассчитанный профессионально</div>
+          <div style="font-size:12.5px;color:var(--t3);font-style:italic;">Заботимся о тех, кто внутри</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="frame" data-screen-label="Слоган B">
+    <div class="flabel"><span class="fnum">B</span><span class="fname">Один слоган + разделитель-точка</span><span class="fdesc">— оба в одну строку через « · », тех. золотым, тёплый серым — компактно, не в два яруса</span></div>
+    <div class="stripe slog-stripe">
+      <div class="brand">
+        <span id="sb" style="display:inline-block;"></span>
+        <div style="font-size:12.5px;white-space:nowrap;"><span style="color:var(--gold-soft);font-weight:500;">климат, рассчитанный профессионально</span><span style="color:var(--t4);margin:0 8px;">·</span><span style="color:var(--t3);font-style:italic;">заботимся о тех, кто внутри</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="frame" data-screen-label="Слоган C">
+    <div class="flabel"><span class="fnum">C</span><span class="fname">Только рабочий в шапке</span><span class="fdesc">— тёплый слоган убран из мастхеда совсем (живёт на логин-экране/футере); в шапке — один чёткий тех. слоган</span></div>
+    <div class="stripe slog-stripe">
+      <div class="brand">
+        <span id="sc" style="display:inline-block;"></span>
+        <div style="font-size:12.5px;color:var(--gold-soft);font-weight:500;">климат, рассчитанный профессионально</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="frame" data-screen-label="Слоган D">
+    <div class="flabel"><span class="fnum">D</span><span class="fname">Тёплый — главный, тех. — подпись</span><span class="fdesc">— переворачиваем иерархию: «Заботимся о тех, кто внутри» крупнее и человечнее, тех.формулировка мелкой подписью под</span></div>
+    <div class="stripe slog-stripe">
+      <div class="brand">
+        <span id="sd" style="display:inline-block;"></span>
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <div style="font-size:14px;color:var(--t1);font-weight:500;">Заботимся о тех, кто внутри</div>
+          <div style="font-size:11px;color:var(--t4);letter-spacing:.04em;">климат, рассчитанный профессионально</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="frame" data-screen-label="Слоган E">
+    <div class="flabel"><span class="fnum">E</span><span class="fname">Без слогана в шапке</span><span class="fdesc">— в самой шапке только бренд+PRO (чище, воздуха больше); оба слогана переезжают на экран входа / о компании</span></div>
+    <div class="stripe slog-stripe">
+      <div class="brand">
+        <span id="se" style="display:inline-block;"></span>
+        <span class="pro">PRO</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="logo-mark.js"></script>
+<script>
+  if(window.KPLogo){
+    ['t1','t2','t3','t4','sa','sb','sc','sd','se'].forEach(function(id){
+      KPLogo.mount(document.getElementById(id),{height:36});
+    });
+  }
+  (function(){
+    var c=document.getElementById('bg'),x=c.getContext('2d'),W,H,DPR=Math.min(devicePixelRatio||1,2),nd=[];
+    var blobs=[{x:.14,y:.1,r:340,a:.12,sx:7e-5,sy:5e-5,p:0},{x:.86,y:.3,r:300,a:.1,sx:5e-5,sy:8e-5,p:2.1}];
+    function rs(){W=innerWidth;H=innerHeight;c.width=W*DPR|0;c.height=H*DPR|0;c.style.width=W+'px';c.style.height=H+'px';x.setTransform(DPR,0,0,DPR,0,0);nd=[];var n=Math.min(Math.round(W*H/38000),34);for(var i=0;i<n;i++)nd.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.14,vy:(Math.random()-.5)*.14,r:Math.random()*1.2+.5});}
+    addEventListener('resize',rs);rs();
+    function f(t){x.clearRect(0,0,W,H);x.fillStyle='#0a0a0a';x.fillRect(0,0,W,H);x.globalCompositeOperation='lighter';
+      blobs.forEach(function(b){var cx=(b.x+Math.sin(t*b.sx+b.p)*.05)*W,cy=(b.y+Math.cos(t*b.sy+b.p)*.05)*H;var g=x.createRadialGradient(cx,cy,0,cx,cy,b.r);g.addColorStop(0,'rgba(212,175,55,'+b.a+')');g.addColorStop(1,'rgba(212,175,55,0)');x.fillStyle=g;x.beginPath();x.arc(cx,cy,b.r,0,6.2832);x.fill();});
+      for(var i=0;i<nd.length;i++){var n=nd[i];n.x+=n.vx;n.y+=n.vy;if(n.x<0||n.x>W)n.vx*=-1;if(n.y<0||n.y>H)n.vy*=-1;}
+      for(var q=0;q<nd.length;q++){x.beginPath();x.arc(nd[q].x,nd[q].y,nd[q].r,0,6.2832);x.fillStyle='rgba(240,216,120,.45)';x.fill();}
+      x.globalCompositeOperation='source-over';requestAnimationFrame(f);}
+    requestAnimationFrame(f);
+  })();
+</script>
+</body>
+</html>
