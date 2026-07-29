@@ -6,6 +6,8 @@ import {
   SKINS,
   deserializeAppearance,
   getAllowedEffects,
+  filterAppearancePanelsForRole,
+  shouldUseLegacyCardTilt,
   isAllowedPair,
   resolvePanelAppearance,
   sanitizeAppearance,
@@ -22,9 +24,36 @@ describe("appearance catalog", () => {
     expect(EFFECTS).toHaveLength(15);
     expect(new Set(SKINS.map(({ id }) => id)).size).toBe(15);
     expect(new Set(EFFECTS.map(({ id }) => id)).size).toBe(15);
-    expect(Object.values(PANEL_IDS)).toHaveLength(14);
-    expect(new Set(Object.values(PANEL_IDS)).size).toBe(14);
+    expect(Object.values(PANEL_IDS)).toHaveLength(13);
+    expect(new Set(Object.values(PANEL_IDS)).size).toBe(13);
     expect(DEFAULT_APPEARANCE).toEqual({ skinId: "classic", effectId: "none", panelOverrides: {}, selfTransferNames: [] });
+  });
+
+  it("targets real content cards, including Admin, instead of control wrappers", () => {
+    expect(PANEL_IDS.adminUsers).toBe("admin.users");
+    expect(PANEL_IDS.adminStats).toBe("admin.stats");
+    expect(PANEL_IDS.adminActivity).toBe("admin.activity");
+    expect(PANEL_IDS.projectsOverview).toBeUndefined();
+    expect(PANEL_IDS.projectsEditor).toBeUndefined();
+    expect(PANEL_IDS.tasksFilters).toBeUndefined();
+    expect(PANEL_IDS.financeControls).toBeUndefined();
+  });
+
+  it("shows Admin appearance targets only to administrators", () => {
+    const panels = [
+      { id: PANEL_IDS.dashboardKpis },
+      { id: PANEL_IDS.adminUsers },
+      { id: PANEL_IDS.adminStats },
+    ];
+    expect(filterAppearancePanelsForRole(panels, "admin")).toEqual(panels);
+    expect(filterAppearancePanelsForRole(panels, "user")).toEqual([{ id: PANEL_IDS.dashboardKpis }]);
+    expect(filterAppearancePanelsForRole(panels, "client")).toEqual([{ id: PANEL_IDS.dashboardKpis }]);
+  });
+
+  it("disables the legacy inline tilt on appearance-managed cards", () => {
+    expect(shouldUseLegacyCardTilt("glass-card kp-hover-glow")).toBe(true);
+    expect(shouldUseLegacyCardTilt("glass-card kp-appearance-surface kp-effect-tilt")).toBe(false);
+    expect(shouldUseLegacyCardTilt("kp-appearance-surface kp-effect-lift")).toBe(false);
   });
 
   it("exposes only allowed effects for a skin", () => {
@@ -76,7 +105,7 @@ describe("appearance preference safety", () => {
     };
     expect(resolvePanelAppearance(preference, PANEL_IDS.tasksBoard))
       .toEqual({ skinId: "dust", effectId: "pulse", inherited: false });
-    expect(resolvePanelAppearance(preference, PANEL_IDS.projectsOverview))
+    expect(resolvePanelAppearance(preference, PANEL_IDS.projectsList))
       .toEqual({ skinId: "classic", effectId: "none", inherited: true });
   });
 

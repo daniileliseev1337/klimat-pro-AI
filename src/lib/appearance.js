@@ -45,16 +45,15 @@ export const PANEL_IDS = Object.freeze({
   dashboardAttention: "dashboard.attention",
   dashboardFinance: "dashboard.finance",
   dashboardProjects: "dashboard.projects",
-  projectsOverview: "projects.overview",
   projectsList: "projects.list",
-  projectsEditor: "projects.editor",
   financeSummary: "finance.summary",
   financeCategories: "finance.categories",
   financeTransactions: "finance.transactions",
-  financeControls: "finance.controls",
   tasksBoard: "tasks.board",
   tasksList: "tasks.list",
-  tasksFilters: "tasks.filters",
+  adminUsers: "admin.users",
+  adminStats: "admin.stats",
+  adminActivity: "admin.activity",
 });
 
 export const DEFAULT_APPEARANCE = Object.freeze({
@@ -67,6 +66,7 @@ export const DEFAULT_APPEARANCE = Object.freeze({
 const SKIN_IDS = new Set(SKINS.map(({ id }) => id));
 const EFFECT_IDS = new Set(EFFECTS.map(({ id }) => id));
 const PANEL_ID_SET = new Set(Object.values(PANEL_IDS));
+const ADMIN_PANEL_IDS = new Set([PANEL_IDS.adminUsers, PANEL_IDS.adminStats, PANEL_IDS.adminActivity]);
 
 const STATIC_EFFECTS = ["none", "grain"];
 const MOTION_EFFECTS = ["glow", "shimmer", "pulse", "lift", "spark", "flip", "border-flow", "breathe", "spotlight", "scan", "bloom", "wave"];
@@ -116,6 +116,15 @@ export function isAllowedPair(skinId, effectId) {
 export function getAllowedEffects(skinId) {
   const allowed = new Set(PAIRS_BY_SKIN[skinId] || []);
   return EFFECTS.filter(({ id }) => allowed.has(id));
+}
+
+export function filterAppearancePanelsForRole(panels, role) {
+  if (!Array.isArray(panels)) return [];
+  return role === "admin" ? panels : panels.filter(({ id }) => !ADMIN_PANEL_IDS.has(id));
+}
+
+export function shouldUseLegacyCardTilt(className = "") {
+  return !String(className).split(/\s+/).includes("kp-appearance-surface");
 }
 
 export function sanitizeAppearance(raw) {

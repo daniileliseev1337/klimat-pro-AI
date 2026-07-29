@@ -8,7 +8,7 @@ import { dueState, dueSuffix, DUE_COLORS, PRIORITY_ORDER, tasksAttention } from 
 import { projectRemaining, paymentsByProject as groupPaymentsByProject, clientTotals, attentionTasks } from "./lib/clientMetrics.js";
 import { validateNewUser } from "./lib/userCreateValidation.js";
 import { parseYandexRows, classifyOperation, categorize, dedupe, normalizeMerchant, hashOperation } from "./lib/bankParsers.js";
-import { PANEL_IDS, deserializeAppearance, resetAppearance, serializeAppearance, withoutPanelOverride } from "./lib/appearance.js";
+import { PANEL_IDS, deserializeAppearance, filterAppearancePanelsForRole, resetAppearance, serializeAppearance, shouldUseLegacyCardTilt, withoutPanelOverride } from "./lib/appearance.js";
 import NotificationBell from "./components/NotificationBell";
 import MagneticButton from "./components/MagneticButton";
 import CommandPalette from "./components/CommandPalette";
@@ -48,20 +48,19 @@ import {
 } from "recharts";
 
 const APPEARANCE_PANELS = [
-  { id: PANEL_IDS.dashboardKpis, label: "Дашборд · показатели" },
-  { id: PANEL_IDS.dashboardAttention, label: "Дашборд · внимание" },
-  { id: PANEL_IDS.dashboardFinance, label: "Дашборд · финансы" },
-  { id: PANEL_IDS.dashboardProjects, label: "Дашборд · проекты" },
-  { id: PANEL_IDS.projectsOverview, label: "Проекты · управление" },
-  { id: PANEL_IDS.projectsList, label: "Проекты · список" },
-  { id: PANEL_IDS.projectsEditor, label: "Проекты · карточка" },
-  { id: PANEL_IDS.tasksFilters, label: "Задачи · управление" },
-  { id: PANEL_IDS.tasksBoard, label: "Задачи · доска" },
-  { id: PANEL_IDS.tasksList, label: "Задачи · список" },
-  { id: PANEL_IDS.financeControls, label: "Финансы · управление" },
-  { id: PANEL_IDS.financeSummary, label: "Финансы · сводка" },
-  { id: PANEL_IDS.financeCategories, label: "Финансы · категории" },
-  { id: PANEL_IDS.financeTransactions, label: "Финансы · операции" },
+  { group: "Дашборд", id: PANEL_IDS.dashboardKpis, label: "Показатели" },
+  { group: "Дашборд", id: PANEL_IDS.dashboardAttention, label: "Требует внимания" },
+  { group: "Дашборд", id: PANEL_IDS.dashboardFinance, label: "Финансовые карточки" },
+  { group: "Дашборд", id: PANEL_IDS.dashboardProjects, label: "Карточки проектов" },
+  { group: "Проекты", id: PANEL_IDS.projectsList, label: "Карточки списка" },
+  { group: "Задачи", id: PANEL_IDS.tasksBoard, label: "Карточки доски" },
+  { group: "Задачи", id: PANEL_IDS.tasksList, label: "Строки списка" },
+  { group: "Финансы", id: PANEL_IDS.financeSummary, label: "Карточки сводки" },
+  { group: "Финансы", id: PANEL_IDS.financeCategories, label: "Диаграммы категорий" },
+  { group: "Финансы", id: PANEL_IDS.financeTransactions, label: "Операции" },
+  { group: "Admin", id: PANEL_IDS.adminUsers, label: "Пользователи" },
+  { group: "Admin", id: PANEL_IDS.adminStats, label: "Статистика" },
+  { group: "Admin", id: PANEL_IDS.adminActivity, label: "Журнал событий" },
 ];
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -857,7 +856,7 @@ const ACTIVITY_LABELS = {
 };
 
 // №10: презентационная лента событий (переиспользуется админ-журналом и историей проекта)
-function ActivityFeed({ items }) {
+function ActivityFeed({ items, appearance, panelId }) {
   if (!items?.length) return <Empty text="Журнал пуст" />;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -870,7 +869,7 @@ function ActivityFeed({ items }) {
         else if (d.label) detail = `${d.label}${d.value != null ? " · " + d.value : ""}`;
         else if (d.name) detail = d.name;
         else if (d.title) detail = d.title;
-        return (
+        const row = (
           <div key={a.id} onMouseMove={spotlightMove} className="kp-card" style={{
             display: "flex", alignItems: "center", gap: 12, padding: "8px 14px",
           }}>
@@ -893,6 +892,9 @@ function ActivityFeed({ items }) {
             </div>
           </div>
         );
+        return panelId
+          ? <AppearancePanel key={a.id} panelId={panelId} appearance={appearance}>{row}</AppearancePanel>
+          : row;
       })}
     </div>
   );
@@ -1543,12 +1545,14 @@ function LogoMark() {
   );
 }
 
-function Card({ children, style = {}, glass = false }) {
+function Card({ children, style = {}, glass = false, className = "", ...surfaceProps }) {
+  const useLegacyTilt = shouldUseLegacyCardTilt(className);
   if (glass) {
     return (
       <div
-        onMouseMove={tiltMove} onMouseLeave={tiltLeave}
-        className="glass-card kp-spotlight kp-hover-glow gold-ingot"
+        {...surfaceProps}
+        onMouseMove={useLegacyTilt ? tiltMove : undefined} onMouseLeave={useLegacyTilt ? tiltLeave : undefined}
+        className={`glass-card kp-spotlight kp-hover-glow gold-ingot ${className}`.trim()}
         style={{ borderRadius: 14, padding: 18, ...style }}
       >
         {children}
@@ -1556,7 +1560,7 @@ function Card({ children, style = {}, glass = false }) {
     );
   }
   return (
-    <div onMouseMove={tiltMove} onMouseLeave={tiltLeave} className="kp-spotlight kp-hover-glow gold-ingot" style={{
+    <div {...surfaceProps} onMouseMove={useLegacyTilt ? tiltMove : undefined} onMouseLeave={useLegacyTilt ? tiltLeave : undefined} className={`kp-spotlight kp-hover-glow gold-ingot ${className}`.trim()} style={{
       background: "#141414",
       border: "1px solid rgba(255,255,255,0.06)",
       borderRadius: 14,
@@ -1730,14 +1734,15 @@ function Modal({ title, onClose, children, maxWidth = 480, icon }) {
 // Поэтому они получают полную визуальную обработку: эффект стекла с лёгким
 // размытием, мягкое свечение акцентным цветом по краю, иконка в подсвеченном
 // квадрате слева, и плавная анимация числа при первом появлении.
-function KpiCard({ label, value, sub, color = "#d4af37", Icon, format, trend }) {
+function KpiCard({ label, value, sub, color = "#d4af37", Icon, format, trend, className = "", ...surfaceProps }) {
   // Определяем формат отображения значения. Если передана функция format,
   // используем её. Если значение строка (например, "65%") — оставляем как есть.
   // Иначе округляем число до целого.
   const isString = typeof value === "string";
+  const useLegacyTilt = shouldUseLegacyCardTilt(className);
 
   return (
-    <div onMouseMove={tiltMove} onMouseLeave={tiltLeave} className="glass-card kp-spotlight kp-hover-glow gold-ingot" style={{ borderRadius: 14, padding: 16, position: "relative", overflow: "hidden" }}>
+    <div {...surfaceProps} onMouseMove={useLegacyTilt ? tiltMove : undefined} onMouseLeave={useLegacyTilt ? tiltLeave : undefined} className={`glass-card kp-spotlight kp-hover-glow gold-ingot ${className}`.trim()} style={{ borderRadius: 14, padding: 16, position: "relative", overflow: "hidden" }}>
       {/* Тонкое цветное свечение в углу — акцент в цвет показателя */}
       <div
         aria-hidden
@@ -3078,11 +3083,11 @@ const ZONE_TITLE = (color) => ({
   margin: "0 0 10px", textTransform: "uppercase",
 });
 
-function ReceivablesCard({ data }) {
+function ReceivablesCard({ data, ...surfaceProps }) {
   const top = data.items.slice(0, 5);
   const rest = data.items.length - top.length;
   return (
-    <Card>
+    <Card {...surfaceProps}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <SectionTitle icon={<Wallet size={13} />}>Дебиторка · жду оплат</SectionTitle>
         <span style={{ color: "#e8c860", fontSize: 14, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{fmt(data.total)}</span>
@@ -3100,12 +3105,12 @@ function ReceivablesCard({ data }) {
   );
 }
 
-function MySharesCard({ shares }) {
+function MySharesCard({ shares, ...surfaceProps }) {
   if (!shares || !shares.length) return null;
   const totalReceived = shares.reduce((s, x) => s + (x.myReceived || 0), 0);
   const top = [...shares].sort((a, b) => b.myReceivable - a.myReceivable).slice(0, 5);
   return (
-    <Card>
+    <Card {...surfaceProps}>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
         <SectionTitle icon={<Wallet size={13} />}>Мои доли в проектах</SectionTitle>
         <span style={{ color: "#6ee7a8", fontSize: 14, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{fmt(totalReceived)}</span>
@@ -3122,9 +3127,9 @@ function MySharesCard({ shares }) {
 
 const EXP_COLORS = ["#d4af37", "#93c5fd", "#f8a3a3", "#6ee7a8", "#b794f6", "var(--text-tertiary)"];
 
-function ExpenseByCategoryCard({ data, tt }) {
+function ExpenseByCategoryCard({ data, tt, ...surfaceProps }) {
   return (
-    <Card>
+    <Card {...surfaceProps}>
       <SectionTitle icon={<BarChart3 size={13} />}>Расходы по категориям</SectionTitle>
       {data.length > 0
         ? <ResponsiveContainer width="100%" height={210}>
@@ -3141,10 +3146,10 @@ function ExpenseByCategoryCard({ data, tt }) {
   );
 }
 
-function CashflowCard({ series, tt }) {
+function CashflowCard({ series, tt, ...surfaceProps }) {
   const has = series.length > 0;
   return (
-    <Card>
+    <Card {...surfaceProps}>
       <SectionTitle icon={<TrendingUp size={13} />}>Накопительный баланс</SectionTitle>
       {has
         ? <ResponsiveContainer width="100%" height={210}>
@@ -3162,11 +3167,11 @@ function CashflowCard({ series, tt }) {
   );
 }
 
-function MyTasksCard({ data }) {
+function MyTasksCard({ data, ...surfaceProps }) {
   const today = todayStr();
   const rows = [...data.overdue, ...data.today];
   return (
-    <Card>
+    <Card {...surfaceProps}>
       <SectionTitle icon={<AlertTriangle size={13} />}>
         Мои задачи · просрочено {data.counts.overdue} · сегодня {data.counts.today}
       </SectionTitle>
@@ -3234,7 +3239,7 @@ function Dashboard({ projects, txs, tasks, onDrillStage, sharesByProject = {}, m
   const itemVariants = { hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } } };
 
   const PERIODS = [["month", "Месяц"], ["quarter", "Квартал"], ["year", "Год"], ["all", "Всё"]];
-  const panel = (id, label, children) => <AppearancePanel panelId={id} label={label} appearance={appearance} customizeMode={customizeMode} onSelect={onSelectAppearancePanel} onReset={onResetAppearancePanel}>{children}</AppearancePanel>;
+  const surface = (id, child) => <AppearancePanel panelId={id} appearance={appearance}>{child}</AppearancePanel>;
 
   return (
     <motion.div style={{ display: "flex", flexDirection: "column", gap: 16 }} variants={containerVariants} initial="hidden" animate="visible">
@@ -3255,23 +3260,21 @@ function Dashboard({ projects, txs, tasks, onDrillStage, sharesByProject = {}, m
 
       {/* KPI ×4 */}
       <motion.div variants={itemVariants}>
-        {panel(PANEL_IDS.dashboardKpis, "Дашборд · показатели", <>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
           <div onClick={() => onDrillStage && onDrillStage("Активные")} style={{ cursor: onDrillStage ? "pointer" : "default" }}>
-            <KpiCard label="Активных проектов" value={active.length} Icon={FolderKanban} color="#d4af37" sub={`всего: ${projects.length}`} />
+            {surface(PANEL_IDS.dashboardKpis, <KpiCard label="Активных проектов" value={active.length} Icon={FolderKanban} color="#d4af37" sub={`всего: ${projects.length}`} />)}
           </div>
-          <KpiCard label="Портфель" value={totalContract} Icon={Briefcase} color="#d4af37" format={fmt} sub={`моё: ${fmt(mineInPortfolio)}`} />
-          <KpiCard label="Получено" value={myReceived} Icon={BadgeCheck} color="#6ee7a8" format={fmt} sub={`жду: ${fmt(debtTotal)}`} />
-          <KpiCard label="Баланс за период" value={bal.balance} Icon={Wallet} color={bal.balance >= 0 ? "#6ee7a8" : "#f8a3a3"} format={fmt} sub={`доходы ${fmt(bal.income)}`} trend={balanceTrend} />
-          </div>
-        </>)}
+          {surface(PANEL_IDS.dashboardKpis, <KpiCard label="Портфель" value={totalContract} Icon={Briefcase} color="#d4af37" format={fmt} sub={`моё: ${fmt(mineInPortfolio)}`} />)}
+          {surface(PANEL_IDS.dashboardKpis, <KpiCard label="Получено" value={myReceived} Icon={BadgeCheck} color="#6ee7a8" format={fmt} sub={`жду: ${fmt(debtTotal)}`} />)}
+          {surface(PANEL_IDS.dashboardKpis, <KpiCard label="Баланс за период" value={bal.balance} Icon={Wallet} color={bal.balance >= 0 ? "#6ee7a8" : "#f8a3a3"} format={fmt} sub={`доходы ${fmt(bal.income)}`} trend={balanceTrend} />)}
+        </div>
       </motion.div>
 
       {/* ЗОНА: Требует внимания */}
       <motion.div variants={itemVariants}>
-        {panel(PANEL_IDS.dashboardAttention, "Дашборд · внимание", <><p style={ZONE_TITLE("#f8a3a3")}>⚠ Требует внимания</p>
+        <p style={ZONE_TITLE("#f8a3a3")}>⚠ Требует внимания</p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
-          <Card>
+          {surface(PANEL_IDS.dashboardAttention, <Card>
             <SectionTitle icon={<AlertTriangle size={13} />}>Просроченные дедлайны проектов</SectionTitle>
             {overdue.length === 0
               ? <p style={{ color: "var(--text-tertiary)", fontSize: 13, margin: 0 }}>Всё в срок</p>
@@ -3281,16 +3284,16 @@ function Dashboard({ projects, txs, tasks, onDrillStage, sharesByProject = {}, m
                   <span style={{ color: "var(--text-tertiary)", fontSize: 11, flexShrink: 0, marginLeft: 8 }}>{fmtD(p.deadline)}</span>
                 </div>
               ))}
-          </Card>
-          <MyTasksCard data={myT} />
-        </div></>)}
+          </Card>)}
+          {surface(PANEL_IDS.dashboardAttention, <MyTasksCard data={myT} />)}
+        </div>
       </motion.div>
 
       {/* ЗОНА: Финансы */}
       <motion.div variants={itemVariants}>
-        {panel(PANEL_IDS.dashboardFinance, "Дашборд · финансы", <><p style={ZONE_TITLE("#e8c860")}>💰 Финансы · за выбранный период</p>
+        <p style={ZONE_TITLE("#e8c860")}>💰 Финансы · за выбранный период</p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginBottom: 16 }}>
-          <Card>
+          {surface(PANEL_IDS.dashboardFinance, <Card>
             <SectionTitle icon={<TrendingUp size={13} />}>Доходы и расходы</SectionTitle>
             {series.some(m => m.inc > 0 || m.exp > 0)
               ? <ResponsiveContainer width="100%" height={210}>
@@ -3304,20 +3307,19 @@ function Dashboard({ projects, txs, tasks, onDrillStage, sharesByProject = {}, m
                   </BarChart>
                 </ResponsiveContainer>
               : <Empty text="Нет финансовых записей за период" />}
-          </Card>
-          <CashflowCard series={series} tt={tt} />
-          <ExpenseByCategoryCard data={expCats} tt={tt} />
+          </Card>)}
+          {surface(PANEL_IDS.dashboardFinance, <CashflowCard series={series} tt={tt} />)}
+          {surface(PANEL_IDS.dashboardFinance, <ExpenseByCategoryCard data={expCats} tt={tt} />)}
         </div>
-        <ReceivablesCard data={debt} />
-        <MySharesCard shares={myShares} />
-        </>)}
+        {surface(PANEL_IDS.dashboardFinance, <ReceivablesCard data={debt} />)}
+        {myShares?.length > 0 && surface(PANEL_IDS.dashboardFinance, <MySharesCard shares={myShares} />)}
       </motion.div>
 
       {/* ЗОНА: Проекты */}
       <motion.div variants={itemVariants}>
-        {panel(PANEL_IDS.dashboardProjects, "Дашборд · проекты", <><p style={ZONE_TITLE("#93c5fd")}>📁 Проекты</p>
+        <p style={ZONE_TITLE("#93c5fd")}>📁 Проекты</p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
-          <Card>
+          {surface(PANEL_IDS.dashboardProjects, <Card>
             <SectionTitle icon={<BarChart3 size={13} />}>Проекты по стадиям</SectionTitle>
             {stageData.length > 0
               ? <ResponsiveContainer width="100%" height={210}>
@@ -3331,8 +3333,8 @@ function Dashboard({ projects, txs, tasks, onDrillStage, sharesByProject = {}, m
                   </PieChart>
                 </ResponsiveContainer>
               : <Empty text="Добавь первый проект" />}
-          </Card>
-          <Card>
+          </Card>)}
+          {surface(PANEL_IDS.dashboardProjects, <Card>
             <SectionTitle icon={<Calendar size={13} />}>Ближайшие дедлайны</SectionTitle>
             {upcoming.length === 0
               ? <p style={{ color: "var(--text-tertiary)", fontSize: 13, margin: 0 }}>Нет запланированных дедлайнов</p>
@@ -3342,9 +3344,8 @@ function Dashboard({ projects, txs, tasks, onDrillStage, sharesByProject = {}, m
                   <span style={{ color: "#e8c860", fontSize: 11, flexShrink: 0, marginLeft: 8 }}>{fmtD(p.deadline)}</span>
                 </div>
               ))}
-          </Card>
+          </Card>)}
         </div>
-        </>)}
       </motion.div>
 
     </motion.div>
@@ -3795,11 +3796,9 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
   const sortFn = SORTS[sortBy]?.fn;
   const visibleSorted = sortFn ? [...visibleForRole].sort(sortFn) : visibleForRole;
   const todayS  = todayStr();
-  const panel = (id, label, children) => <AppearancePanel panelId={id} label={label} appearance={appearance} customizeMode={customizeMode} onSelect={onSelectAppearancePanel} onReset={onResetAppearancePanel}>{children}</AppearancePanel>;
-
   return (
     <div>
-      {panel(PANEL_IDS.projectsOverview, "Проекты · управление", <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:20,alignItems:"center"}}>
+      <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:20,alignItems:"center"}}>
         <div style={{display:"flex",flexWrap:"wrap",gap:6,flex:1}}>
           {["Активные",...PROJECT_STAGES].map(s=>{
             const cnt = s==="Активные" ? projects.filter(p=>!["Оплачен","Архив"].includes(p.stage)).length : projects.filter(p=>p.stage===s).length;
@@ -3833,9 +3832,9 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
           }}
         >{selectMode ? "Отмена" : "Выбрать"}</button>
         <MagneticButton onClick={()=>setModal("add")} className={BTN.primary}>+ Новый проект</MagneticButton>
-      </div>)}
+      </div>
 
-      {panel(PANEL_IDS.projectsList, "Проекты · список", <div style={{display:"flex",flexDirection:"column",gap:12}}>
+      <div style={{display:"flex",flexDirection:"column",gap:12}}>
         {visibleSorted.length===0
           ? <Empty text={stageFilter==="Все"?"Нет проектов — нажми «Новый проект»":`Нет проектов со стадией «${stageFilter}»`}/>
           : visibleSorted.map((p,i)=>{
@@ -3847,7 +3846,8 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
             const canEdit   = p.ownerId===profile?.id || profile?.role==="admin" || p.takenBy===profile?.id;
             const canManage = p.ownerId===profile?.id || profile?.role==="admin";
             return (
-              <div key={p.id} onMouseMove={spotlightMove} className="kp-card kp-rise" style={{padding:16,animationDelay:`${i*40}ms`}}>
+              <AppearancePanel key={p.id} panelId={PANEL_IDS.projectsList} appearance={appearance}>
+              <div onMouseMove={spotlightMove} className="kp-card kp-rise" style={{padding:16,animationDelay:`${i*40}ms`}}>
                 <div style={{display:"flex",alignItems:"flex-start",gap:12}}>
                   {selectMode && (
                     <div style={{paddingTop:2,flexShrink:0}} onClick={e => e.stopPropagation()}>
@@ -4165,6 +4165,7 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
                   </div>
                 </div>
               </div>
+              </AppearancePanel>
             );
           })}
         {selectMode && selectedIds.size > 0 && (() => {
@@ -4194,7 +4195,7 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
             </div>
           );
         })()}
-      </div>)}
+      </div>
 
       {eyeProject && (
         <ProjectVisibilityModal project={eyeProject} client={client} profile={profile} onClose={() => setEyeProject(null)} />
@@ -4211,7 +4212,7 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
 
       {modal&&(
         <Modal title={modal==="add"?"Новый проект":"Редактировать проект"} onClose={()=>!saving&&setModal(null)}>
-          {panel(PANEL_IDS.projectsEditor, "Проекты · карточка", <ProjectForm
+          <ProjectForm
             initial={modal === "add" ? null : { ...modal, shares: (sharesByProject || {})[modal.id] || [] }}
             onSave={saveProject}
             onClose={() => setModal(null)}
@@ -4220,7 +4221,7 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
             profile={profile}
             showToast={showToast}
             isOwner={modal === "add" || (modal && modal.ownerId === profile?.id)}
-          />)}
+          />
         </Modal>
       )}
     </div>
@@ -5092,12 +5093,13 @@ function TaskModal({ task, client, profile, projects, realtimeTick, onClose, onS
 }
 
 // Строка списка задач — те же данные, что на карточке доски, в одну плотную строку.
-function TaskRowList({ t, onOpen, idx = 0 }) {
+function TaskRowList({ t, onOpen, idx = 0, appearance }) {
   const today = todayStr();
   const due = dueState(t.dueDate, today);
   const sm = TASK_STATUS_META[t.status] || { color: "var(--text-tertiary)" };
   const pm = TASK_PRIORITY_META[t.priority] || TASK_PRIORITY_META["Обычный"];
   return (
+    <AppearancePanel panelId={PANEL_IDS.tasksList} appearance={appearance}>
     <div onClick={() => onOpen(t)} onMouseMove={spotlightMove} className="kp-card kp-rise" style={{
       display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
       padding: "10px 14px", marginBottom: 8, cursor: "pointer",
@@ -5116,16 +5118,18 @@ function TaskRowList({ t, onOpen, idx = 0 }) {
       </span>
       {t.hasOpenQuestion && <span title="есть открытый вопрос" style={{ color: "#e8c860", fontSize: 13 }}>💬</span>}
     </div>
+    </AppearancePanel>
   );
 }
 
 // Карточка задачи на доске — стиль B (мокап 2026-06-11). UserAvatar — общий компонент сайта.
-function TaskCardBoard({ t, onOpen, draggable, onDragStart, photos = [], client, idx = 0 }) {
+function TaskCardBoard({ t, onOpen, draggable, onDragStart, photos = [], client, idx = 0, appearance }) {
   const today = todayStr();
   const due = dueState(t.dueDate, today);
   const pm = TASK_PRIORITY_META[t.priority] || TASK_PRIORITY_META["Обычный"];
   const done = t.status === "Готово";
   return (
+    <AppearancePanel panelId={PANEL_IDS.tasksBoard} appearance={appearance}>
     <div draggable={draggable} onDragStart={onDragStart} onClick={() => onOpen(t)}
       onMouseMove={spotlightMove} className="kp-card kp-rise"
       style={{
@@ -5178,10 +5182,11 @@ function TaskCardBoard({ t, onOpen, draggable, onDragStart, photos = [], client,
         </span>
       </div>
     </div>
+    </AppearancePanel>
   );
 }
 
-function TasksBoard({ tasks, onOpen, onReload, client, profile, photosByTask = {}, showToast }) {
+function TasksBoard({ tasks, onOpen, onReload, client, profile, photosByTask = {}, showToast, appearance }) {
   // колонки доски — без «Отменена» (намеренно; отменённые видны фильтром в списке)
   const cols = ["Новая", "В работе", "На проверке", "Готово"];
   const [dragId, setDragId] = useState(null);
@@ -5221,6 +5226,7 @@ function TasksBoard({ tasks, onOpen, onReload, client, profile, photosByTask = {
               {colTasks.map((t, i) => (
                 <TaskCardBoard key={t.id} t={t} onOpen={onOpen} client={client} idx={i}
                   photos={photosByTask[t.id] || []}
+                  appearance={appearance}
                   draggable onDragStart={() => setDragId(t.id)} />
               ))}
               <button onClick={() => onOpen({ status: col, priority: "Обычный" })} style={{
@@ -5335,11 +5341,9 @@ function TasksView({ client, profile, projects, showToast, appearance, customize
       return da - db;
     });
   })();
-  const panel = (id, label, children) => <AppearancePanel panelId={id} label={label} appearance={appearance} customizeMode={customizeMode} onSelect={onSelectAppearancePanel} onReset={onResetAppearancePanel}>{children}</AppearancePanel>;
-
   return (
     <div>
-      {panel(PANEL_IDS.tasksFilters, "Задачи · управление", <><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
         <div>
           <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, letterSpacing: "-0.01em" }}>Задачи</h2>
           <p style={{ margin: "3px 0 0", fontSize: 12, color: "var(--text-tertiary)" }}>
@@ -5383,13 +5387,13 @@ function TasksView({ client, profile, projects, showToast, appearance, customize
         <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text-secondary)" }}>
           <input type="checkbox" checked={onlyMine} onChange={e => setOnlyMine(e.target.checked)} style={{ accentColor: "#d4af37" }} /> только мои
         </label>
-      </div></>)}
+      </div>
       {loading ? <div className="opacity-60">Загрузка…</div> :
-       view === "board" ? panel(PANEL_IDS.tasksBoard, "Задачи · доска", <TasksBoard tasks={shown} onOpen={setEditing} onReload={reload} client={client} profile={profile} photosByTask={photosByTask} showToast={showToast} />) :
-       panel(PANEL_IDS.tasksList, "Задачи · список", <div>
-         {listShown.map((t, i) => <TaskRowList key={t.id} t={t} onOpen={setEditing} idx={i} />)}
+       view === "board" ? <TasksBoard tasks={shown} onOpen={setEditing} onReload={reload} client={client} profile={profile} photosByTask={photosByTask} showToast={showToast} appearance={appearance} /> :
+       <div>
+         {listShown.map((t, i) => <TaskRowList key={t.id} t={t} onOpen={setEditing} idx={i} appearance={appearance} />)}
          {!listShown.length && <div style={{ color: "var(--text-tertiary)", padding: "24px 0", textAlign: "center" }}>Задач нет</div>}
-       </div>)}
+       </div>}
       {editing && <TaskModal task={editing} client={client} profile={profile} projects={projects}
                              realtimeTick={openTaskTick}
                              onClose={() => setEditing(null)} onSaved={() => { setEditing(null); reload(); }}
@@ -5841,11 +5845,11 @@ function Finance({ txs, setTxs, client, ownerId, showToast, projects = [], share
   const incByCatFull = projIncomeMonth > 0 ? [...incByCat, { name: "Проектные доходы", value: projIncomeMonth }] : incByCat;
 
   const tt = {background:"#141414",border:"1px solid #141414",borderRadius:8,fontSize:12,color:"white"};
-  const panel = (id, label, children) => <AppearancePanel panelId={id} label={label} appearance={appearance} customizeMode={customizeMode} onSelect={onSelectAppearancePanel} onReset={onResetAppearancePanel}>{children}</AppearancePanel>;
+  const surface = (id, child) => <AppearancePanel panelId={id} appearance={appearance}>{child}</AppearancePanel>;
 
   return (
     <div>
-      {panel(PANEL_IDS.financeControls, "Финансы · управление", <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:16,alignItems:"center"}}>
+      <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:16,alignItems:"center"}}>
         <div style={{display:"flex",gap:6}}>
           {[["all","Все"],["income","Доходы"],["expense","Расходы"]].map(([v,l])=>(
             <Chip key={v} label={l} active={typeFilter===v} onClick={()=>setTypeFilter(v)}/>
@@ -5862,9 +5866,9 @@ function Finance({ txs, setTxs, client, ownerId, showToast, projects = [], share
         }}>
           📂 Импорт CSV
         </button>
-      </div>)}
+      </div>
 
-      {panel(PANEL_IDS.financeSummary, "Финансы · сводка", <>{(projReceived > 0 || projReceivable > 0) && (
+      {(projReceived > 0 || projReceivable > 0) && surface(PANEL_IDS.financeSummary,
         <Card style={{ marginBottom: 16 }}>
           <SectionTitle>💼 По проектам · моя доля (всего)</SectionTitle>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -5877,8 +5881,7 @@ function Finance({ txs, setTxs, client, ownerId, showToast, projects = [], share
               <div style={{ fontSize: 16, fontWeight: 900, color: projReceivable > 0 ? "#f8a3a3" : "var(--text-tertiary)", marginTop: 4 }}>{fmt(projReceivable)}</div>
             </div>
           </div>
-        </Card>
-      )}
+        </Card>)}
 
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:16}}>
         {[
@@ -5886,17 +5889,19 @@ function Finance({ txs, setTxs, client, ownerId, showToast, projects = [], share
           {label:"Расходы",val:exp,color:"#f8a3a3"},
           {label:"Баланс",val:incTotal-exp,color:incTotal>=exp?"#6ee7a8":"#f8a3a3"},
         ].map(r=>(
-          <Card key={r.label} style={{textAlign:"center"}}>
+          <AppearancePanel key={r.label} panelId={PANEL_IDS.financeSummary} appearance={appearance}>
+          <Card style={{textAlign:"center"}}>
             <Label>{r.label}</Label>
             <div style={{fontSize:16,fontWeight:900,color:r.color,marginTop:4}}>{fmt(r.val)}</div>
           </Card>
+          </AppearancePanel>
         ))}
-      </div></>)}
+      </div>
 
-      {panel(PANEL_IDS.financeCategories, "Финансы · категории", <>{(incByCatFull.length>0||expByCat.length>0)&&(
+      {(incByCatFull.length>0||expByCat.length>0)&&(
         <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:16,marginBottom:16}}>
           {incByCatFull.length>0&&(
-            <Card>
+            surface(PANEL_IDS.financeCategories, <Card>
               <SectionTitle>Источники доходов</SectionTitle>
               <ResponsiveContainer width="100%" height={240}>
                 <PieChart>
@@ -5907,10 +5912,10 @@ function Finance({ txs, setTxs, client, ownerId, showToast, projects = [], share
                   <Legend iconType="circle" iconSize={7} verticalAlign="bottom" wrapperStyle={{paddingTop:6,fontSize:10,lineHeight:"15px"}} formatter={v=><span style={{fontSize:10,color:"var(--text-secondary)"}}>{v}</span>}/>
                 </PieChart>
               </ResponsiveContainer>
-            </Card>
+            </Card>)
           )}
           {expByCat.length>0&&(
-            <Card>
+            surface(PANEL_IDS.financeCategories, <Card>
               <SectionTitle>Структура расходов</SectionTitle>
               <ResponsiveContainer width="100%" height={240}>
                 <PieChart>
@@ -5921,16 +5926,17 @@ function Finance({ txs, setTxs, client, ownerId, showToast, projects = [], share
                   <Legend iconType="circle" iconSize={7} verticalAlign="bottom" wrapperStyle={{paddingTop:6,fontSize:10,lineHeight:"15px"}} formatter={v=><span style={{fontSize:10,color:"var(--text-secondary)"}}>{v}</span>}/>
                 </PieChart>
               </ResponsiveContainer>
-            </Card>
+            </Card>)
           )}
         </div>
-      )}</>)}
+      )}
 
-      {panel(PANEL_IDS.financeTransactions, "Финансы · операции", <div style={{display:"flex",flexDirection:"column",gap:8}}>
+      <div style={{display:"flex",flexDirection:"column",gap:8}}>
         {filtered.length===0
           ? <Empty text="Нет записей за выбранный период"/>
           : filtered.map(t=>(
-            <div key={t.id} onMouseMove={spotlightMove} className="kp-card" style={{
+            <AppearancePanel key={t.id} panelId={PANEL_IDS.financeTransactions} appearance={appearance}>
+            <div onMouseMove={spotlightMove} className="kp-card" style={{
               padding:"12px 16px",display:"flex",alignItems:"center",gap:12,
             }}>
               <div style={{width:4,height:36,borderRadius:2,flexShrink:0,
@@ -5959,8 +5965,9 @@ function Finance({ txs, setTxs, client, ownerId, showToast, projects = [], share
                 }}
               >{confirmDel===t.id?"✓?":"🗑️"}</button>
             </div>
+            </AppearancePanel>
           ))}
-      </div>)}
+      </div>
 
       {modal&&(
         <Modal
@@ -8425,7 +8432,7 @@ function ProfileModal({ profile, client, selfTransferNames = [], onSaveSelfTrans
 // ════════════════════════════════════════════════════════════════════════════
 // ADMIN PAGE — административная панель (v1.5, видна только role=admin)
 // ════════════════════════════════════════════════════════════════════════════
-function AdminPage({ profile, client, showToast }) {
+function AdminPage({ profile, client, showToast, appearance }) {
   const [section, setSection] = useState("users");
   const [users, setUsers] = useState([]);
   const [stats, setStats] = useState(null);
@@ -8598,7 +8605,8 @@ function AdminPage({ profile, client, showToast }) {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {filteredUsers.map(u => (
-                <div key={u.id} style={{
+                <AppearancePanel key={u.id} panelId={PANEL_IDS.adminUsers} appearance={appearance}>
+                <div style={{
                   display: "flex", alignItems: "center", gap: 12,
                   padding: "10px 14px", borderRadius: 10,
                   background: "#141414",
@@ -8716,6 +8724,7 @@ function AdminPage({ profile, client, showToast }) {
                     </div>
                   )}
                 </div>
+                </AppearancePanel>
               ))}
             </div>
           )}
@@ -8724,19 +8733,25 @@ function AdminPage({ profile, client, showToast }) {
 
       {/* Форма «Создать пользователя» — видна только в разделе users */}
       {section === "users" && (
-        <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 8, padding: 14, borderRadius: 12,
-          background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
-          <span style={{ fontSize: 13, color: "var(--text-tertiary)" }}>Создать пользователя</span>
-          <input placeholder="email" value={nu.email} onChange={e => setNu({ ...nu, email: e.target.value })} />
-          <input placeholder="имя" value={nu.name} onChange={e => setNu({ ...nu, name: e.target.value })} />
-          <input placeholder="пароль (≥8)" type="text" value={nu.password} onChange={e => setNu({ ...nu, password: e.target.value })} />
-          <select value={nu.role} onChange={e => setNu({ ...nu, role: e.target.value })}>
+        <AppearancePanel panelId={PANEL_IDS.adminUsers} appearance={appearance}>
+        <div className="kp-card" style={{ marginTop: 16, padding: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <UserPlus size={15} color="#d4af37" />
+            <span style={{ fontSize: 13, fontWeight: 650, color: "#f7f8f8" }}>Создать пользователя</span>
+          </div>
+          <div className="kp-admin-create-grid">
+          <StyledInput aria-label="Email нового пользователя" placeholder="Email" type="email" value={nu.email} onChange={e => setNu({ ...nu, email: e.target.value })} />
+          <StyledInput aria-label="Имя нового пользователя" placeholder="Имя" value={nu.name} onChange={e => setNu({ ...nu, name: e.target.value })} />
+          <StyledInput aria-label="Пароль нового пользователя" placeholder="Пароль (не менее 8 символов)" type="text" value={nu.password} onChange={e => setNu({ ...nu, password: e.target.value })} />
+          <StyledSelect aria-label="Роль нового пользователя" value={nu.role} onChange={e => setNu({ ...nu, role: e.target.value })}>
             <option value="client">Заказчик</option>
             <option value="employee">Сотрудник</option>
-          </select>
+          </StyledSelect>
           <button className={BTN.primary} disabled={nuBusy} onClick={submitNewUser}
             style={{ opacity: nuBusy ? 0.6 : 1 }}>{nuBusy ? "Создаю…" : "Создать"}</button>
+          </div>
         </div>
+        </AppearancePanel>
       )}
 
       {/* Раздел "Статистика" */}
@@ -8759,7 +8774,9 @@ function AdminPage({ profile, client, showToast }) {
                 { label: "Доходов суммарно",     value: stats.income_total,       Icon: TrendingUp,   color: "#6ee7a8", format: fmt },
                 { label: "Расходов суммарно",    value: stats.expense_total,      Icon: TrendingDown, color: "#f8a3a3", format: fmt },
               ].map((it, i) => (
-                <KpiCard key={i} label={it.label} value={Number(it.value || 0)} Icon={it.Icon} color={it.color} format={it.format} />
+                <AppearancePanel key={it.label} panelId={PANEL_IDS.adminStats} appearance={appearance}>
+                  <KpiCard label={it.label} value={Number(it.value || 0)} Icon={it.Icon} color={it.color} format={it.format} />
+                </AppearancePanel>
               ))}
             </div>
           )}
@@ -8769,7 +8786,7 @@ function AdminPage({ profile, client, showToast }) {
       {/* Раздел "Журнал событий" */}
       {section === "activity" && (
         <div>
-          {loading ? <Empty text="Загружаем..." /> : <ActivityFeed items={activity} />}
+          {loading ? <Empty text="Загружаем..." /> : <ActivityFeed items={activity} appearance={appearance} panelId={PANEL_IDS.adminActivity} />}
         </div>
       )}
 
@@ -10152,7 +10169,7 @@ export default function App() {
             {effectiveTab === "myorders" && <ClientOrdersPage orders={clientProjects} client={supabase} profile={profile} showToast={showToast} onChanged={async () => { try { setClientProjects(await fetchMyClientProjects(supabase)); } catch (e) {} }} />}
             {effectiveTab === "finance" && <Finance txs={txs} setTxs={setTxs} client={supabase} ownerId={profile.id} showToast={showToast} projects={projects} sharesByProject={sharesByProject} myShares={myShares} paymentsByProject={paymentsByProject} selfNames={appearance.selfTransferNames} appearance={appearance} customizeMode={appearanceMode} onSelectAppearancePanel={setActiveAppearancePanel} onResetAppearancePanel={(id) => setAppearance(value => withoutPanelOverride(value, id))} />}
             {effectiveTab === "analytics" && <Analytics projects={projects} txs={txs} sharesByProject={sharesByProject} ownerId={profile.id} paymentsByProject={paymentsByProject} />}
-            {effectiveTab === "admin" && profile?.role === "admin" && <AdminPage profile={profile} client={supabase} showToast={showToast} />}
+            {effectiveTab === "admin" && profile?.role === "admin" && <AdminPage profile={profile} client={supabase} showToast={showToast} appearance={appearance} />}
             </>}
           </motion.div>
         </AnimatePresence>
@@ -10206,8 +10223,8 @@ export default function App() {
       {appearanceMode && <AppearanceMode
         draft={appearance}
         activePanelId={activeAppearancePanel}
-        panelLabel={APPEARANCE_PANELS.find((panel) => panel.id === activeAppearancePanel)?.label}
-        panels={APPEARANCE_PANELS}
+        panelLabel={filterAppearancePanelsForRole(APPEARANCE_PANELS, profile?.role).find((panel) => panel.id === activeAppearancePanel)?.label}
+        panels={filterAppearancePanelsForRole(APPEARANCE_PANELS, profile?.role)}
         saving={appearanceSaving}
         saveError={appearanceSaveError}
         onChange={setAppearance}
