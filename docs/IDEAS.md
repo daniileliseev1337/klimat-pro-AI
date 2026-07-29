@@ -22,10 +22,10 @@
 
 ---
 
-## Обновление 2026-07-29 — worktree `codex/personalized-ui`
+## Обновление 2026-07-29 — закрыто в `main` (`2e3d2d1`)
 
-- ⚠ Персонализируемое оформление и закрытие UX-недоделок реализованы локально, но ещё не в `main`: account-level скин+эффект, 14 overrides на реальные рабочие зоны, owner-only preferences migration, self-name editor банка, prefix/legacy merchant rules, mobile review, помощь в профиле и self-hosted copy.
-- ✅ Кодовая проверка: 157/157 Vitest и production build. Миграция применена к live DB, RLS включён и owner-policy структурно проверена. Остаются: authenticated visual QA, merge/deploy/push.
+- ✅ Персонализируемое оформление и закрытие UX-недоделок в `main`: account-level скин+эффект, 14 overrides на реальные рабочие зоны, owner-only preferences migration, self-name editor банка, prefix/legacy merchant rules, mobile review, помощь в профиле и self-hosted copy.
+- ✅ Кодовая проверка: 157/157 Vitest и production build. Миграция применена к live DB, RLS включён и owner-policy структурно проверена. `origin/main` и production обновлены; внешний asset совпадает с `dist`. Остаётся только authenticated visual QA.
 - Дальняя идея «несколько вариантов оформления» не должна порождать второй параллельный механизм: после принятия этой ветки её следует сверить с реализованным account appearance и либо закрыть, либо оставить только для будущего расширения каталога.
 
 ---

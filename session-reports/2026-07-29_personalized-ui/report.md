@@ -20,9 +20,10 @@
 ## Не выполнялось
 
 - Не проведена authenticated visual QA: локальный dev-server не получил безопасный Supabase env.
-- Нет merge, commit, push или deploy.
 
 ## После первичной проверки
 
 - По явному разрешению владельца миграция применена к `supabase-db` после транзакционного preflight (`BEGIN` → DDL → `ROLLBACK`).
 - Структурная проверка: `relrowsecurity = true`, единственная policy `user_appearance_preferences_owner_all` использует и проверяет `user_id = auth.uid()`.
+- Коммит `2e3d2d1` fast-forward перенесён в `main` и pushed в `origin/main`; production развёрнут из проверенного `dist`.
+- Внешний HTTPS вернул 200, asset `assets/index-FdBhWjDr.js` совпадает в `dist`, nginx и опубликованном HTML.
