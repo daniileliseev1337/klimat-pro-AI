@@ -1,6 +1,6 @@
 # Исправление visual-регрессии account appearance — 2026-07-29
 
-Работа выполнена в изолированной ветке `codex/appearance-ui-fix`. `main`, живая БД и production не изменялись.
+Работа начата в изолированной ветке `codex/appearance-ui-fix`, затем по явному разрешению владельца перенесена fast-forward в `main`, применена к живой БД и задеплоена.
 
 ## Исправлено
 
@@ -23,4 +23,9 @@
 
 ## Release
 
-Не выполнялся: исправление требует отдельного явного разрешения владельца на перенос в `main` и deployment.
+- Миграция `20260729_0001_user_appearance_preferences.sql` повторно применена идемпотентно: 6/6 колонок, RLS=true, owner-only policy подтверждена.
+- `main` и `origin/main`: `c38d8a2` (`fix: apply appearance to existing cards`).
+- Финальная проверка объединённого `main`: 161/161 tests, production build PASS, `git diff --check` PASS.
+- Production deploy выполнен из основного checkout; `dist` и nginx совпадают.
+- Внешний HTTPS через WSL: HTML=200, `index-BsHtLjtJ.js`=200, `index-DegNOVBM.css`=200. Windows-запрос с активным VPN дал локальный timeout, но frpc active и внешний маршрут независимо подтверждён.
+- Browser smoke на nginx: правильные asset-хеши, console errors отсутствуют, `scrollWidth === innerWidth`.
