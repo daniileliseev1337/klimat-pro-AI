@@ -3,7 +3,7 @@
 > Единственный источник правды о состоянии проекта. Обновляется в конце каждой рабочей сессии.
 > Правило: не верь датам в других доках — этот файл главнее; расхождение = обнови этот файл.
 
-**Обновлено: 2026-07-29** (`main`/`origin/main` включают `c38d8a2`: исправлена visual-регрессия account appearance; `npm test` = 161/161, production build = PASS. Миграция повторно применена и проверена; production отдаёт `index-BsHtLjtJ.js` + `index-DegNOVBM.css`.)
+**Обновлено: 2026-07-29** (`main`/`origin/main` включают `c38d8a2`: исправлена visual-регрессия account appearance; `npm test` = 161/161, production build = PASS. Миграция повторно применена и проверена; production отдаёт `index-DjaZC-_-.js` + `index-DegNOVBM.css`.)
 
 ## Готово — исправление персонализируемого UI
 
@@ -22,7 +22,7 @@
 - Закрыты: «Помощь» в профиле и ложная подпись `Supabase (Frankfurt)`. Реальная авторизованная visual QA ожидает пользовательскую сессию.
 
 ## Прод
-- **29.07.2026:** `main`/`origin/main` включают `c38d8a2` (`fix: apply appearance to existing cards`). Миграция `20260729_0001` повторно применена к `supabase-db`: 6/6 колонок, RLS=true, policy `user_appearance_preferences_owner_all` использует и проверяет `user_id = auth.uid()`. Фронтенд задеплоен; `dist`, nginx и внешний HTTPS отдают `assets/index-BsHtLjtJ.js` и `assets/index-DegNOVBM.css`, оба asset-запроса HTTPS=200.
+- **29.07.2026:** `main`/`origin/main` включают `c38d8a2` (`fix: apply appearance to existing cards`). Миграция `20260729_0001` повторно применена к `supabase-db`: 6/6 колонок, RLS=true, policy `user_appearance_preferences_owner_all` использует и проверяет `user_id = auth.uid()`. Фронтенд задеплоен; `dist`, nginx и внешний HTTPS отдают `assets/index-DjaZC-_-.js` и `assets/index-DegNOVBM.css`, оба asset-запроса HTTPS=200.
 - Живой: https://193-124-130-236.sslip.io — **HTTP 200 снаружи** и на nginx :8080 (frp-туннель восстановлен после
   возврата VPN Direct-правила `193.124.130.236/32` — инцидент 502 при деплое банка закрыт).
 - Исторический релиз банка v2: **26e0b86** / `index-CRXk9JKF.js` (04.07,
