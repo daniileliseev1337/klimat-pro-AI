@@ -1,7 +1,17 @@
 // Умный импорт выписки Яндекс Банка v2. Чистые функции — покрыты vitest.
 
-// Нормализация описания в ключ мерчанта: разные точки сети → один ключ.
-export function normalizeMerchant(rawDesc) {
+// Служебные типы операций в выписке не являются частью имени мерчанта.
+// Их обязательно убрать до построения ключа, иначе все оплаты начинают
+// «учиться» на одном ключе `оплата`.
+function stripMerchantPrefix(rawDesc) {
+  return (rawDesc || "")
+    .replace(/^\s*оплата\s+товаров\s+и\s+услуг\s*/i, "")
+    .replace(/^\s*оплата\s+сбп\s+qr\s*/i, "")
+    .replace(/^\s*оплата\s+по\s+qr\s*/i, "")
+    .trim();
+}
+
+function normalizeMerchantTokens(rawDesc) {
   const tokens = (rawDesc || "")
     .toLowerCase()
     .replace(/[^a-zа-яё0-9]+/gi, " ")
@@ -9,6 +19,18 @@ export function normalizeMerchant(rawDesc) {
     .split(/\s+/)
     .filter(t => t.length >= 2 && !/^\d+$/.test(t));
   return tokens[0] || "";
+}
+
+// Нормализация описания в ключ мерчанта: разные точки сети → один ключ.
+export function normalizeMerchant(rawDesc) {
+  return normalizeMerchantTokens(stripMerchantPrefix(rawDesc));
+}
+
+// Сохранённые до исправления правила могли иметь старый ключ `оплата`.
+// Только чтение legacy-ключа поддерживается для уже существующих правил;
+// новые записи всегда используют исправленный ключ мерчанта.
+function legacyNormalizeMerchant(rawDesc) {
+  return normalizeMerchantTokens(rawDesc);
 }
 
 // Стандартные группы MCC → категория сайта. Расширяется по мере встреч.
@@ -187,6 +209,10 @@ export async function categorizeLLM(_merchant) { return null; }
 export function categorize(op, learned = new Map()) {
   const key = normalizeMerchant(op.rawDesc);
   if (key && learned.has(key)) return { category: learned.get(key), source: "learned" };
+  const legacyKey = legacyNormalizeMerchant(op.rawDesc);
+  if (legacyKey && legacyKey !== key && learned.has(legacyKey)) {
+    return { category: learned.get(legacyKey), source: "learned-legacy" };
+  }
   const byMcc = categorizeByMcc(op.rawDesc);
   if (byMcc) return { category: byMcc, source: "mcc" };
   const byDict = categorizeByDict(op.rawDesc);

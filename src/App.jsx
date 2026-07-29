@@ -8,6 +8,7 @@ import { dueState, dueSuffix, DUE_COLORS, PRIORITY_ORDER, tasksAttention } from 
 import { projectRemaining, paymentsByProject as groupPaymentsByProject, clientTotals, attentionTasks } from "./lib/clientMetrics.js";
 import { validateNewUser } from "./lib/userCreateValidation.js";
 import { parseYandexRows, classifyOperation, categorize, dedupe, normalizeMerchant, hashOperation } from "./lib/bankParsers.js";
+import { PANEL_IDS, deserializeAppearance, resetAppearance, serializeAppearance, withoutPanelOverride } from "./lib/appearance.js";
 import NotificationBell from "./components/NotificationBell";
 import MagneticButton from "./components/MagneticButton";
 import CommandPalette from "./components/CommandPalette";
@@ -15,6 +16,8 @@ import HelpModal from "./components/HelpModal";
 import TourModal from "./components/TourModal";
 import { helpSectionsFor, shouldAutoStartTour } from "./lib/helpContent";
 import BackgroundCanvas from "./components/BackgroundCanvas";
+import AppearanceMode from "./components/AppearanceMode";
+import AppearancePanel from "./components/AppearancePanel";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, FolderKanban, Wallet, BarChart3,
@@ -43,6 +46,23 @@ import {
   CartesianGrid, Tooltip, Legend, LineChart, Line,
   ResponsiveContainer
 } from "recharts";
+
+const APPEARANCE_PANELS = [
+  { id: PANEL_IDS.dashboardKpis, label: "Дашборд · показатели" },
+  { id: PANEL_IDS.dashboardAttention, label: "Дашборд · внимание" },
+  { id: PANEL_IDS.dashboardFinance, label: "Дашборд · финансы" },
+  { id: PANEL_IDS.dashboardProjects, label: "Дашборд · проекты" },
+  { id: PANEL_IDS.projectsOverview, label: "Проекты · управление" },
+  { id: PANEL_IDS.projectsList, label: "Проекты · список" },
+  { id: PANEL_IDS.projectsEditor, label: "Проекты · карточка" },
+  { id: PANEL_IDS.tasksFilters, label: "Задачи · управление" },
+  { id: PANEL_IDS.tasksBoard, label: "Задачи · доска" },
+  { id: PANEL_IDS.tasksList, label: "Задачи · список" },
+  { id: PANEL_IDS.financeControls, label: "Финансы · управление" },
+  { id: PANEL_IDS.financeSummary, label: "Финансы · сводка" },
+  { id: PANEL_IDS.financeCategories, label: "Финансы · категории" },
+  { id: PANEL_IDS.financeTransactions, label: "Финансы · операции" },
+];
 
 // ════════════════════════════════════════════════════════════════════════════
 // HOOKS — общие утилиты
@@ -896,6 +916,26 @@ async function fetchProfile(client, userId) {
     .single();
   if (error) throw error;
   return data;
+}
+
+async function fetchAppearancePreferences(client, userId) {
+  const { data, error } = await client
+    .from("user_appearance_preferences")
+    .select("user_id, global_skin_id, global_effect_id, panel_overrides, self_transfer_names, updated_at")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw error;
+  return deserializeAppearance(data);
+}
+
+async function upsertAppearancePreferences(client, userId, preferences) {
+  const { data, error } = await client
+    .from("user_appearance_preferences")
+    .upsert({ user_id: userId, ...serializeAppearance(preferences), updated_at: new Date().toISOString() }, { onConflict: "user_id" })
+    .select("user_id, global_skin_id, global_effect_id, panel_overrides, self_transfer_names, updated_at")
+    .single();
+  if (error) throw error;
+  return deserializeAppearance(data);
 }
 
 async function updateNotificationSettings(client, settings) {
@@ -2114,7 +2154,7 @@ function AuthScreen({ onAuthenticated, onError }) {
           gap: 6,
         }}>
           <Cloud size={11} strokeWidth={2.2} />
-          Данные хранятся в защищённой БД Supabase (Frankfurt)
+          Данные хранятся в защищённой базе КЛИМАТ-ПРО
         </p>
       </motion.div>
     </div>
@@ -3148,7 +3188,7 @@ function MyTasksCard({ data }) {
 // ════════════════════════════════════════════════════════════════════════════
 // DASHBOARD — главная страница с KPI и графиками
 // ════════════════════════════════════════════════════════════════════════════
-function Dashboard({ projects, txs, tasks, onDrillStage, sharesByProject = {}, myShares = [], ownerId = null, paymentsByProject = {} }) {
+function Dashboard({ projects, txs, tasks, onDrillStage, sharesByProject = {}, myShares = [], ownerId = null, paymentsByProject = {}, appearance, customizeMode, onSelectAppearancePanel, onResetAppearancePanel }) {
   const [period, setPeriod] = useState("month");
   const range = periodRange(period);
   const prevRange = prevPeriodRange(period);
@@ -3194,6 +3234,7 @@ function Dashboard({ projects, txs, tasks, onDrillStage, sharesByProject = {}, m
   const itemVariants = { hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } } };
 
   const PERIODS = [["month", "Месяц"], ["quarter", "Квартал"], ["year", "Год"], ["all", "Всё"]];
+  const panel = (id, label, children) => <AppearancePanel panelId={id} label={label} appearance={appearance} customizeMode={customizeMode} onSelect={onSelectAppearancePanel} onReset={onResetAppearancePanel}>{children}</AppearancePanel>;
 
   return (
     <motion.div style={{ display: "flex", flexDirection: "column", gap: 16 }} variants={containerVariants} initial="hidden" animate="visible">
@@ -3213,18 +3254,22 @@ function Dashboard({ projects, txs, tasks, onDrillStage, sharesByProject = {}, m
       </motion.div>
 
       {/* KPI ×4 */}
-      <motion.div variants={itemVariants} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
-        <div onClick={() => onDrillStage && onDrillStage("Активные")} style={{ cursor: onDrillStage ? "pointer" : "default" }}>
-          <KpiCard label="Активных проектов" value={active.length} Icon={FolderKanban} color="#d4af37" sub={`всего: ${projects.length}`} />
-        </div>
-        <KpiCard label="Портфель" value={totalContract} Icon={Briefcase} color="#d4af37" format={fmt} sub={`моё: ${fmt(mineInPortfolio)}`} />
-        <KpiCard label="Получено" value={myReceived} Icon={BadgeCheck} color="#6ee7a8" format={fmt} sub={`жду: ${fmt(debtTotal)}`} />
-        <KpiCard label="Баланс за период" value={bal.balance} Icon={Wallet} color={bal.balance >= 0 ? "#6ee7a8" : "#f8a3a3"} format={fmt} sub={`доходы ${fmt(bal.income)}`} trend={balanceTrend} />
+      <motion.div variants={itemVariants}>
+        {panel(PANEL_IDS.dashboardKpis, "Дашборд · показатели", <>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
+          <div onClick={() => onDrillStage && onDrillStage("Активные")} style={{ cursor: onDrillStage ? "pointer" : "default" }}>
+            <KpiCard label="Активных проектов" value={active.length} Icon={FolderKanban} color="#d4af37" sub={`всего: ${projects.length}`} />
+          </div>
+          <KpiCard label="Портфель" value={totalContract} Icon={Briefcase} color="#d4af37" format={fmt} sub={`моё: ${fmt(mineInPortfolio)}`} />
+          <KpiCard label="Получено" value={myReceived} Icon={BadgeCheck} color="#6ee7a8" format={fmt} sub={`жду: ${fmt(debtTotal)}`} />
+          <KpiCard label="Баланс за период" value={bal.balance} Icon={Wallet} color={bal.balance >= 0 ? "#6ee7a8" : "#f8a3a3"} format={fmt} sub={`доходы ${fmt(bal.income)}`} trend={balanceTrend} />
+          </div>
+        </>)}
       </motion.div>
 
       {/* ЗОНА: Требует внимания */}
       <motion.div variants={itemVariants}>
-        <p style={ZONE_TITLE("#f8a3a3")}>⚠ Требует внимания</p>
+        {panel(PANEL_IDS.dashboardAttention, "Дашборд · внимание", <><p style={ZONE_TITLE("#f8a3a3")}>⚠ Требует внимания</p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
           <Card>
             <SectionTitle icon={<AlertTriangle size={13} />}>Просроченные дедлайны проектов</SectionTitle>
@@ -3238,12 +3283,12 @@ function Dashboard({ projects, txs, tasks, onDrillStage, sharesByProject = {}, m
               ))}
           </Card>
           <MyTasksCard data={myT} />
-        </div>
+        </div></>)}
       </motion.div>
 
       {/* ЗОНА: Финансы */}
       <motion.div variants={itemVariants}>
-        <p style={ZONE_TITLE("#e8c860")}>💰 Финансы · за выбранный период</p>
+        {panel(PANEL_IDS.dashboardFinance, "Дашборд · финансы", <><p style={ZONE_TITLE("#e8c860")}>💰 Финансы · за выбранный период</p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginBottom: 16 }}>
           <Card>
             <SectionTitle icon={<TrendingUp size={13} />}>Доходы и расходы</SectionTitle>
@@ -3265,11 +3310,12 @@ function Dashboard({ projects, txs, tasks, onDrillStage, sharesByProject = {}, m
         </div>
         <ReceivablesCard data={debt} />
         <MySharesCard shares={myShares} />
+        </>)}
       </motion.div>
 
       {/* ЗОНА: Проекты */}
       <motion.div variants={itemVariants}>
-        <p style={ZONE_TITLE("#93c5fd")}>📁 Проекты</p>
+        {panel(PANEL_IDS.dashboardProjects, "Дашборд · проекты", <><p style={ZONE_TITLE("#93c5fd")}>📁 Проекты</p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
           <Card>
             <SectionTitle icon={<BarChart3 size={13} />}>Проекты по стадиям</SectionTitle>
@@ -3298,6 +3344,7 @@ function Dashboard({ projects, txs, tasks, onDrillStage, sharesByProject = {}, m
               ))}
           </Card>
         </div>
+        </>)}
       </motion.div>
 
     </motion.div>
@@ -3593,7 +3640,7 @@ function QuickEditPortal({ project, mode, anchorRect, isMobile, client, profile,
   );
 }
 
-function Projects({ projects, setProjects, clients, client, profile, ownerId, showToast, initialStageFilter = "Активные", sharesByProject, setSharesByProject, pendingProjectId, onProjectOpened, setPaymentsByProject, onMakeReport }) {
+function Projects({ projects, setProjects, clients, client, profile, ownerId, showToast, initialStageFilter = "Активные", sharesByProject, setSharesByProject, pendingProjectId, onProjectOpened, setPaymentsByProject, onMakeReport, appearance, customizeMode, onSelectAppearancePanel, onResetAppearancePanel }) {
   const [modal, setModal]             = useState(null);
   const [stageFilter, setStageFilter] = useState(initialStageFilter);
   const [confirmDel, setConfirmDel]   = useState(null);
@@ -3748,10 +3795,11 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
   const sortFn = SORTS[sortBy]?.fn;
   const visibleSorted = sortFn ? [...visibleForRole].sort(sortFn) : visibleForRole;
   const todayS  = todayStr();
+  const panel = (id, label, children) => <AppearancePanel panelId={id} label={label} appearance={appearance} customizeMode={customizeMode} onSelect={onSelectAppearancePanel} onReset={onResetAppearancePanel}>{children}</AppearancePanel>;
 
   return (
     <div>
-      <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:20,alignItems:"center"}}>
+      {panel(PANEL_IDS.projectsOverview, "Проекты · управление", <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:20,alignItems:"center"}}>
         <div style={{display:"flex",flexWrap:"wrap",gap:6,flex:1}}>
           {["Активные",...PROJECT_STAGES].map(s=>{
             const cnt = s==="Активные" ? projects.filter(p=>!["Оплачен","Архив"].includes(p.stage)).length : projects.filter(p=>p.stage===s).length;
@@ -3785,9 +3833,9 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
           }}
         >{selectMode ? "Отмена" : "Выбрать"}</button>
         <MagneticButton onClick={()=>setModal("add")} className={BTN.primary}>+ Новый проект</MagneticButton>
-      </div>
+      </div>)}
 
-      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+      {panel(PANEL_IDS.projectsList, "Проекты · список", <div style={{display:"flex",flexDirection:"column",gap:12}}>
         {visibleSorted.length===0
           ? <Empty text={stageFilter==="Все"?"Нет проектов — нажми «Новый проект»":`Нет проектов со стадией «${stageFilter}»`}/>
           : visibleSorted.map((p,i)=>{
@@ -4146,7 +4194,7 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
             </div>
           );
         })()}
-      </div>
+      </div>)}
 
       {eyeProject && (
         <ProjectVisibilityModal project={eyeProject} client={client} profile={profile} onClose={() => setEyeProject(null)} />
@@ -4163,7 +4211,7 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
 
       {modal&&(
         <Modal title={modal==="add"?"Новый проект":"Редактировать проект"} onClose={()=>!saving&&setModal(null)}>
-          <ProjectForm
+          {panel(PANEL_IDS.projectsEditor, "Проекты · карточка", <ProjectForm
             initial={modal === "add" ? null : { ...modal, shares: (sharesByProject || {})[modal.id] || [] }}
             onSave={saveProject}
             onClose={() => setModal(null)}
@@ -4172,7 +4220,7 @@ function Projects({ projects, setProjects, clients, client, profile, ownerId, sh
             profile={profile}
             showToast={showToast}
             isOwner={modal === "add" || (modal && modal.ownerId === profile?.id)}
-          />
+          />)}
         </Modal>
       )}
     </div>
@@ -5188,7 +5236,7 @@ function TasksBoard({ tasks, onOpen, onReload, client, profile, photosByTask = {
   );
 }
 
-function TasksView({ client, profile, projects, showToast }) {
+function TasksView({ client, profile, projects, showToast, appearance, customizeMode, onSelectAppearancePanel, onResetAppearancePanel }) {
   const [tasks, setTasks] = useState([]);
   const [photosByTask, setPhotosByTask] = useState({});
   const [loading, setLoading] = useState(true);
@@ -5287,10 +5335,11 @@ function TasksView({ client, profile, projects, showToast }) {
       return da - db;
     });
   })();
+  const panel = (id, label, children) => <AppearancePanel panelId={id} label={label} appearance={appearance} customizeMode={customizeMode} onSelect={onSelectAppearancePanel} onReset={onResetAppearancePanel}>{children}</AppearancePanel>;
 
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
+      {panel(PANEL_IDS.tasksFilters, "Задачи · управление", <><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
         <div>
           <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, letterSpacing: "-0.01em" }}>Задачи</h2>
           <p style={{ margin: "3px 0 0", fontSize: 12, color: "var(--text-tertiary)" }}>
@@ -5334,13 +5383,13 @@ function TasksView({ client, profile, projects, showToast }) {
         <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text-secondary)" }}>
           <input type="checkbox" checked={onlyMine} onChange={e => setOnlyMine(e.target.checked)} style={{ accentColor: "#d4af37" }} /> только мои
         </label>
-      </div>
+      </div></>)}
       {loading ? <div className="opacity-60">Загрузка…</div> :
-       view === "board" ? <TasksBoard tasks={shown} onOpen={setEditing} onReload={reload} client={client} profile={profile} photosByTask={photosByTask} showToast={showToast} /> :
-       <div>
+       view === "board" ? panel(PANEL_IDS.tasksBoard, "Задачи · доска", <TasksBoard tasks={shown} onOpen={setEditing} onReload={reload} client={client} profile={profile} photosByTask={photosByTask} showToast={showToast} />) :
+       panel(PANEL_IDS.tasksList, "Задачи · список", <div>
          {listShown.map((t, i) => <TaskRowList key={t.id} t={t} onOpen={setEditing} idx={i} />)}
          {!listShown.length && <div style={{ color: "var(--text-tertiary)", padding: "24px 0", textAlign: "center" }}>Задач нет</div>}
-       </div>}
+       </div>)}
       {editing && <TaskModal task={editing} client={client} profile={profile} projects={projects}
                              realtimeTick={openTaskTick}
                              onClose={() => setEditing(null)} onSaved={() => { setEditing(null); reload(); }}
@@ -5579,9 +5628,9 @@ function CsvImportModal({ onClose, onImport, client, selfNames = [], existingHas
                 }}>✂ Очистить все названия</button>
             </div>
 
-            <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch",marginBottom:16}}>
-            <div style={{border:"1px solid #141414",borderRadius:12,overflow:"hidden",minWidth:440}}>
-              <div style={{
+            <div className="bank-review-scroll" style={{overflowX:"auto",WebkitOverflowScrolling:"touch",marginBottom:16}}>
+            <div className="bank-review-table" style={{border:"1px solid #141414",borderRadius:12,overflow:"hidden",minWidth:440}}>
+              <div className="bank-review-row bank-review-head" style={{
                 display:"grid",gridTemplateColumns:"90px 1fr 130px 90px 32px",gap:8,
                 padding:"8px 12px",background:"#131d2e",
                 fontSize:10,fontWeight:700,color:"#404040",textTransform:"uppercase",letterSpacing:".08em"
@@ -5591,7 +5640,7 @@ function CsvImportModal({ onClose, onImport, client, selfNames = [], existingHas
               </div>
               <div style={{maxHeight:380,overflowY:"auto"}}>
                 {edited.map(row=>(
-                  <div key={row.id} style={{
+                  <div key={row.id} className="bank-review-row" style={{
                     display:"grid",gridTemplateColumns:"90px 1fr 130px 90px 32px",gap:8,
                     padding:"8px 12px",borderTop:"1px solid #141414",alignItems:"center",
                     opacity:row.skip?0.35:1,transition:"opacity .15s",
@@ -5718,7 +5767,7 @@ function CsvImportModal({ onClose, onImport, client, selfNames = [], existingHas
 // ════════════════════════════════════════════════════════════════════════════
 // FINANCE
 // ════════════════════════════════════════════════════════════════════════════
-function Finance({ txs, setTxs, client, ownerId, showToast, projects = [], sharesByProject = {}, myShares = [], paymentsByProject = {} }) {
+function Finance({ txs, setTxs, client, ownerId, showToast, projects = [], sharesByProject = {}, myShares = [], paymentsByProject = {}, selfNames = [], appearance, customizeMode, onSelectAppearancePanel, onResetAppearancePanel }) {
   const isMobile = useIsMobile(); // моб: пироги/гриды сворачиваем в колонку на телефоне
   const [modal, setModal]           = useState(null);
   const [typeFilter, setTypeFilter] = useState("all");
@@ -5792,10 +5841,11 @@ function Finance({ txs, setTxs, client, ownerId, showToast, projects = [], share
   const incByCatFull = projIncomeMonth > 0 ? [...incByCat, { name: "Проектные доходы", value: projIncomeMonth }] : incByCat;
 
   const tt = {background:"#141414",border:"1px solid #141414",borderRadius:8,fontSize:12,color:"white"};
+  const panel = (id, label, children) => <AppearancePanel panelId={id} label={label} appearance={appearance} customizeMode={customizeMode} onSelect={onSelectAppearancePanel} onReset={onResetAppearancePanel}>{children}</AppearancePanel>;
 
   return (
     <div>
-      <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:16,alignItems:"center"}}>
+      {panel(PANEL_IDS.financeControls, "Финансы · управление", <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:16,alignItems:"center"}}>
         <div style={{display:"flex",gap:6}}>
           {[["all","Все"],["income","Доходы"],["expense","Расходы"]].map(([v,l])=>(
             <Chip key={v} label={l} active={typeFilter===v} onClick={()=>setTypeFilter(v)}/>
@@ -5812,9 +5862,9 @@ function Finance({ txs, setTxs, client, ownerId, showToast, projects = [], share
         }}>
           📂 Импорт CSV
         </button>
-      </div>
+      </div>)}
 
-      {(projReceived > 0 || projReceivable > 0) && (
+      {panel(PANEL_IDS.financeSummary, "Финансы · сводка", <>{(projReceived > 0 || projReceivable > 0) && (
         <Card style={{ marginBottom: 16 }}>
           <SectionTitle>💼 По проектам · моя доля (всего)</SectionTitle>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -5841,9 +5891,9 @@ function Finance({ txs, setTxs, client, ownerId, showToast, projects = [], share
             <div style={{fontSize:16,fontWeight:900,color:r.color,marginTop:4}}>{fmt(r.val)}</div>
           </Card>
         ))}
-      </div>
+      </div></>)}
 
-      {(incByCatFull.length>0||expByCat.length>0)&&(
+      {panel(PANEL_IDS.financeCategories, "Финансы · категории", <>{(incByCatFull.length>0||expByCat.length>0)&&(
         <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:16,marginBottom:16}}>
           {incByCatFull.length>0&&(
             <Card>
@@ -5874,9 +5924,9 @@ function Finance({ txs, setTxs, client, ownerId, showToast, projects = [], share
             </Card>
           )}
         </div>
-      )}
+      )}</>)}
 
-      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+      {panel(PANEL_IDS.financeTransactions, "Финансы · операции", <div style={{display:"flex",flexDirection:"column",gap:8}}>
         {filtered.length===0
           ? <Empty text="Нет записей за выбранный период"/>
           : filtered.map(t=>(
@@ -5910,7 +5960,7 @@ function Finance({ txs, setTxs, client, ownerId, showToast, projects = [], share
               >{confirmDel===t.id?"✓?":"🗑️"}</button>
             </div>
           ))}
-      </div>
+      </div>)}
 
       {modal&&(
         <Modal
@@ -5924,7 +5974,7 @@ function Finance({ txs, setTxs, client, ownerId, showToast, projects = [], share
           onClose={()=>setCsvModal(false)}
           onImport={handleCsvImport}
           client={client}
-          selfNames={[]}
+          selfNames={selfNames}
           existingHashes={new Set(txs.map(t => hashOperation({ date: t.date, amount: t.amount, rawDesc: t.description })))}
         />
       )}
@@ -8050,9 +8100,11 @@ function ClientsPage({ clients, setClients, projects, client, ownerId, showToast
 // ════════════════════════════════════════════════════════════════════════════
 // PROFILE MODAL — настройки своего профиля (v1.5)
 // ════════════════════════════════════════════════════════════════════════════
-function ProfileModal({ profile, client, onClose, onProfileUpdated, showToast }) {
+function ProfileModal({ profile, client, selfTransferNames = [], onSaveSelfTransferNames, onClose, onProfileUpdated, onOpenAppearance, onOpenHelp, showToast }) {
   const [name, setSaveName]      = useState(profile?.name || "");
   const [position, setPosition]  = useState(profile?.position || "");
+  const [selfTransferNamesText, setSelfTransferNamesText] = useState(() => selfTransferNames.join("\n"));
+  const [savingSelfTransferNames, setSavingSelfTransferNames] = useState(false);
   const [saving, setSaving]      = useState(false);
   // Режим высокого контраста — per-device (localStorage), не в аккаунте: зависит от экрана.
   const [hc, setHc] = useState(() => { try { return localStorage.getItem("kp-hc") === "1"; } catch { return false; } });
@@ -8111,6 +8163,20 @@ function ProfileModal({ profile, client, onClose, onProfileUpdated, showToast })
       showToast("Ошибка: " + (e.message || ""), "error");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const saveSelfTransferNames = async () => {
+    const names = [...new Set(selfTransferNamesText.split(/[\n,]/).map((item) => item.trim()).filter((item) => item.length >= 2))].slice(0, 12);
+    setSavingSelfTransferNames(true);
+    try {
+      await onSaveSelfTransferNames?.(names);
+      setSelfTransferNamesText(names.join("\n"));
+      showToast("✓ Варианты имени сохранены");
+    } catch {
+      showToast("Не удалось сохранить варианты имени", "error");
+    } finally {
+      setSavingSelfTransferNames(false);
     }
   };
 
@@ -8224,6 +8290,13 @@ function ProfileModal({ profile, client, onClose, onProfileUpdated, showToast })
         Имя и должность видят другие участники команды. Email и роль изменить нельзя.
       </div>
 
+      <div style={{ marginBottom: 16, padding: "12px 14px", borderRadius: 10, background: "rgba(147,197,253,0.04)", border: "1px solid rgba(147,197,253,0.15)" }}>
+        <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text-primary)", marginBottom: 5 }}>Варианты имени для банковского импорта</div>
+        <p style={{ fontSize: 11, color: "var(--text-tertiary)", margin: "0 0 8px", lineHeight: 1.45 }}>По одному варианту на строку. Нужны только для распознавания переводов себе; в интерфейсе команды они не показываются.</p>
+        <textarea value={selfTransferNamesText} onChange={(event) => setSelfTransferNamesText(event.target.value)} placeholder={"Например:\nДаниил Владимирович Е.\nЕлисеев Даниил"} rows={3} style={{ width: "100%", resize: "vertical", minHeight: 62, boxSizing: "border-box", borderRadius: 8, border: "1px solid var(--border-subtle)", background: "rgba(0,0,0,.16)", color: "var(--text-primary)", padding: "8px 10px", fontFamily: "inherit", fontSize: 12, lineHeight: 1.4 }} />
+        <button type="button" onClick={saveSelfTransferNames} disabled={savingSelfTransferNames} className={BTN.ghost} style={{ marginTop: 8, padding: "6px 10px" }}>{savingSelfTransferNames ? "Сохраняем…" : "Сохранить варианты"}</button>
+      </div>
+
       {/* ── Режим «Повышение контрастности» (этого устройства) ──────────── */}
       <div style={{
         marginBottom: 16, padding: "12px 14px", borderRadius: 10,
@@ -8245,6 +8318,19 @@ function ProfileModal({ profile, client, onClose, onProfileUpdated, showToast })
         <p style={{ fontSize: 11, color: "var(--text-tertiary)", margin: "8px 0 0", lineHeight: 1.5 }}>
           Делает текст белым, а палитру — ярче на этом устройстве: для большей читаемости. Действует только на этом устройстве.
         </p>
+      </div>
+
+      <div style={{
+        marginBottom: 16, padding: "12px 14px", borderRadius: 10,
+        background: "rgba(212,175,55,0.04)", border: "1px solid rgba(212,175,55,0.16)",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text-primary)" }}>Оформление интерфейса</div>
+            <p style={{ fontSize: 11, color: "var(--text-tertiary)", margin: "4px 0 0", lineHeight: 1.45 }}>Общий стиль аккаунта и индивидуальные настройки панелей.</p>
+          </div>
+          <button type="button" onClick={onOpenAppearance} className={BTN.ghost} style={{ whiteSpace: "nowrap", padding: "7px 10px" }}>Настроить</button>
+        </div>
       </div>
 
       {/* ── Логотип (этого устройства) ─────────────────────────────────── */}
@@ -8325,7 +8411,8 @@ function ProfileModal({ profile, client, onClose, onProfileUpdated, showToast })
         <NotifToggle label="Уведомления о задачах"                      notifKey="notifTask" />
       </div>
 
-      <div style={{ display: "flex", gap: 10 }}>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <button type="button" onClick={onOpenHelp} className={BTN.ghost} style={{ flex: "1 1 100%" }}>Помощь и быстрый тур</button>
         <button onClick={onClose} className={BTN.ghost} style={{ flex: 1 }} disabled={saving}>Закрыть</button>
         <button onClick={save} className={BTN.primary} style={{ flex: 2, opacity: saving ? 0.6 : 1 }} disabled={saving}>
           {saving ? "Сохраняем..." : "Сохранить"}
@@ -9248,6 +9335,14 @@ export default function App() {
 
   const [user, setUser]       = useState(null);
   const [profile, setProfile] = useState(null);
+  const [appearance, setAppearance] = useState(() => resetAppearance());
+  const [confirmedAppearance, setConfirmedAppearance] = useState(() => resetAppearance());
+  const [appearanceMode, setAppearanceMode] = useState(false);
+  const [activeAppearancePanel, setActiveAppearancePanel] = useState(null);
+  const [appearanceSaving, setAppearanceSaving] = useState(false);
+  const [appearanceSaveError, setAppearanceSaveError] = useState("");
+  const appearanceUserIdRef = useRef(null);
+  const appearanceRequestRef = useRef(null);
 
   const [tab, setTab]               = useState("dashboard");
   const [pendingStageFilter, setPendingStageFilter] = useState("Активные");
@@ -9298,6 +9393,77 @@ export default function App() {
     toastTimer.current = setTimeout(()=>setToast(t => ({ ...t, visible: false })), 2500);
   }, []);
 
+  const appearanceCacheKey = (userId) => `kp-appearance:${userId}`;
+  const hydrateAppearance = useCallback(async (userId) => {
+    const requestToken = Symbol("appearance-hydration");
+    appearanceUserIdRef.current = userId;
+    appearanceRequestRef.current = requestToken;
+    const stillCurrent = () => appearanceUserIdRef.current === userId && appearanceRequestRef.current === requestToken;
+    const key = appearanceCacheKey(userId);
+    try {
+      const cached = localStorage.getItem(key);
+      if (cached && stillCurrent()) {
+        const safeCached = deserializeAppearance(JSON.parse(cached));
+        setAppearance(safeCached);
+        setConfirmedAppearance(safeCached);
+      }
+    } catch {}
+    try {
+      const saved = await fetchAppearancePreferences(supabase, userId);
+      if (!stillCurrent()) return;
+      setAppearance(saved);
+      setConfirmedAppearance(saved);
+      try { localStorage.setItem(key, JSON.stringify(saved)); } catch {}
+    } catch (error) {
+      // The migration can legitimately be absent before the separately gated DB step.
+      console.warn("Appearance preferences are unavailable:", error?.message || error);
+    }
+  }, []);
+
+  const saveAppearance = async () => {
+    if (!profile?.id) return;
+    setAppearanceSaving(true);
+    setAppearanceSaveError("");
+    try {
+      const saved = await upsertAppearancePreferences(supabase, profile.id, appearance);
+      setAppearance(saved);
+      setConfirmedAppearance(saved);
+      try { localStorage.setItem(appearanceCacheKey(profile.id), JSON.stringify(saved)); } catch {}
+      setAppearanceMode(false);
+      setActiveAppearancePanel(null);
+      showToast("✓ Оформление сохранено в аккаунте");
+    } catch (error) {
+      setAppearance(confirmedAppearance);
+      setAppearanceSaveError("Не удалось сохранить настройку аккаунта. Проверьте подключение и повторите.");
+      showToast("Не удалось сохранить оформление", "error");
+    } finally {
+      setAppearanceSaving(false);
+    }
+  };
+
+  const saveSelfTransferNames = async (names) => {
+    if (!profile?.id) throw new Error("Нет активного аккаунта");
+    const next = deserializeAppearance({ ...appearance, selfTransferNames: names });
+    const saved = await upsertAppearancePreferences(supabase, profile.id, next);
+    setAppearance(saved);
+    setConfirmedAppearance(saved);
+    try { localStorage.setItem(appearanceCacheKey(profile.id), JSON.stringify(saved)); } catch {}
+  };
+
+  const closeAppearanceMode = () => {
+    setAppearance(confirmedAppearance);
+    setAppearanceMode(false);
+    setActiveAppearancePanel(null);
+    setAppearanceSaveError("");
+  };
+
+  const openAppearanceMode = () => {
+    setAppearance(confirmedAppearance);
+    setAppearanceMode(true);
+    setActiveAppearancePanel(null);
+    setAppearanceSaveError("");
+  };
+
   // ── Инициализация: проверяем сохранённую сессию ─────────────────────────
   // В отличие от версии для артефактов Claude, здесь не нужно ждать
   // загрузки библиотеки с CDN — клиент supabase уже создан на уровне
@@ -9321,6 +9487,7 @@ export default function App() {
             }
             setUser(session.user);
             setProfile(prof);
+            void hydrateAppearance(session.user.id);
             // Ф3: роли определяем ДО загрузки — у чистого посетителя реальные RPC не зовём (ноль утечки данных).
             const rl = await fetchMyRoles(supabase).catch(() => []);
             setMyRoles(rl);
@@ -9389,6 +9556,12 @@ export default function App() {
       if (event === "SIGNED_OUT") {
         setUser(null);
         setProfile(null);
+        appearanceUserIdRef.current = null;
+        appearanceRequestRef.current = null;
+        setAppearance(resetAppearance());
+        setConfirmedAppearance(resetAppearance());
+        setAppearanceMode(false);
+        setActiveAppearancePanel(null);
         setProjects([]);
         setTxs([]);
         setTasks([]);
@@ -9414,6 +9587,7 @@ export default function App() {
   const handleAuthenticated = async (u, prof) => {
     setUser(u);
     setProfile(prof);
+    void hydrateAppearance(u.id);
     try {
       // Ф3: роли определяем ДО загрузки — у чистого посетителя реальные RPC не зовём (ноль утечки данных).
       const rl = await fetchMyRoles(supabase).catch(() => []);
@@ -9970,13 +10144,13 @@ export default function App() {
                 {effectiveTab === "myorders"  && <ClientOrdersPage orders={clientProjects} client={supabase} profile={profile} showToast={showToast} onChanged={async () => { try { setClientProjects(await fetchMyClientProjects(supabase)); } catch (e) {} }} />}
               </>
             ) : <>
-            {effectiveTab === "dashboard" && <Dashboard projects={projects} txs={txs} tasks={tasks} onDrillStage={(stage) => { setPendingStageFilter(stage); setTab("projects"); }} sharesByProject={sharesByProject} myShares={myShares} ownerId={profile.id} paymentsByProject={paymentsByProject} />}
-            {effectiveTab === "projects" && <Projects projects={projects} setProjects={setProjects} clients={clients} client={supabase} profile={profile} ownerId={profile.id} showToast={showToast} initialStageFilter={pendingStageFilter} sharesByProject={sharesByProject} setSharesByProject={setSharesByProject} pendingProjectId={pendingProjectId} onProjectOpened={() => setPendingProjectId(null)} setPaymentsByProject={setPaymentsByProject} onMakeReport={(sel)=>{ setReportProjects(sel); setReportModal(true); }} />}
-            {effectiveTab === "tasks" && <TasksView client={supabase} profile={profile} projects={projects} showToast={showToast} />}
+            {effectiveTab === "dashboard" && <Dashboard projects={projects} txs={txs} tasks={tasks} onDrillStage={(stage) => { setPendingStageFilter(stage); setTab("projects"); }} sharesByProject={sharesByProject} myShares={myShares} ownerId={profile.id} paymentsByProject={paymentsByProject} appearance={appearance} customizeMode={appearanceMode} onSelectAppearancePanel={setActiveAppearancePanel} onResetAppearancePanel={(id) => setAppearance(value => withoutPanelOverride(value, id))} />}
+            {effectiveTab === "projects" && <Projects projects={projects} setProjects={setProjects} clients={clients} client={supabase} profile={profile} ownerId={profile.id} showToast={showToast} initialStageFilter={pendingStageFilter} sharesByProject={sharesByProject} setSharesByProject={setSharesByProject} pendingProjectId={pendingProjectId} onProjectOpened={() => setPendingProjectId(null)} setPaymentsByProject={setPaymentsByProject} onMakeReport={(sel)=>{ setReportProjects(sel); setReportModal(true); }} appearance={appearance} customizeMode={appearanceMode} onSelectAppearancePanel={setActiveAppearancePanel} onResetAppearancePanel={(id) => setAppearance(value => withoutPanelOverride(value, id))} />}
+            {effectiveTab === "tasks" && <TasksView client={supabase} profile={profile} projects={projects} showToast={showToast} appearance={appearance} customizeMode={appearanceMode} onSelectAppearancePanel={setActiveAppearancePanel} onResetAppearancePanel={(id) => setAppearance(value => withoutPanelOverride(value, id))} />}
             {effectiveTab === "clients" && <ClientsPage clients={clients} setClients={setClients} projects={projects} client={supabase} ownerId={profile.id} showToast={showToast} />}
             {effectiveTab === "requests" && <EmployeeRequestsPage client={supabase} showToast={showToast} />}
             {effectiveTab === "myorders" && <ClientOrdersPage orders={clientProjects} client={supabase} profile={profile} showToast={showToast} onChanged={async () => { try { setClientProjects(await fetchMyClientProjects(supabase)); } catch (e) {} }} />}
-            {effectiveTab === "finance" && <Finance txs={txs} setTxs={setTxs} client={supabase} ownerId={profile.id} showToast={showToast} projects={projects} sharesByProject={sharesByProject} myShares={myShares} paymentsByProject={paymentsByProject} />}
+            {effectiveTab === "finance" && <Finance txs={txs} setTxs={setTxs} client={supabase} ownerId={profile.id} showToast={showToast} projects={projects} sharesByProject={sharesByProject} myShares={myShares} paymentsByProject={paymentsByProject} selfNames={appearance.selfTransferNames} appearance={appearance} customizeMode={appearanceMode} onSelectAppearancePanel={setActiveAppearancePanel} onResetAppearancePanel={(id) => setAppearance(value => withoutPanelOverride(value, id))} />}
             {effectiveTab === "analytics" && <Analytics projects={projects} txs={txs} sharesByProject={sharesByProject} ownerId={profile.id} paymentsByProject={paymentsByProject} />}
             {effectiveTab === "admin" && profile?.role === "admin" && <AdminPage profile={profile} client={supabase} showToast={showToast} />}
             </>}
@@ -10021,9 +10195,26 @@ export default function App() {
       {profileModal && <ProfileModal
         profile={profile}
         client={supabase}
+        selfTransferNames={appearance.selfTransferNames}
+        onSaveSelfTransferNames={saveSelfTransferNames}
         onClose={() => setProfileModal(false)}
         onProfileUpdated={(p) => setProfile(p)}
+        onOpenAppearance={() => { setProfileModal(false); openAppearanceMode(); }}
+        onOpenHelp={() => { setProfileModal(false); setHelpOpen(true); }}
         showToast={showToast}
+      />}
+      {appearanceMode && <AppearanceMode
+        draft={appearance}
+        activePanelId={activeAppearancePanel}
+        panelLabel={APPEARANCE_PANELS.find((panel) => panel.id === activeAppearancePanel)?.label}
+        panels={APPEARANCE_PANELS}
+        saving={appearanceSaving}
+        saveError={appearanceSaveError}
+        onChange={setAppearance}
+        onSave={saveAppearance}
+        onClose={closeAppearanceMode}
+        onSelectPanel={setActiveAppearancePanel}
+        onClearPanel={(panelId) => { setAppearance(value => withoutPanelOverride(value, panelId)); setActiveAppearancePanel(null); }}
       />}
       {helpOpen && <HelpModal
         sections={helpSectionsFor(TABS.map((t) => t.id))}

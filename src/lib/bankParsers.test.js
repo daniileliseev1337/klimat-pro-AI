@@ -10,6 +10,11 @@ describe("normalizeMerchant", () => {
     expect(normalizeMerchant("Pyaterochka 5231")).toBe("pyaterochka");
     expect(normalizeMerchant("  VERNYJ 1300 ")).toBe("vernyj");
   });
+  it("не сохраняет служебный префикс операции как мерчанта", () => {
+    expect(normalizeMerchant("Оплата товаров и услуг MAGNIT MM 7745")).toBe("magnit");
+    expect(normalizeMerchant("Оплата СБП QR ВкусВилл 1234")).toBe("вкусвилл");
+    expect(normalizeMerchant("Оплата товаров и услуг")).toBe("");
+  });
   it("пустую строку отдаёт пустым ключом", () => {
     expect(normalizeMerchant("")).toBe("");
     expect(normalizeMerchant("   ")).toBe("");
@@ -203,6 +208,27 @@ describe("parseYandexRows", () => {
     const r = parseYandexRows(rows);
     expect(r).toHaveLength(1);
     expect(r[0].rawDesc).toContain("MERCHANT NAME CONTINUATION");
+  });
+  it("сохраняет совместимость со старым ключом правила до исправления префикса", () => {
+    const learned = new Map([["оплата", "Старая категория"]]);
+    expect(categorize({ rawDesc: "Оплата товаров и услуг MAGNIT MM 12", type: "expense" }, learned))
+      .toEqual({ category: "Старая категория", source: "learned-legacy" });
+  });
+
+  it("разбирает форму выписки с типом операции, переносом мерчанта и служебной строкой", () => {
+    const rows = [
+      "Дата операции Описание Сумма",
+      "06.07.2026 Оплата товаров и услуг MAGNIT MM –1 250,00 ₽",
+      "STANTSIONNYJ 7745",
+      "Выписка по договору за период",
+      "05.07.2026 Входящий перевод СБП, Даниил В. Е. +12 000,00 ₽",
+    ];
+    const result = parseYandexRows(rows);
+    expect(result).toHaveLength(2);
+    expect(result[0]).toMatchObject({ date: "2026-07-06", amount: 1250, sign: -1 });
+    expect(result[0].rawDesc).toContain("STANTSIONNYJ 7745");
+    expect(normalizeMerchant(result[0].rawDesc)).toBe("magnit");
+    expect(result[1]).toMatchObject({ date: "2026-07-05", amount: 12000, sign: 1 });
   });
 
   it("возвращает пустой массив на пустом входе", () => {
