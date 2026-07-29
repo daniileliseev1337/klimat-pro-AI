@@ -3,7 +3,7 @@
 > Единственный источник правды о состоянии проекта. Обновляется в конце каждой рабочей сессии.
 > Правило: не верь датам в других доках — этот файл главнее; расхождение = обнови этот файл.
 
-**Обновлено: 2026-07-29** (`main` = `2e3d2d1`: account appearance, доводка банка v2 и UX; `npm test` = 157/157, `npm run build` = PASS. ✅ Миграция применена к живой БД, RLS policy структурно проверена; `origin/main` и production обновлены, asset `index-FdBhWjDr.js` подтверждён снаружи.)
+**Обновлено: 2026-07-29** (в `main` включён `2e3d2d1`: account appearance, доводка банка v2 и UX; `npm test` = 157/157, `npm run build` = PASS. ✅ Миграция применена к живой БД, RLS policy структурно проверена; `origin/main` и production обновлены, asset `index-FdBhWjDr.js` подтверждён снаружи.)
 
 ## Готово — персонализируемый UI
 
@@ -13,7 +13,7 @@
 - Закрыты: «Помощь» в профиле и ложная подпись `Supabase (Frankfurt)`. Реальная авторизованная visual QA ожидает пользовательскую сессию.
 
 ## Прод
-- **29.07.2026:** `main`/`origin/main` = `2e3d2d1` (`feat: add account appearance preferences`). Миграция `20260729_0001` применена к `supabase-db`: RLS=true, policy `user_appearance_preferences_owner_all` использует и проверяет `user_id = auth.uid()`. Фронтенд задеплоен; `dist`, nginx и внешний HTTPS отдают один asset `assets/index-FdBhWjDr.js`, HTTPS=200. Авторизованная visual QA остаётся отдельной проверкой с пользовательской сессией.
+- **29.07.2026:** `main`/`origin/main` включают `2e3d2d1` (`feat: add account appearance preferences`). Миграция `20260729_0001` применена к `supabase-db`: RLS=true, policy `user_appearance_preferences_owner_all` использует и проверяет `user_id = auth.uid()`. Фронтенд задеплоен; `dist`, nginx и внешний HTTPS отдают один asset `assets/index-FdBhWjDr.js`, HTTPS=200. Авторизованная visual QA остаётся отдельной проверкой с пользовательской сессией.
 - Живой: https://193-124-130-236.sslip.io — **HTTP 200 снаружи** и на nginx :8080 (frp-туннель восстановлен после
   возврата VPN Direct-правила `193.124.130.236/32` — инцидент 502 при деплое банка закрыт).
 - Прод-код: **26e0b86** (банк v2 — умный импорт выписки; asset `index-CRXk9JKF.js`, задеплоен 04.07,
