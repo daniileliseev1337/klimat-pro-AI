@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "klimat-pro": {
+      "command": "node",
+      "args": [
+        "F:\\Сайт\\redesign-v2-fresh\\mcp\\src\\stdio.js"
+      ],
+      "cwd": "F:\\Сайт\\redesign-v2-fresh\\mcp"
+    }
+  }
+}

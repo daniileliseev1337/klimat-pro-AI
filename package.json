@@ -9,7 +9,12 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "mcp:install": "npm --prefix mcp ci",
+    "mcp:login": "npm --prefix mcp run login",
+    "mcp:start": "npm --prefix mcp start",
+    "mcp:http": "npm --prefix mcp run start:http",
+    "mcp:test": "npm --prefix mcp test"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.1.0",

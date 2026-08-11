@@ -1,0 +1,6 @@
+[mcp_servers.klimat_pro]
+command = "node"
+args = ['F:\Сайт\redesign-v2-fresh\mcp\src\stdio.js']
+cwd = 'F:\Сайт\redesign-v2-fresh\mcp'
+startup_timeout_sec = 20
+tool_timeout_sec = 60
