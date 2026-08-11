@@ -223,6 +223,6 @@ Run frontend/MCP tests, audits, production build, secret scan, JSON/TOML parsing
 
 Present exact live operations: DB migration, Auth image/config upgrade, main merge/push, VPS Caddy reload and production deploy. Do not execute until the owner sends an addressable `го` for these operations.
 
-- [ ] **Step 4: After owner approval, execute live E2E**
+- [x] **Step 4: After owner approval, execute live E2E**
 
 Verify: unauthenticated `/mcp` = 401 + PRM; OAuth discovery/DCR/PKCE/refresh; denied user blocked; read user can query but not prepare; write user completes preview/confirm; revoked user is blocked on next MCP request; `dist`/nginx/external assets match; rollback artifacts exist.

@@ -3,26 +3,27 @@
 > Единственный источник правды о состоянии проекта. Обновляется в конце каждой рабочей сессии.
 > Правило: не верь датам в других доках — этот файл главнее; расхождение = обнови этот файл.
 
-**Обновлено: 2026-08-11** (`main`/`origin/main` = `d1b8623`; локальный MCP 6.7 в production. Удалённый OAuth MCP подготовлен в `codex/remote-mcp-oauth`, но живая БД/Auth/main/production ещё не изменены.)
+**Обновлено: 2026-08-11** (`main`/`origin/main` включают `d5dff35`; удалённый OAuth MCP развёрнут и прошёл live E2E.)
 
-## В работе — публичный MCP для пользователей без репозитория
+## Готово — публичный MCP для пользователей без репозитория
 
 - Реализован публичный Streamable HTTP resource `https://193-124-130-236.sslip.io/mcp` с OAuth 2.1/PKCE, Dynamic Client Registration и refresh tokens через self-hosted Supabase Auth.
 - В Admin у каждого одобренного аккаунта появился отдельный уровень `Нет / Чтение / Изменение`; отсутствие строки означает deny. MCP перепроверяет грант на каждом запросе, поэтому отзыв действует сразу и не полагается только на срок JWT.
 - Добавлена отдельная consent-страница `/oauth/consent`: вход обычным логином сайта, показ имени клиента/scopes/уровня, явное разрешение или отказ. Пароль не передаётся LLM-клиенту.
-- Подготовлены миграция `20260811_0001_remote_mcp_access.sql`, контейнер MCP на Node 22 без host-порта, nginx/Caddy routing, Auth v2.195.0 upgrade и backup/rollback жёстко заданного контура.
-- Локально подтверждены frontend 165 тестов, MCP 58 тестов, production build, compose config, `nginx -t`, bash syntax, Docker build и контейнерный health/metadata smoke. Живой OAuth E2E намеренно не заявлен.
-- **Гейт владельца:** применить миграцию, изменить Auth `.env` (`API_EXTERNAL_URL`/`SITE_URL`), обновить GoTrue 2.186.0 → 2.195.0, merge в `main`, push и deploy можно только после отдельного адресного «го».
+- Миграция `20260811_0001_remote_mcp_access.sql` применена; GoTrue обновлён 2.186.0 → 2.195.0, `API_EXTERNAL_URL`/`SITE_URL` переведены на публичный HTTPS. MCP работает в Node 22 контейнере без host-порта через nginx/Caddy и существующий frp `:8080`.
+- Внешние проверки: site/asset, protected-resource metadata и OAuth discovery = 200; `/mcp` без Bearer = 401 с RFC 9728 challenge. `dist`, локальный nginx и внешний HTTPS отдают `assets/index-CAVK59Q5.js`.
+- Live OAuth E2E PASS: DCR, Authorization Code + PKCE, consent, access+refresh token, 5 tools, read-запрет записи, переключение на write, реальный prepare/confirm create+delete и немедленный revoke=401. Временные пользователь, OAuth client и тестовая запись удалены.
+- Локальная проверка: frontend 165/165, MCP 59/59, production build, production audits=0, compose/nginx/bash/Docker health PASS.
 
 ## Готово — MCP-доступ LLM
 
 - В отдельном пакете `mcp/` реализованы stdio и Streamable HTTP транспорты, пять MCP-инструментов и два ресурса-каталога. Доступ идёт только с пользовательской Supabase-сессией через существующие RLS/RPC; `service_role`, raw SQL и произвольные таблицы отсутствуют.
 - Чтение покрывает проекты, задачи/ТЗ/комментарии, клиентов, финансы, команду/файлы, заявки, активность и пользователей. Запись покрывает CRUD основных сущностей, marketplace/RPC, сообщения и admin-операции без передачи паролей.
 - Все изменения двухфазные: preview → отдельная точная фраза, одноразовый token на 5 минут, привязка к user id и stale-fingerprint перед выполнением.
-- MCP 48/48, frontend 162/162, production build и `npm audit` (0 vulnerabilities) зелёные. Реальные дочерний stdio и локальный HTTP SDK-клиент проходят initialize/tools-list.
+- MCP 59/59, frontend 165/165, production build и production `npm audit` (0 vulnerabilities) зелёные. Реальные дочерний stdio, локальный HTTP SDK-клиент и публичный OAuth E2E проходят initialize/tools-list.
 - `klimat-pro` зарегистрирован как глобальный stdio MCP-сервер Codex. Перед первым доступом владелец один раз выполняет `npm run mcp:login` и вводит пароль скрыто; локальной сессии в репозитории нет и токены не коммитятся.
 - Администратор видит инструкцию «Подключение LLM через MCP/API» во встроенной справке. Корневой `README.md` полностью актуализирован на русском, подробная операторская инструкция находится в `mcp/README.md`.
-- Для уже работающего локального stdio новая миграция не нужна. Публичный endpoint пока не открыт; готовый удалённый OAuth-контур описан выше и ждёт production-гейта.
+- Локальный stdio сохранён как developer-режим; основной пользовательский путь теперь публичный OAuth endpoint, описанный выше.
 
 ## Готово — исправление персонализируемого UI
 
@@ -41,6 +42,7 @@
 - Закрыты: «Помощь» в профиле и ложная подпись `Supabase (Frankfurt)`. Реальная авторизованная visual QA ожидает пользовательскую сессию.
 
 ## Прод
+- **11.08.2026 — Remote MCP OAuth:** `main`/`origin/main` включают `d5dff35`; миграция `20260811_0001` применена, GoTrue `v2.195.0` healthy, `daniil-mcp` healthy, внешний OAuth/MCP E2E PASS. Frontend asset `index-CAVK59Q5.js` совпадает между `dist`, nginx `:8080` и внешним HTTPS.
 - **11.08.2026:** MCP 6.7 и русская инструкция подключения LLM включены в `main`/`origin/main` (`e4a2fa2`, `3ca355d`). Фронтенд задеплоен; `dist`, nginx `:8080` и внешний HTTPS отдают `assets/index-CgzldX97.js` и `assets/index-DegNOVBM.css`, главная и оба asset-запроса = HTTP 200. Живая БД не менялась — новая миграция не требуется.
 - **29.07.2026:** `main`/`origin/main` включают `c38d8a2` (`fix: apply appearance to existing cards`). Миграция `20260729_0001` повторно применена к `supabase-db`: 6/6 колонок, RLS=true, policy `user_appearance_preferences_owner_all` использует и проверяет `user_id = auth.uid()`. Фронтенд задеплоен; `dist`, nginx и внешний HTTPS отдают `assets/index-DjaZC-_-.js` и `assets/index-DegNOVBM.css`, оба asset-запроса HTTPS=200.
 - Живой: https://193-124-130-236.sslip.io — **HTTP 200 снаружи** и на nginx :8080 (frp-туннель восстановлен после
@@ -48,7 +50,7 @@
 - Исторический релиз банка v2: **26e0b86** / `index-CRXk9JKF.js` (04.07,
   было сверено dist=nginx:8080=снаружи HTTP 200). Предыдущий ему прод — `CG_qyP3W` (follow-up Фазы 3).
   ⚠️ Банк НЕ прогнан на реальной выписке (эвристики проверены синтетикой) — проверить первый реальный импорт выписки.
-- Тесты текущего `main`: frontend 162/162, MCP 48/48 зелёные. Build зелёный (чанк 1.25 MB; существующее предупреждение Vite >500 kB).
+- Тесты текущего `main`: frontend 165/165, MCP 59/59 зелёные. Build зелёный (чанк 1.27 MB; существующее предупреждение Vite >500 kB).
 - Edge `web-push-notify` — dual-гейт (verify `PUSH_GATE_OK`) + типы Фазы 3 (`client_message`/`client_new_file`/`client_stage_changed`); `telegram-notify` удалена.
 - БД: миграция `20260703_0003` применена (client_messages + client_visible + RPC), verify `MESSAGES_OK`+`FILES_OK`.
 - БД: миграция `20260704_0001_merchant_rules` **применена к живой БД** 04.07 (таблица + RLS=true owner-only +
@@ -108,9 +110,7 @@
   (minX-эвристика/парсинг/дедуп проверены только синтетикой); (2) deploy фронта; (3) применение миграции к живой БД.
   Отложено (вне scope): self_names UI, LLM-слой [4], парсеры Сбер/Альфа/Тинькофф (не тронуты, рабочие).
   Гейты: миграция `merchant_rules` + деплой — по «го». Вне scope: LLM-слой (только интерфейс), Сбер/Альфа/Тинькофф.
-- Удалённый MCP OAuth реализован в `codex/remote-mcp-oauth`; осталось только адресно разрешённое внедрение и живой E2E. Локальный stdio production-доступ продолжает работать.
 - Владелец сам: `chkdsk F:` (диск сбоит!), смена паролей VPS-root/БД, выбор из 7 логотипов в Claude Design.
-- Мелочь: «Supabase (Frankfurt)» на экране входа — ложь (self-hosted), поправить при случае.
 - Полный список — docs/IDEAS.md.
 
 ## Режим репо (важно)
