@@ -36,32 +36,30 @@
 
 ## Подключение LLM через MCP/API
 
-Рекомендуемый способ — локальный MCP `stdio`: он подключает LLM к рабочим данным
-от имени отдельного пользователя сайта и наследует все его права. `service_role`,
-произвольный SQL и обход RLS запрещены на уровне MCP-сервера.
+Основной способ не требует репозитория, Node.js или доступа к компьютеру владельца.
+Администратор сначала выдаёт пользователю в разделе Admin уровень MCP: «чтение»
+или «изменение». Затем пользователь:
 
-Требуется Node.js 20 или новее. В PowerShell из корня проекта:
+1. Добавляет в совместимом LLM-клиенте удалённый MCP URL
+   `https://193-124-130-236.sslip.io/mcp`.
+2. Браузер открывает страницу входа КЛИМАТ-ПРО.
+3. Пользователь входит обычным логином сайта, проверяет имя клиента и разрешения,
+   затем нажимает «Разрешить подключение».
+4. Клиент получает короткоживущий OAuth access token и refresh token; пароль
+   никогда не передаётся LLM-клиенту.
 
-```powershell
-npm run mcp:install
-npm run mcp:login
-```
+Где добавить URL:
 
-Команда входа принимает email или обычный логин сайта, пароль вводится скрыто.
-Сессия сохраняется локально в исключённом из Git файле
-`mcp/.local/session.json`.
+- **Claude / Claude Desktop:** `Settings → Connectors → Add custom connector`,
+  затем «Connect» и вход через браузер;
+- **ChatGPT:** администратор рабочего пространства включает Developer mode,
+  затем `Settings → Apps → Create`, указывает endpoint, запускает `Scan Tools` и
+  проходит OAuth. Доступность чтения/записи зависит от тарифа ChatGPT;
+- **Codex CLI:** `codex mcp add klimat-pro --url https://193-124-130-236.sslip.io/mcp`,
+  затем `codex mcp login klimat-pro`.
 
-### Codex
-
-```powershell
-codex mcp add klimat-pro -- node "F:\Сайт\redesign-v2-fresh\mcp\src\stdio.js"
-```
-
-### Claude Desktop
-
-Добавьте сервер из [mcp/examples/claude-desktop.json](mcp/examples/claude-desktop.json)
-в конфигурацию MCP Claude и перезапустите приложение. Готовый пример для Codex
-также находится в [mcp/examples/codex.toml](mcp/examples/codex.toml).
+Доступ можно немедленно отозвать или понизить в Admin. Сервер проверяет грант на
+каждом MCP-запросе, поэтому старый refresh token не обходит отзыв.
 
 LLM получает пять инструментов: контекст и схемы, безопасное чтение, подготовку
 изменения, отдельное подтверждение и отмену. Любая запись выполняется в два этапа:
@@ -69,18 +67,18 @@ LLM получает пять инструментов: контекст и сх
 точную одноразовую фразу. Подтверждение живёт 5 минут, привязано к пользователю и
 отменяется, если запись успела измениться.
 
-Локальный Streamable HTTP endpoint можно запустить командой:
+Для разработки на компьютере с репозиторием остаётся необязательный режим stdio:
 
 ```powershell
-npm run mcp:http
-# http://127.0.0.1:8788/mcp
+npm run mcp:install
+npm run mcp:login
+npm run mcp:start
 ```
 
-Он принимает только `Authorization: Bearer <Supabase access JWT>` и по умолчанию
-слушает loopback. Публичный HTTP endpoint намеренно не открыт: для него необходимы
-HTTPS reverse proxy, allowlist и автоматическое безопасное обновление
-короткоживущего JWT. Полная инструкция, список инструментов, переменных и модель
-подтверждений — в [mcp/README.md](mcp/README.md).
+Публичный transport — Streamable HTTP + OAuth 2.1/PKCE, dynamic client registration
+и автоматическое обновление токенов. Он не принимает `service_role`, API-ключи в
+URL или обычную web-сессию без OAuth `client_id`. Полная инструкция — в
+[mcp/README.md](mcp/README.md).
 
 ## Технологии
 

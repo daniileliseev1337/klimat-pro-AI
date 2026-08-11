@@ -15,11 +15,28 @@
                           │
 [Домашний ПК, Windows 11] WSL2 Ubuntu, Docker (systemd, без Docker Desktop)
                         frpc → пробрасывает 127.0.0.1:8080 и :8000 на VPS
-                        ├─ daniil-web (nginx, заглушка) :8080
+                        ├─ daniil-web (nginx + SPA + OAuth/MCP reverse proxy) :8080
+                        ├─ daniil-mcp (внутренняя сеть Docker, без host-порта) :8788
                         └─ Supabase (13 контейнеров) :8000 (Kong API gateway)
 ```
 
 **Публичный адрес:** https://193-124-130-236.sslip.io
+
+## Удалённый MCP + OAuth 2.1 (пакет внедрения 2026-08-11)
+
+- Канонический resource: `https://193-124-130-236.sslip.io/mcp` (Streamable HTTP).
+- Внешний порт не добавляется: Caddy/frp направляют MCP в существующий nginx
+  `:8080`, а nginx — во внутренний контейнер `daniil-mcp:8788`.
+- Supabase Auth v2.195.0 служит OAuth 2.1 authorization server: discovery,
+  Dynamic Client Registration, Authorization Code + PKCE и refresh tokens.
+- Consent UI находится в SPA по `/oauth/consent`; пароль видит только Supabase Auth.
+- MCP-контейнер получает только публичный anon key. Он проверяет OAuth-сессию,
+  `client_id`, одобрение профиля и актуальный Admin-грант `read`/`write`, затем
+  обращается к PostgREST тем же пользовательским JWT — RLS/RPC остаются финальным
+  контуром авторизации.
+- Релизный пакет: `deploy/mcp/deploy-remote-mcp.sh`; rollback принимает конкретную
+  папку `/srv/daniil-deploy/backups/remote-mcp-<timestamp>` и восстанавливает Auth,
+  его schema dump, `.env`, web-compose/nginx и Caddy.
 
 ## VPS (193.124.130.236)
 

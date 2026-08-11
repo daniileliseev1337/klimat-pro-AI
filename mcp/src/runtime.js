@@ -1,6 +1,6 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createHttpSupabase, createStdioSupabase, requireIdentity } from "./auth.js";
+import { createHttpSupabase, createStdioSupabase, requireIdentity, requireOAuthIdentity } from "./auth.js";
 import { createChangeStore } from "./change-store.js";
 import { loadConfig } from "./config.js";
 import { createKlimatService } from "./service.js";
@@ -24,7 +24,7 @@ export function createStdioService(config, changeStore = createChangeStore()) {
 
 export async function createHttpService(config, accessToken, changeStore) {
   const client = createHttpSupabase(config, accessToken);
-  const identity = await requireIdentity(client, accessToken);
+  const identity = await requireOAuthIdentity(client, accessToken, config);
   const gateway = createSupabaseGateway(client);
   return createKlimatService({ gateway, changeStore, getIdentity: async () => identity });
 }

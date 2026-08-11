@@ -18,6 +18,8 @@ import { helpSectionsFor, shouldAutoStartTour } from "./lib/helpContent";
 import BackgroundCanvas from "./components/BackgroundCanvas";
 import AppearanceMode from "./components/AppearanceMode";
 import AppearancePanel from "./components/AppearancePanel";
+import McpAccessControl from "./components/McpAccessControl";
+import { loadMcpAccessMap } from "./lib/mcpAccess.js";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, FolderKanban, Wallet, BarChart3,
@@ -8438,6 +8440,7 @@ function AdminPage({ profile, client, showToast, appearance }) {
   const [stats, setStats] = useState(null);
   const [rolesByUser, setRolesByUser] = useState({}); // Система ролей Ф1: user_id -> [roles]
   const [accessReqByUser, setAccessReqByUser] = useState({}); // Ф3: user_id -> requested_role (активные заявки)
+  const [mcpAccessByUser, setMcpAccessByUser] = useState({});
   const [activity, setActivity] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -8480,6 +8483,8 @@ function AdminPage({ profile, client, showToast, appearance }) {
           (reqs || []).forEach(x => { rmap[x.user_id] = { role: x.requested_role, req: x.is_access_request }; });
           setAccessReqByUser(rmap);
         } catch { setAccessReqByUser({}); }
+        try { setMcpAccessByUser(await loadMcpAccessMap(client)); }
+        catch { setMcpAccessByUser({}); }
       } else if (section === "stats") {
         setStats(await adminSystemStats(client));
       } else if (section === "activity") {
@@ -8666,6 +8671,16 @@ function AdminPage({ profile, client, showToast, appearance }) {
                         )}
                       </div>
                     )}
+                    <div style={{ marginTop: 6 }}>
+                      <McpAccessControl
+                        client={client}
+                        userId={u.id}
+                        value={mcpAccessByUser[u.id] || "none"}
+                        disabled={!u.approved}
+                        showToast={showToast}
+                        onChanged={level => setMcpAccessByUser(prev => ({ ...prev, [u.id]: level }))}
+                      />
+                    </div>
                   </div>
                   {u.id !== profile.id && (
                     <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>

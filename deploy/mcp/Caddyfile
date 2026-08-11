@@ -1,0 +1,13 @@
+193-124-130-236.sslip.io {
+    @oauth path /.well-known/oauth-authorization-server* /auth/v1/.well-known/oauth-authorization-server* /auth/v1/.well-known/openid-configuration* /auth/v1/.well-known/jwks.json* /auth/v1/oauth/*
+    handle @oauth {
+        reverse_proxy 127.0.0.1:8080
+    }
+    @api path /rest/* /auth/* /realtime/* /storage/* /functions/* /graphql/* /pg/*
+    handle @api {
+        reverse_proxy 127.0.0.1:8000
+    }
+    handle {
+        reverse_proxy 127.0.0.1:8080
+    }
+}

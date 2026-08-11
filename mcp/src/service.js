@@ -40,7 +40,7 @@ export function createKlimatService({ gateway, changeStore, getIdentity }) {
 
   async function getContext() {
     const user = await identity();
-    return { ...(await gateway.getContext(user)), ...describeCapabilities() };
+    return { ...(await gateway.getContext(user)), mcpAccessLevel: user.accessLevel || "write", ...describeCapabilities() };
   }
 
   async function query(input) {
@@ -50,6 +50,7 @@ export function createKlimatService({ gateway, changeStore, getIdentity }) {
 
   async function prepareChange(action, rawPayload) {
     const user = await identity();
+    if (user.accessLevel === "read") throw new Error("MCP-доступ разрешает только чтение");
     const payload = normalizeAction(action, rawPayload);
     const before = await gateway.snapshot(action, payload);
     if (requiresExisting(action) && before == null) {
@@ -73,6 +74,7 @@ export function createKlimatService({ gateway, changeStore, getIdentity }) {
 
   async function confirmChange(confirmationToken, confirmation) {
     const user = await identity();
+    if (user.accessLevel === "read") throw new Error("MCP-доступ разрешает только чтение");
     const pending = changeStore.consume(confirmationToken, user.id, confirmation);
     const current = await gateway.snapshot(pending.action, pending.payload);
     if (fingerprint(current) !== pending.beforeFingerprint) {
@@ -85,6 +87,7 @@ export function createKlimatService({ gateway, changeStore, getIdentity }) {
 
   async function cancelChange(confirmationToken) {
     const user = await identity();
+    if (user.accessLevel === "read") throw new Error("MCP-доступ разрешает только чтение");
     return { cancelled: changeStore.cancel(confirmationToken, user.id) };
   }
 

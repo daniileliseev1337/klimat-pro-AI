@@ -5,7 +5,7 @@ import { createKlimatService } from "../src/service.js";
 const USER = { id: "11111111-1111-4111-8111-111111111111", email: "owner@example.test" };
 const PROJECT_ID = "22222222-2222-4222-8222-222222222222";
 
-function setup({ before = { id: PROJECT_ID, name: "Старое" }, current = before } = {}) {
+function setup({ before = { id: PROJECT_ID, name: "Старое" }, current = before, user = USER } = {}) {
   const calls = [];
   const gateway = {
     async getContext(identity) { return { user: identity, profile: { name: "Owner" }, roles: ["admin"] }; },
@@ -15,7 +15,7 @@ function setup({ before = { id: PROJECT_ID, name: "Старое" }, current = be
     async audit(action) { calls.push(["audit", action]); },
   };
   const store = createChangeStore({ randomUUID: () => "11111111-2222-4333-8444-55555555abcd" });
-  const service = createKlimatService({ gateway, changeStore: store, getIdentity: async () => USER });
+  const service = createKlimatService({ gateway, changeStore: store, getIdentity: async () => user });
   return { service, calls, gateway };
 }
 
@@ -28,6 +28,12 @@ describe("createKlimatService", () => {
     expect(context.safety).toMatchObject({ serviceRole: false, confirmationRequired: true });
     expect(rows).toEqual([{ id: PROJECT_ID }]);
     expect(calls[0]).toEqual(["query", { entity: "projects", limit: 100 }]);
+  });
+
+  it("разрешает чтение, но запрещает mutation flow для read-гранта", async () => {
+    const { service } = setup({ user: { ...USER, accessLevel: "read" } });
+    await expect(service.query({ entity: "projects" })).resolves.toHaveLength(1);
+    await expect(service.prepareChange("project.delete", { id: PROJECT_ID })).rejects.toThrow("только чтение");
   });
 
   it("previews and executes a confirmed action exactly once", async () => {

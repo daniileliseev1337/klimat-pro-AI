@@ -49,6 +49,14 @@ export function loadConfig({ env = process.env, cwd = process.cwd() } = {}) {
     throw new Error("KP_HTTP_BODY_LIMIT должен быть положительным числом байт");
   }
 
+  const publicMcpUrl = String(values.KP_PUBLIC_MCP_URL || `${supabaseUrl.replace(/\/$/, "")}/mcp`).replace(/\/$/, "");
+  let publicOrigin;
+  try { publicOrigin = new URL(publicMcpUrl).origin; }
+  catch { throw new Error("KP_PUBLIC_MCP_URL должен быть абсолютным HTTPS URL"); }
+  if (values.KP_PUBLIC_MCP_URL && !publicMcpUrl.startsWith("https://")) {
+    throw new Error("KP_PUBLIC_MCP_URL в production должен использовать HTTPS");
+  }
+
   return {
     supabaseUrl: String(supabaseUrl).replace(/\/$/, ""),
     supabaseAnonKey: String(supabaseAnonKey),
@@ -58,5 +66,7 @@ export function loadConfig({ env = process.env, cwd = process.cwd() } = {}) {
     allowedHosts: csv(values.KP_ALLOWED_HOSTS, [httpHost, `${httpHost}:${httpPort}`, "localhost", `localhost:${httpPort}`]),
     allowedOrigins: csv(values.KP_ALLOWED_ORIGINS),
     bodyLimitBytes: Math.min(2_000_000, Math.max(16_384, requestedBodyLimit)),
+    publicMcpUrl,
+    oauthIssuer: String(values.KP_OAUTH_ISSUER || `${publicOrigin}/auth/v1`).replace(/\/$/, ""),
   };
 }

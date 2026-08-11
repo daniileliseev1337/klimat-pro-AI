@@ -33,7 +33,7 @@ function fakeService() {
 describe("MCP Streamable HTTP", () => {
   it("требует Bearer JWT до создания сервиса", async () => {
     const createService = vi.fn();
-    const config = { allowedHosts: [], allowedOrigins: [], bodyLimitBytes: 50_000 };
+    const config = { allowedHosts: [], allowedOrigins: [], bodyLimitBytes: 50_000, publicMcpUrl: "https://example.test/mcp", oauthIssuer: "https://example.test/auth/v1" };
     const port = await listen(createHttpHandler({ config, createService }));
     config.allowedHosts.push(`127.0.0.1:${port}`);
 
@@ -44,8 +44,17 @@ describe("MCP Streamable HTTP", () => {
     });
 
     expect(response.status).toBe(401);
-    expect(response.headers.get("www-authenticate")).toContain("Bearer");
+    expect(response.headers.get("www-authenticate")).toContain('resource_metadata="https://example.test/.well-known/oauth-protected-resource"');
     expect(createService).not.toHaveBeenCalled();
+  });
+
+  it("публикует RFC 9728 metadata без Bearer token", async () => {
+    const config = { allowedHosts: [], allowedOrigins: [], bodyLimitBytes: 50_000, publicMcpUrl: "https://example.test/mcp", oauthIssuer: "https://example.test/auth/v1" };
+    const port = await listen(createHttpHandler({ config }));
+    config.allowedHosts.push(`127.0.0.1:${port}`);
+    const response = await fetch(`http://127.0.0.1:${port}/.well-known/oauth-protected-resource`);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ resource: "https://example.test/mcp", authorization_servers: ["https://example.test/auth/v1"] });
   });
 
   it("обслуживает MCP-клиента с валидированным Bearer token", async () => {
@@ -54,7 +63,7 @@ describe("MCP Streamable HTTP", () => {
       if (token !== "valid-user-jwt") throw new Error("bad token");
       return service;
     });
-    const config = { allowedHosts: [], allowedOrigins: [], bodyLimitBytes: 50_000 };
+    const config = { allowedHosts: [], allowedOrigins: [], bodyLimitBytes: 50_000, publicMcpUrl: "https://example.test/mcp", oauthIssuer: "https://example.test/auth/v1" };
     const port = await listen(createHttpHandler({ config, createService }));
     config.allowedHosts.push(`127.0.0.1:${port}`);
     const client = new Client({ name: "http-test", version: "1.0.0" });

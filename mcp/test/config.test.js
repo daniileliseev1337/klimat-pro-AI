@@ -7,6 +7,7 @@ describe("loadConfig", () => {
       env: {
         VITE_SUPABASE_URL: "https://dashboard.example.test",
         VITE_SUPABASE_KEY: "anon-public-key",
+        KP_PUBLIC_MCP_URL: "https://dashboard.example.test/mcp",
       },
       cwd: "C:/project/mcp",
     });
@@ -15,6 +16,7 @@ describe("loadConfig", () => {
     expect(config.supabaseAnonKey).toBe("anon-public-key");
     expect(config.sessionFile.replaceAll("\\", "/")).toBe("C:/project/mcp/.local/session.json");
     expect(config.httpHost).toBe("127.0.0.1");
+    expect(config.oauthIssuer).toBe("https://dashboard.example.test/auth/v1");
   });
 
   it("fails closed when required public configuration is missing", () => {

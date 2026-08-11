@@ -6,6 +6,7 @@ import { createChangeStore } from "./change-store.js";
 import { extractBearerToken, readJsonBody, validateHttpRequest } from "./http-security.js";
 import { createKlimatMcpServer } from "./mcp-server.js";
 import { createHttpService, loadRuntimeConfig } from "./runtime.js";
+import { protectedResourceMetadata, protectedResourceMetadataUrl } from "./oauth-metadata.js";
 
 function sendJson(response, status, body, extraHeaders = {}) {
   if (response.headersSent) return;
@@ -28,6 +29,12 @@ function rpcError(response, status, message, extraHeaders) {
 
 export function createHttpHandler({ config, changeStore = createChangeStore(), createService = createHttpService } = {}) {
   return async (request, response) => {
+    if (request.method === "GET" && request.url === "/healthz") {
+      return sendJson(response, 200, { ok: true, service: "klimat-pro-mcp" });
+    }
+    if (request.method === "GET" && ["/.well-known/oauth-protected-resource", "/.well-known/oauth-protected-resource/mcp"].includes(request.url)) {
+      return sendJson(response, 200, protectedResourceMetadata(config));
+    }
     if (request.url !== "/mcp") {
       return rpcError(response, 404, "Not found");
     }
@@ -38,7 +45,7 @@ export function createHttpHandler({ config, changeStore = createChangeStore(), c
     const accessToken = extractBearerToken(request.headers.authorization);
     if (!accessToken) {
       return rpcError(response, 401, "Требуется Authorization: Bearer <Supabase access JWT>", {
-        "www-authenticate": 'Bearer realm="klimat-pro"',
+        "www-authenticate": `Bearer realm="klimat-pro", resource_metadata="${protectedResourceMetadataUrl(config)}"`,
       });
     }
 
@@ -68,7 +75,7 @@ export function createHttpHandler({ config, changeStore = createChangeStore(), c
       const message = error?.message || "Internal MCP error";
       const status = /сесс|token|JWT|auth|user/i.test(message) ? 401 : 500;
       return rpcError(response, status, status === 401 ? "Supabase Bearer JWT недействителен или истёк" : "Internal MCP error",
-        status === 401 ? { "www-authenticate": 'Bearer realm="klimat-pro", error="invalid_token"' } : undefined);
+        status === 401 ? { "www-authenticate": `Bearer realm="klimat-pro", error="invalid_token", resource_metadata="${protectedResourceMetadataUrl(config)}"` } : undefined);
     }
   };
 }

@@ -1,14 +1,43 @@
-# Веб-фронт daniil-dashboard (этап 6.1 — страница-заглушка).
-# На этапе 6.2 каталог ./web заменится на собранный React (vite build → dist).
-#
-# Порт публикуется ТОЛЬКО на localhost — наружу трафик идёт исключительно
-# через cloudflared (туннель), прямого доступа из сети нет.
 services:
   web:
     image: nginx:alpine
     container_name: daniil-web
     restart: unless-stopped
+    depends_on:
+      mcp:
+        condition: service_healthy
     ports:
       - "127.0.0.1:8080:80"
     volumes:
       - ./web:/usr/share/nginx/html:ro
+      - ./nginx.default.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - default
+      - supabase_default
+
+  mcp:
+    build:
+      context: ./mcp-runtime
+    container_name: daniil-mcp
+    restart: unless-stopped
+    environment:
+      KP_SUPABASE_URL: http://kong:8000
+      KP_SUPABASE_ANON_KEY: ${ANON_KEY}
+      KP_HTTP_HOST: 0.0.0.0
+      KP_HTTP_PORT: 8788
+      KP_PUBLIC_MCP_URL: https://193-124-130-236.sslip.io/mcp
+      KP_OAUTH_ISSUER: https://193-124-130-236.sslip.io/auth/v1
+      KP_ALLOWED_HOSTS: 193-124-130-236.sslip.io,mcp,mcp:8788,localhost
+      KP_HTTP_BODY_LIMIT: 1000000
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8788/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+    networks:
+      - default
+      - supabase_default
+
+networks:
+  supabase_default:
+    external: true
