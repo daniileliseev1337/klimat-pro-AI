@@ -14,8 +14,10 @@ select set_config('request.jwt.claims', jsonb_build_object('sub', :'user1_id', '
 select 1 / ((select count(*) from public.mcp_user_access) = 0)::int as default_deny_ok;
 
 \set ON_ERROR_STOP off
+savepoint non_admin_mutation;
 select public.admin_set_mcp_access(:'user1_id'::uuid, 'write');
 \if :ERROR
+  rollback to savepoint non_admin_mutation;
   \echo NON_ADMIN_MUTATION_DENIED
 \else
   \quit 1
@@ -27,7 +29,7 @@ set local role authenticated;
 select set_config('request.jwt.claims', jsonb_build_object('sub', :'admin_id', 'role', 'authenticated')::text, true);
 select public.admin_set_mcp_access(:'user1_id'::uuid, 'read');
 select public.admin_set_mcp_access(:'user2_id'::uuid, 'write');
-select 1 / ((select count(*) from public.mcp_user_access) = 2)::int as admin_reads_all_ok;
+select 1 / ((select count(*) from public.mcp_user_access where user_id in (:'user1_id'::uuid, :'user2_id'::uuid)) = 2)::int as admin_reads_all_ok;
 
 reset role;
 set local role authenticated;
