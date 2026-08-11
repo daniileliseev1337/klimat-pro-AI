@@ -104,10 +104,11 @@ touch "$BACKUP/auth-upgrade-started.flag"
 docker compose up -d auth
 for _ in $(seq 1 30); do docker inspect -f '{{.State.Health.Status}}' supabase-auth 2>/dev/null | grep -q healthy && break; sleep 2; done
 docker inspect -f '{{.State.Health.Status}}' supabase-auth | grep -q healthy
+touch "$BACKUP/auth-upgrade-healthy.flag"
 
 cd "$WEB"
-docker compose --env-file "$SUPA/.env" config >/dev/null
-docker compose --env-file "$SUPA/.env" up -d --build
+docker compose -f "$WEB/docker-compose.web.yml" --env-file "$SUPA/.env" config >/dev/null
+docker compose -f "$WEB/docker-compose.web.yml" --env-file "$SUPA/.env" up -d --build
 docker inspect -f '{{.State.Health.Status}}' daniil-mcp | grep -q healthy
 
 bash "$ROOT/deploy/mcp/verify-remote-mcp-http.sh"

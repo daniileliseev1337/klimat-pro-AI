@@ -31,8 +31,10 @@ describe("remote MCP deployment configuration", () => {
     expect(deploy).toContain("GOTRUE_OAUTH_SERVER_ENABLED");
     expect(deploy).toContain("API_EXTERNAL_URL");
     expect(deploy).toContain("SITE_URL");
+    expect(deploy).toContain('docker compose -f "$WEB/docker-compose.web.yml"');
     expect(rollback).toContain("auth-schema.sql");
     expect(rollback).toContain("mcp-table-preexisting.flag");
+    expect(rollback).not.toContain('< "$BACKUP/auth-schema.sql"');
   });
 
   it("собирает MCP на поддерживаемой Supabase SDK версии Node", () => {
