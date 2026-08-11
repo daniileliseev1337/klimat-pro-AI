@@ -41,5 +41,6 @@ describe("remote MCP deployment configuration", () => {
     const dockerfile = read("mcp/Dockerfile");
     expect(dockerfile.match(/FROM node:22-alpine/g)).toHaveLength(2);
     expect(dockerfile).toContain("ENV KP_HTTP_HOST=0.0.0.0");
+    expect(dockerfile.match(/--chown=mcp:mcp/g)).toHaveLength(3);
   });
 });
