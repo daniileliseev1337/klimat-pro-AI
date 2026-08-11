@@ -21,6 +21,15 @@ describe('helpContent', () => {
   it('сотрудник-админ видит admin-секцию', () => {
     expect(helpSectionsFor(['dashboard', 'admin']).map(s => s.key)).toContain('admin');
   });
+  it('инструкция подключения LLM доступна только администратору', () => {
+    const adminSections = helpSectionsFor(['dashboard', 'admin']);
+    const clientKeys = helpSectionsFor(['dashboard', 'projects', 'tasks', 'finance']).map(s => s.key);
+    const mcp = adminSections.find(s => s.key === 'mcp-api');
+
+    expect(mcp).toBeTruthy();
+    expect(mcp.how).toContain('npm run mcp:login');
+    expect(clientKeys).not.toContain('mcp-api');
+  });
   it('каждая секция имеет непустые title/desc/how и уникальный key', () => {
     const keys = new Set();
     for (const s of HELP_SECTIONS) {

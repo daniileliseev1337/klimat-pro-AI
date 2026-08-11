@@ -1,118 +1,167 @@
-# klimat-pro-AI
+# КЛИМАТ-ПРО AI
 
-Личный рабочий центр: проекты, финансы, задачи, команда и аналитика в одном
-React-приложении. Работает на **собственной инфраструктуре** (self-hosted Supabase
-за туннелем), доступен с любого устройства, ставится как приложение (PWA).
+Рабочая информационная система проектной компании: проекты, задачи, заказчики,
+финансы, аналитика, команда и клиентский портал в одном PWA-приложении. Система
+развёрнута на собственной инфраструктуре и доступна по адресу
+[193-124-130-236.sslip.io](https://193-124-130-236.sslip.io).
 
-## Что внутри
+## Текущее состояние
 
-Разделы приложения: **Дашборд · Проекты · Финансы · Аналитика · Задачи**. Плюс
-админ-панель, управление командой проекта, клиентская база и права/бейджи (v1.5).
+На август 2026 года в рабочем контуре реализованы:
 
-- Импорт банковских выписок: CSV (Тинькофф / Сбер / Альфа / Яндекс) и PDF (Яндекс Банк),
-  автокатегоризация транзакций.
-- Экспорт отчётов печатью в PDF.
-- Слой задач: список с фильтрами, доска с drag-and-drop, задачи проекта, уведомления.
-- PWA: устанавливается на телефон/десктоп, работает офлайн (service worker, push-уведомления).
+- дашборд с показателями, сроками, задачами и финансовой сводкой;
+- проекты со стадиями, командой, долями, оплатами, файлами и историей;
+- задачи в виде списка и Kanban-доски, ТЗ с версиями, комментарии, фото и приёмка;
+- заказчики, входящие заявки и административное управление пользователями;
+- доходы и расходы, категории, аналитика и импорт банковских выписок;
+- портал заказчика: его проекты, задачи, переписка, платежи и доступные файлы;
+- Web Push, PWA-установка и ограниченная офлайн-работа;
+- персональный внешний вид: 15 скинов × 15 эффектов, совместимость сочетаний и
+  индивидуальные настройки карточек;
+- защищённый MCP-слой для Claude, Codex и других LLM-клиентов.
 
-## Стек
+Актуальный статус внедрения и известные ограничения ведутся в
+[docs/STATUS.md](docs/STATUS.md), идеи и технический долг — в
+[docs/IDEAS.md](docs/IDEAS.md).
 
-React 18 + Vite 5 · Tailwind CSS 3 · Supabase (self-hosted) · framer-motion · recharts ·
-lucide-react · vite-plugin-pwa. Тесты — Vitest.
+## Роли и безопасность
 
-## Структура проекта
+Приложение использует Supabase Auth и Row Level Security. Один аккаунт может иметь
+несколько разрешённых ролей: сотрудник, заказчик и администратор. Заказчик видит
+только связанные с ним проекты и специально открытые файлы; административные
+операции доступны только администраторам.
 
+Секреты, пароли и токены не хранятся в Git. Файлы лежат во внутреннем Nextcloud и
+выдаются через Edge Function с проверкой пользовательского JWT и RLS.
+
+## Подключение LLM через MCP/API
+
+Рекомендуемый способ — локальный MCP `stdio`: он подключает LLM к рабочим данным
+от имени отдельного пользователя сайта и наследует все его права. `service_role`,
+произвольный SQL и обход RLS запрещены на уровне MCP-сервера.
+
+Требуется Node.js 20 или новее. В PowerShell из корня проекта:
+
+```powershell
+npm run mcp:install
+npm run mcp:login
 ```
+
+Команда входа принимает email или обычный логин сайта, пароль вводится скрыто.
+Сессия сохраняется локально в исключённом из Git файле
+`mcp/.local/session.json`.
+
+### Codex
+
+```powershell
+codex mcp add klimat-pro -- node "F:\Сайт\redesign-v2-fresh\mcp\src\stdio.js"
+```
+
+### Claude Desktop
+
+Добавьте сервер из [mcp/examples/claude-desktop.json](mcp/examples/claude-desktop.json)
+в конфигурацию MCP Claude и перезапустите приложение. Готовый пример для Codex
+также находится в [mcp/examples/codex.toml](mcp/examples/codex.toml).
+
+LLM получает пять инструментов: контекст и схемы, безопасное чтение, подготовку
+изменения, отдельное подтверждение и отмену. Любая запись выполняется в два этапа:
+сначала модель показывает предпросмотр, затем пользователь должен подтвердить
+точную одноразовую фразу. Подтверждение живёт 5 минут, привязано к пользователю и
+отменяется, если запись успела измениться.
+
+Локальный Streamable HTTP endpoint можно запустить командой:
+
+```powershell
+npm run mcp:http
+# http://127.0.0.1:8788/mcp
+```
+
+Он принимает только `Authorization: Bearer <Supabase access JWT>` и по умолчанию
+слушает loopback. Публичный HTTP endpoint намеренно не открыт: для него необходимы
+HTTPS reverse proxy, allowlist и автоматическое безопасное обновление
+короткоживущего JWT. Полная инструкция, список инструментов, переменных и модель
+подтверждений — в [mcp/README.md](mcp/README.md).
+
+## Технологии
+
+- React 18, Vite 5, Tailwind CSS 3;
+- self-hosted Supabase: Postgres, Auth, PostgREST, Realtime и Edge Functions;
+- Nextcloud для проектных файлов;
+- Recharts, Framer Motion, Lucide React;
+- Vite PWA/Workbox и Web Push;
+- Node.js MCP SDK, Supabase JS и Zod;
+- Vitest для frontend- и MCP-тестов.
+
+## Структура репозитория
+
+```text
 klimat-pro-AI/
-├── index.html              # Точка входа
-├── package.json            # Зависимости и команды
-├── vite.config.js          # Сборщик (Vite + PWA)
-├── tailwind.config.js      # Tailwind
-├── postcss.config.js       # PostCSS
-├── .env / .env.production  # Переменные окружения (НЕ в git)
 ├── src/
-│   ├── main.jsx            # Старт приложения
-│   ├── App.jsx             # Основной код (~8400 строк)
-│   ├── index.css           # Глобальные стили (включая тему и режим контрастности)
-│   ├── sw.js               # Service worker (PWA/офлайн)
-│   ├── components/         # BackgroundCanvas, CommandPalette, MagneticButton, NotificationBell
-│   └── lib/                # supabase, dashboardMetrics, notifications, push, taskUi, lineDiff (+ тесты)
-├── public/                 # Статика и иконки PWA
-├── scripts/                # gen-icons.mjs, gen-vapid-node.mjs
-├── supabase/               # Миграции БД
-├── deploy/                 # Инфраструктура: docker-compose, nginx, скрипты деплоя, Nextcloud, задачи
-│   ├── README.md           # Состав инфраструктуры
-│   └── INFRASTRUCTURE.md   # Карта развёрнутого стека (топология, автозапуск, деплой)
-├── docs/                   # BACKLOG.md, ТЗ
-└── apartment-tracker/      # Отдельный вложенный подпроект
+│   ├── App.jsx              # Основное SPA, около 10 тысяч строк
+│   ├── components/          # Самостоятельные интерфейсные компоненты
+│   ├── lib/                 # Бизнес-логика, API-обвязка и тесты
+│   └── sw.js                # Service worker
+├── mcp/                     # MCP-сервер, transports, schemas и тесты
+├── supabase/                # Baseline и миграции БД
+├── deploy/                  # Docker/nginx, Edge Functions и релизные скрипты
+├── docs/                    # Живой статус, идеи, спецификации и планы
+├── public/                  # PWA-иконки и статические ресурсы
+├── session-reports/         # Проверяемые отчёты рабочих сессий
+└── apartment-tracker/       # Отдельный вложенный подпроект
 ```
+
+Основной интерфейс исторически остаётся монолитом `src/App.jsx`; новые независимые
+части выносятся в отдельные модули без рискованного массового рефакторинга.
 
 ## Локальная разработка
 
-```bash
-# Установка зависимостей (один раз)
+```powershell
 npm install
-
-# Переменные окружения: создай .env с ключами Supabase
-#   VITE_SUPABASE_URL=...
-#   VITE_SUPABASE_KEY=...
-# (значения для прода — в .env.production, в git не попадают)
-
-# Запуск дев-сервера
-npm run dev          # http://localhost:5173
-
-# Тесты
-npm test             # vitest run
+npm run dev
 ```
 
-Изменения в коде применяются мгновенно (HMR), без перезагрузки страницы.
+В `.env` должны быть заданы `VITE_SUPABASE_URL` и `VITE_SUPABASE_KEY`. Продовые
+значения находятся в локальном `.env.production`, который не коммитится.
 
-## Сборка и деплой
+Проверки:
 
-Проект задеплоен на **собственной инфраструктуре** (не Vercel). Полная карта —
-[deploy/INFRASTRUCTURE.md](deploy/INFRASTRUCTURE.md).
-
-```bash
-# 1. Сборка на Windows (node_modules — Windows-нативные)
-npm run build                          # → dist/
-
-# 2. Раскладка собранного фронта на сервер (внутри WSL Ubuntu)
-bash deploy/nextcloud/deploy-web.sh    # dist → /srv/daniil-deploy/web (bind-mount nginx)
+```powershell
+npm test
+npm run mcp:install
+npm run mcp:test
+npm --prefix mcp audit --audit-level=low
+npm run build
 ```
 
-Скрипт чистит **содержимое** каталога `web`, не пересоздавая его (каталог — источник
-bind-mount для nginx-контейнера). После раскладки сайт обновляется на nginx `:8080`.
+## Сборка и развёртывание
 
-### Как это опубликовано
+Прод работает на этом компьютере: Windows собирает frontend, WSL2/Docker раздаёт
+его через nginx, а VPS с Caddy и TLS передаёт запросы по `frp`-туннелю.
 
+```text
+Интернет → VPS/Caddy :443 → frp → домашний ПК
+                              ├─ nginx :8080 — frontend
+                              └─ Kong :8000 — Supabase API
 ```
-[Интернет] → VPS (Москва, Caddy :443, TLS) → frp-туннель → домашний ПК (WSL2 Docker)
-              ├─ /rest,/auth,/realtime,/storage,/functions → Supabase :8000 (Kong)
-              └─ всё остальное → nginx :8080 (этот фронт)
+
+Релиз frontend:
+
+```powershell
+npm run build
+wsl bash -lc "cd '/mnt/f/Сайт/redesign-v2-fresh' && bash deploy/nextcloud/deploy-web.sh"
 ```
 
-Публичный адрес: **https://193-124-130-236.sslip.io**. Supabase развёрнут self-hosted
-в WSL2 (13 контейнеров), наружу выведены только web `:8080` и Kong `:8000` — через туннель.
-Секреты (`.env` Supabase, токены туннеля) на серверах и **никогда не коммитятся**.
+После раскладки необходимо сверить имена JS/CSS-assets в `dist/index.html`, на
+`http://localhost:8080` и на публичном HTTPS-адресе. Полная карта инфраструктуры и
+команды диагностики — в [deploy/INFRASTRUCTURE.md](deploy/INFRASTRUCTURE.md).
 
-## PWA на телефон
+Если снаружи появляется 502, сначала проверьте `journalctl -u frpc`: при включённом
+VPN для `193.124.130.236/32` обязательно Direct-правило, иначе туннель получает
+`connection write timeout`. Service Worker может удерживать старый bundle в
+браузере; фактическую версию проверяют по asset-файлам, а не только визуально.
 
-1. Открой публичный адрес в браузере (на iPhone — именно в Safari).
-2. Кнопка «Поделиться» → «На экран „Домой"».
-3. Иконка появится на главном экране; приложение открывается во весь экран, без адресной строки.
+## PWA
 
-## Если что-то не работает
-
-- **Сайт не открывается / 502** — обычно туннель отвалился из-за idle-shutdown WSL.
-  Стек поднимается сам после `wsl --shutdown`; «якорь» от простоя — VBS-автозапуск
-  (`sleep infinity`). Проверка статуса — в [deploy/INFRASTRUCTURE.md](deploy/INFRASTRUCTURE.md) («Управление»).
-- **«Load failed» при входе** — неверный ключ Supabase в `.env` / `.env.production`.
-- **«Аккаунт ожидает одобрения»** — email не подтверждён: в Supabase Studio (локально)
-  → Auth → Users → Confirm email вручную.
-- **Build failed (Tailwind/PostCSS)** — проверь, что `tailwind.config.js` и
-  `postcss.config.js` на месте и `npm install` отработал.
-
----
-
-> Инфраструктура — v3.0 (этапы 6.1–6.4a развёрнуты). Приложение — v1.5.0.
-> Подробности и долги: [docs/BACKLOG.md](docs/BACKLOG.md), [deploy/INFRASTRUCTURE.md](deploy/INFRASTRUCTURE.md).
+Откройте публичный адрес в браузере и выберите установку приложения. На iPhone:
+Safari → «Поделиться» → «На экран Домой». Для push-уведомлений потребуется выдать
+разрешение в профиле пользователя.
