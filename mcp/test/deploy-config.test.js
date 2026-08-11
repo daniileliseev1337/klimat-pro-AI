@@ -39,8 +39,10 @@ describe("remote MCP deployment configuration", () => {
 
   it("собирает MCP на поддерживаемой Supabase SDK версии Node", () => {
     const dockerfile = read("mcp/Dockerfile");
+    const pkg = JSON.parse(read("mcp/package.json"));
     expect(dockerfile.match(/FROM node:22-alpine/g)).toHaveLength(2);
     expect(dockerfile).toContain("ENV KP_HTTP_HOST=0.0.0.0");
     expect(dockerfile.match(/--chown=mcp:mcp/g)).toHaveLength(3);
+    expect(pkg.engines.node).toBe(">=22");
   });
 });

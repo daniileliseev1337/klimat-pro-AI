@@ -4,12 +4,13 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "start": "node src/stdio.js",
     "start:http": "node src/http.js",
     "login": "node src/login.js",
+    "test:live-oauth": "node scripts/live-oauth-e2e.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },

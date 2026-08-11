@@ -73,7 +73,7 @@ export function createHttpHandler({ config, changeStore = createChangeStore(), c
     } catch (error) {
       await Promise.allSettled([transport?.close(), server?.close()]);
       const message = error?.message || "Internal MCP error";
-      const status = /сесс|token|JWT|auth|user/i.test(message) ? 401 : 500;
+      const status = /сесс|token|JWT|auth|user|issuer|client_id|аккаунт MCP не одобрен|MCP-доступ не выдан/i.test(message) ? 401 : 500;
       return rpcError(response, status, status === 401 ? "Supabase Bearer JWT недействителен или истёк" : "Internal MCP error",
         status === 401 ? { "www-authenticate": `Bearer realm="klimat-pro", error="invalid_token", resource_metadata="${protectedResourceMetadataUrl(config)}"` } : undefined);
     }

@@ -57,6 +57,24 @@ describe("MCP Streamable HTTP", () => {
     expect(await response.json()).toMatchObject({ resource: "https://example.test/mcp", authorization_servers: ["https://example.test/auth/v1"] });
   });
 
+  it("возвращает 401, когда Admin отозвал MCP-грант", async () => {
+    const createService = vi.fn(async () => {
+      throw new Error("MCP-доступ не выдан администратором или уже отозван");
+    });
+    const config = { allowedHosts: [], allowedOrigins: [], bodyLimitBytes: 50_000, publicMcpUrl: "https://example.test/mcp", oauthIssuer: "https://example.test/auth/v1" };
+    const port = await listen(createHttpHandler({ config, createService }));
+    config.allowedHosts.push(`127.0.0.1:${port}`);
+
+    const response = await fetch(`http://127.0.0.1:${port}/mcp`, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: "Bearer revoked-user-jwt" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: {} }),
+    });
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get("www-authenticate")).toContain('error="invalid_token"');
+  });
+
   it("обслуживает MCP-клиента с валидированным Bearer token", async () => {
     const service = fakeService();
     const createService = vi.fn(async (_config, token) => {
