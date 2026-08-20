@@ -8,7 +8,7 @@ A design system for **Klimat Pro** (КЛИМАТ Pro) — a personal work & fina
 
 ## Sources
 
-- **GitHub** — [`daniileliseev1337/klimat-pro-AI`](https://github.com/daniileliseev1337/klimat-pro-AI) — the production React app (React 18 · Tailwind · framer-motion · recharts · lucide-react · Geist). The token values, component behaviors (gold buttons, glass `kp-card`, animated KPI numbers, ⌘K palette, living background) and the Russian engineering/finance domain copy were all read from this source. Explore it further to recreate views with higher fidelity.
+- **GitHub** — [`K7-LS/klimat-pro-AI`](https://github.com/K7-LS/klimat-pro-AI) — the production React app (React 18 · Tailwind · framer-motion · recharts · lucide-react · Geist). The token values, component behaviors (gold buttons, glass `kp-card`, animated KPI numbers, ⌘K palette, living background) and the Russian engineering/finance domain copy were all read from this source. Explore it further to recreate views with higher fidelity.
 
 No Figma file or slide decks were provided. If you have access to the repo above, read `src/App.jsx`, `src/index.css`, and `src/components/` for the ground truth.
 
